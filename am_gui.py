@@ -4,6 +4,8 @@ import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import signal
+from am_rx import *
+
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -33,6 +35,17 @@ class Am_ui(QWidget):
         self.button_widget.setLayout(button_layout)
 
         top_layout.addWidget(self.button_widget)
+
+        self.receiver_thread = QThread()
+        self.receiver = Am_rx()
+        self.receiver.moveToThread(self.receiver_thread)
+
+        #self.connect(self.receiver, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
+        self.connect(self.receiver_thread, SIGNAL("started()"), self.receiver, SLOT("run()"));
+        self.connect(self.receiver, SIGNAL("finished_signal"), self.receiver_thread, SLOT("quit()"));
+        self.connect(self.receiver, SIGNAL("finished_signal"), self.receiver, SLOT("deleteLater()"));
+        self.connect(self.receiver_thread, SIGNAL("finished_signal"), self.receiver_thread, SLOT("deleteLater()"));
+
                      
 
 
@@ -55,13 +68,14 @@ class Am_ui(QWidget):
                                            QMessageBox.Yes | QMessageBox.No,
                                            QMessageBox.No))
             if (result == QMessageBox.Yes):
-                self.recording = True
                 self.button_record.setText('Stop')
                 self.button_record.setToolTip('Stop recording samples')
                 self.record()
 
     def record(self):
+        self.recording = True
         self.data_saved = False
+        self.receiver_thread.start();
 
     def stop_recording(self):
         self.button_save.setEnabled(True)
