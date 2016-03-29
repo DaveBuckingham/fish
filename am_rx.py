@@ -5,6 +5,7 @@ import sys
 import time
 import serial
 import struct
+import random
 from PyQt4.QtCore import *
 
 class Am_rx(QObject):
@@ -14,22 +15,17 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
+    finished_trigger = pyqtSignal()
+    sample_trigger = pyqtSignal(list)
+    message_trigger = pyqtSignal(QString)
+    error_trigger = pyqtSignal(QString)
+
     def __init__(self, parent = None):
         super(Am_rx, self).__init__(parent)
 
         self.sample_index = 0
-        self.record = True
-        self.count = 100
-        self.finished_trigger = pyqtSignal()
+        self.recording = False
 
-#        self.connection = serial.Serial(
-#            port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
-#            baudrate = 115200,
-#            parity   = serial.PARITY_NONE,
-#            stopbits = serial.STOPBITS_ONE,
-#            bytesize = serial.EIGHTBITS,
-#            timeout  = None   # block, wait forever
-#        )
 
 
 
@@ -65,14 +61,28 @@ class Am_rx(QObject):
 
     @pyqtSlot()
     def run(self):
-        print("recording data")
-        while (self.count > 0):
-        #while (self.record):
-            self.count -= 1
-            print "sample"
-        print "done"
+
+        try:
+            self.connection = serial.Serial(
+                port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
+                baudrate = 115200,
+                parity   = serial.PARITY_NONE,
+                stopbits = serial.STOPBITS_ONE,
+                bytesize = serial.EIGHTBITS,
+                timeout  = None   # block, wait forever
+            )
+
+        except serial.serialutil.SerialException:
+            self.error_trigger.emit("serial connection failed")
+            self.finished_trigger.emit()
+
+
+        self.message_trigger.emit("begin recording data")
+        while (self.recording):
+            self.sample_trigger.emit( [(10*random.random() - 5) for i in xrange(14)] )
+            time.sleep(.1)
+        self.message_trigger.emit("stop recording data")
         self.finished_trigger.emit()
-        print "DONE"
 
 
 

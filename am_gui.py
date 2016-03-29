@@ -1,84 +1,220 @@
 #! /usr/bin/env python
 
+# USE PYTHON 2.6 OR LATER
+
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import signal
 from am_rx import *
+from am_plot import *
+from collections import namedtuple
+import time
 
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 class Am_ui(QWidget):
+
+    APPLICATION_NAME = 'AquaMetric 0.01'
+
+    plot_a1_trigger = pyqtSignal(list)
+    plot_a2_trigger = pyqtSignal(list)
+    plot_g1_trigger = pyqtSignal(list)
+    plot_g2_trigger = pyqtSignal(list)
+    
+    clear_plots_trigger = pyqtSignal()
+
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
 
-        self.data_saved = False
+        self.data_saved = True
         self.recording = False
-                     
-        self.button_widget = QWidget()
 
-        button_layout = QVBoxLayout()
+        self.buttons = {}
+
         top_layout = QGridLayout()
 
-        self.button_record = QPushButton('Record')
-        self.button_record.setToolTip('Begin recording samples')
-        self.button_record.clicked.connect(self.process_record_button)
-        button_layout.addWidget(self.button_record)
+        # BUTTONS
+        
+        button_layout = QVBoxLayout()
+        self.button_container = QWidget()
+        self.button_container.setLayout(button_layout)
 
-        self.button_save = QPushButton('Save')
-        self.button_save.setToolTip('Save recorded data')
-        self.button_save.clicked.connect(self.save)
-        button_layout.addWidget(self.button_save)
+        self.buttons['test'] = QPushButton('Test')
+        self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
+        button_layout.addWidget(self.buttons['test'])
 
-        self.button_widget.setLayout(button_layout)
+        self.buttons['record'] = QPushButton('Record')
+        self.buttons['record'].setToolTip('Begin recording samples')
+        self.buttons['record'].clicked.connect(self.record_button_slot)
+        button_layout.addWidget(self.buttons['record'])
 
-        top_layout.addWidget(self.button_widget)
+        self.buttons['save'] = QPushButton('Save')
+        self.buttons['save'].setToolTip('Save recorded data')
+        self.buttons['save'].clicked.connect(self.save)
+        button_layout.addWidget(self.buttons['save'])
+        self.buttons['save'].setEnabled(False)
+
+        self.buttons['settings'] = QPushButton('Settings')
+        button_layout.addWidget(self.buttons['settings'])
+
+        self.buttons['quit'] = QPushButton('Quit')
+        self.buttons['quit'].clicked.connect(self.quit_button_slot)
+        button_layout.addWidget(self.buttons['quit'])
+
+
+
+
+
+        # TEXT WINDOW
+
+        self.text_window = QTextEdit()
+        self.text_window.setReadOnly(True)
+        #metrics = QFontMetrics(self.text_window.font())
+
+
+        # GRAPHS
+
+        self.plot_a1 = Am_plot()
+        self.plot_a2 = Am_plot()
+        self.plot_g1 = Am_plot()
+        self.plot_g2 = Am_plot()
+
+
+        # STATS
+        self.stats = QtGui.QLabel("# Samples: \nTime: 37")
+        self.stats.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)
+
+
+        # ADD WIDGETS TO LAYOUT
+
+        top_layout.addWidget(self.button_container, 1, 3, 2, 1)
+
+        top_layout.addWidget(self.stats, 3, 3)
+
+        top_layout.addWidget(self.plot_a1, 1, 1)
+        top_layout.addWidget(self.plot_g1, 1, 2)
+        top_layout.addWidget(self.plot_a2, 2, 1)
+        top_layout.addWidget(self.plot_g2, 2, 2)
+
+        top_layout.addWidget(self.text_window, 3, 1, 1, 2)
+        
+
+        # ADD LABELS
+        label = QtGui.QLabel("IMU 1")
+        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
+        top_layout.addWidget(label, 0, 1)
+
+        label = QtGui.QLabel("IMU 2")
+        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
+        top_layout.addWidget(label, 0, 2)
+
+        label = QtGui.QLabel("Accel.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        top_layout.addWidget(label, 1, 0)
+
+        label = QtGui.QLabel("Gyro.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        top_layout.addWidget(label, 2, 0)
+
+
+        # TOP LEVEL
+
+        self.setLayout(top_layout)
+        self.setWindowTitle(Am_ui.APPLICATION_NAME) 
+
+
+        # RECEIVER THREAD
 
         self.receiver_thread = QThread()
         self.receiver = Am_rx()
         self.receiver.moveToThread(self.receiver_thread)
 
-        #self.connect(self.receiver, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
-        self.connect(self.receiver_thread, SIGNAL("started()"), self.receiver, SLOT("run()"));
-        self.connect(self.receiver, SIGNAL("finished_signal"), self.receiver_thread, SLOT("quit()"));
-        self.connect(self.receiver, SIGNAL("finished_signal"), self.receiver, SLOT("deleteLater()"));
-        self.connect(self.receiver_thread, SIGNAL("finished_signal"), self.receiver_thread, SLOT("deleteLater()"));
 
-                     
+        # CONNECTIONS
+
+        self.receiver.finished_trigger.connect(self.receiver_thread.quit)
+        self.receiver_thread.started.connect(self.receiver.run)
+        self.receiver_thread.finished.connect(self.receiver_done)
+
+        self.receiver.sample_trigger.connect(self.sample_slot)
+        self.receiver.message_trigger.connect(self.message_slot)
+        self.receiver.error_trigger.connect(self.error_slot)
+
+        self.plot_a1_trigger.connect(self.plot_a1.data_slot)
+        self.plot_a2_trigger.connect(self.plot_a2.data_slot)
+        self.plot_g1_trigger.connect(self.plot_g1.data_slot)
+        self.plot_a2_trigger.connect(self.plot_g2.data_slot)
+
+        self.clear_plots_trigger.connect(self.plot_a1.clear_slot)
+        self.clear_plots_trigger.connect(self.plot_a2.clear_slot)
+        self.clear_plots_trigger.connect(self.plot_g1.clear_slot)
+        self.clear_plots_trigger.connect(self.plot_g2.clear_slot)
 
 
-        self.setLayout(top_layout)
+    def receiver_done(self):
+        pass
+        # do something?
 
-        self.setWindowTitle('AquaMetric') 
-                     
+    def sample_slot(self, values):
+        self.plot_a1_trigger.emit(values[2:5])
+        self.plot_a2_trigger.emit(values[5:8])
+        self.plot_g1_trigger.emit(values[8:11])
+        self.plot_g2_trigger.emit(values[11:14])
 
-    def process_record_button(self):
-        if (self.recording):
-            self.recording = False
+
+
+    def quit_button_slot(self):
+        result = (QMessageBox.question(self,
+                                       Am_ui.APPLICATION_NAME,
+                                       'Really quit?',
+                                       QMessageBox.Yes | QMessageBox.No,
+                                       QMessageBox.No))
+
+        if (result == QMessageBox.Yes):
             self.stop_recording()
-            self.button_record.setText('Record')
-            self.button_record.setToolTip('Begin recording samples')
+            self.message("waiting for receiver to finish")
+            self.receiver_thread.wait()
+            self.message("exiting")
+            self.close()
 
+
+                     
+
+    def record_button_slot(self):
+        if (self.recording):
+            self.stop_recording()
         else:
-            result = (QMessageBox.question(self,
-                                           'Message',
-                                           'Overwrite recorded data without saving?',
-                                           QMessageBox.Yes | QMessageBox.No,
-                                           QMessageBox.No))
-            if (result == QMessageBox.Yes):
-                self.button_record.setText('Stop')
-                self.button_record.setToolTip('Stop recording samples')
+            if (not self.data_saved):
+                result = (QMessageBox.question(self,
+                                               'Message',
+                                               'Overwrite recorded data without saving?',
+                                               QMessageBox.Yes | QMessageBox.No,
+                                               QMessageBox.No))
+
+            if (self.data_saved or (result == QMessageBox.Yes)):
                 self.record()
 
     def record(self):
         self.recording = True
+        self.receiver.recording = True
         self.data_saved = False
-        self.receiver_thread.start();
+        self.buttons['record'].setText('Stop')
+        self.buttons['record'].setToolTip('Stop recording samples')
+        self.buttons['save'].setEnabled(False)
+
+        self.clear_plots_trigger.emit()
+
+        self.receiver_thread.start()
 
     def stop_recording(self):
-        self.button_save.setEnabled(True)
+        self.recording = False
+        self.receiver.recording = False
+        self.buttons['record'].setText('Record')
+        self.buttons['record'].setToolTip('Begin recording samples')
+        self.buttons['save'].setEnabled(True)
 
 
     def save(self):
@@ -86,9 +222,27 @@ class Am_ui(QWidget):
         if filename:
             if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
                 filename += '.hdf5'
-            print filename
-            data_saved = True
-            self.button_save.setEnabled(False)
+            self.message("data saved to  " + filename)
+            self.data_saved = True
+            self.buttons['save'].setEnabled(False)
+
+    def message_slot(self, the_string):
+        self.message(the_string)
+
+    def error_slot(self, the_string):
+        self.message(the_string, True)
+
+    def message(self, the_string, red=False):
+        self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
+        self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
+
+        if (red):
+            self.text_window.setTextColor(QtGui.QColor(255,0,0))
+        else:
+            self.text_window.setTextColor(QtGui.QColor(0,0,0))
+        self.text_window.insertPlainText(the_string)
+        sb = self.text_window.verticalScrollBar();
+        sb.setValue(sb.maximum());
 
                                           
 def main():
