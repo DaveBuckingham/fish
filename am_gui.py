@@ -27,13 +27,15 @@ class Am_ui(QWidget):
     
     clear_plots_signal = pyqtSignal()
 
-    post_trigger = False
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
 
         self.data_saved = True
         self.recording = False
+
+        self.post_trigger = False
+        self.post_trigger_time = 10
 
         self.buttons = {}
 
@@ -180,7 +182,7 @@ class Am_ui(QWidget):
                                        Am_ui.APPLICATION_NAME,
                                        'Really quit?',
                                        QMessageBox.Yes | QMessageBox.No,
-                                       QMessageBox.No))
+                                       QMessageBox.Yes))
 
         if (result == QMessageBox.Yes):
             self.stop_recording()
