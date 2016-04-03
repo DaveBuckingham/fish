@@ -15,10 +15,10 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
-    finished_trigger = pyqtSignal()
-    sample_trigger = pyqtSignal(list)
-    message_trigger = pyqtSignal(QString)
-    error_trigger = pyqtSignal(QString)
+    finished_signal = pyqtSignal()
+    sample_signal = pyqtSignal(list)
+    message_signal = pyqtSignal(QString)
+    error_signal = pyqtSignal(QString)
 
     def __init__(self, parent = None):
         super(Am_rx, self).__init__(parent)
@@ -55,7 +55,7 @@ class Am_rx(QObject):
 
 
     def cleanup(self):
-        message("closing serial connection")
+        self.message_signal.emit("closing serial connection")
         connection.close()
 
 
@@ -73,16 +73,16 @@ class Am_rx(QObject):
             )
 
         except serial.serialutil.SerialException:
-            self.error_trigger.emit("serial connection failed")
-            self.finished_trigger.emit()
+            self.error_signal.emit("serial connection failed")
+            self.finished_signal.emit()
 
 
-        self.message_trigger.emit("begin recording data")
+        self.message_signal.emit("begin recording data")
         while (self.recording):
-            self.sample_trigger.emit( [(10*random.random() - 5) for i in xrange(14)] )
+            self.sample_signal.emit( [(10*random.random() - 5) for i in xrange(14)] )
             time.sleep(.1)
-        self.message_trigger.emit("stop recording data")
-        self.finished_trigger.emit()
+        self.message_signal.emit("stop recording data")
+        self.finished_signal.emit()
 
 
 

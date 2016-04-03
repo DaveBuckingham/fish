@@ -1,30 +1,33 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 # USE PYTHON 2.6 OR LATER
 
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import signal
+#import signal
 from am_rx import *
 from am_plot import *
+from am_settings import *
 from collections import namedtuple
 import time
 
 
-signal.signal(signal.SIGINT, signal.SIG_DFL)
+#signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 class Am_ui(QWidget):
 
     APPLICATION_NAME = 'AquaMetric 0.01'
 
-    plot_a1_trigger = pyqtSignal(list)
-    plot_a2_trigger = pyqtSignal(list)
-    plot_g1_trigger = pyqtSignal(list)
-    plot_g2_trigger = pyqtSignal(list)
+    plot_a1_signal = pyqtSignal(list)
+    plot_a2_signal = pyqtSignal(list)
+    plot_g1_signal = pyqtSignal(list)
+    plot_g2_signal = pyqtSignal(list)
     
-    clear_plots_trigger = pyqtSignal()
+    clear_plots_signal = pyqtSignal()
+
+    post_trigger = False
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
@@ -53,11 +56,12 @@ class Am_ui(QWidget):
 
         self.buttons['save'] = QPushButton('Save')
         self.buttons['save'].setToolTip('Save recorded data')
-        self.buttons['save'].clicked.connect(self.save)
+        self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
         self.buttons['settings'] = QPushButton('Settings')
+        self.buttons['settings'].clicked.connect(self.settings_button_slot)
         button_layout.addWidget(self.buttons['settings'])
 
         self.buttons['quit'] = QPushButton('Quit')
@@ -135,23 +139,23 @@ class Am_ui(QWidget):
 
         # CONNECTIONS
 
-        self.receiver.finished_trigger.connect(self.receiver_thread.quit)
+        self.receiver.finished_signal.connect(self.receiver_thread.quit)
         self.receiver_thread.started.connect(self.receiver.run)
         self.receiver_thread.finished.connect(self.receiver_done)
 
-        self.receiver.sample_trigger.connect(self.sample_slot)
-        self.receiver.message_trigger.connect(self.message_slot)
-        self.receiver.error_trigger.connect(self.error_slot)
+        self.receiver.sample_signal.connect(self.sample_slot)
+        self.receiver.message_signal.connect(self.message_slot)
+        self.receiver.error_signal.connect(self.error_slot)
 
-        self.plot_a1_trigger.connect(self.plot_a1.data_slot)
-        self.plot_a2_trigger.connect(self.plot_a2.data_slot)
-        self.plot_g1_trigger.connect(self.plot_g1.data_slot)
-        self.plot_a2_trigger.connect(self.plot_g2.data_slot)
+        self.plot_a1_signal.connect(self.plot_a1.data_slot)
+        self.plot_a2_signal.connect(self.plot_a2.data_slot)
+        self.plot_g1_signal.connect(self.plot_g1.data_slot)
+        self.plot_a2_signal.connect(self.plot_g2.data_slot)
 
-        self.clear_plots_trigger.connect(self.plot_a1.clear_slot)
-        self.clear_plots_trigger.connect(self.plot_a2.clear_slot)
-        self.clear_plots_trigger.connect(self.plot_g1.clear_slot)
-        self.clear_plots_trigger.connect(self.plot_g2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_a1.clear_slot)
+        self.clear_plots_signal.connect(self.plot_a2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_g1.clear_slot)
+        self.clear_plots_signal.connect(self.plot_g2.clear_slot)
 
 
     def receiver_done(self):
@@ -159,11 +163,16 @@ class Am_ui(QWidget):
         # do something?
 
     def sample_slot(self, values):
-        self.plot_a1_trigger.emit(values[2:5])
-        self.plot_a2_trigger.emit(values[5:8])
-        self.plot_g1_trigger.emit(values[8:11])
-        self.plot_g2_trigger.emit(values[11:14])
+        self.plot_a1_signal.emit(values[2:5])
+        self.plot_a2_signal.emit(values[5:8])
+        self.plot_g1_signal.emit(values[8:11])
+        self.plot_g2_signal.emit(values[11:14])
 
+
+
+############################################
+#              BUTTON SLOTS                #
+############################################
 
 
     def quit_button_slot(self):
@@ -175,13 +184,11 @@ class Am_ui(QWidget):
 
         if (result == QMessageBox.Yes):
             self.stop_recording()
-            self.message("waiting for receiver to finish")
+            self.message_slot("waiting for receiver to finish")
             self.receiver_thread.wait()
-            self.message("exiting")
+            self.message_slot("exiting")
             self.close()
 
-
-                     
 
     def record_button_slot(self):
         if (self.recording):
@@ -197,6 +204,24 @@ class Am_ui(QWidget):
             if (self.data_saved or (result == QMessageBox.Yes)):
                 self.record()
 
+
+    def save_button_slot(self):
+        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', '', '*.hdf5')
+        if filename:
+            if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
+                filename += '.hdf5'
+            self.message_slot("data saved to  " + filename)
+            self.data_saved = True
+            self.buttons['save'].setEnabled(False)
+
+    def settings_button_slot(self):
+        settings = Am_settings(self)
+        settings.show()
+
+
+
+
+
     def record(self):
         self.recording = True
         self.receiver.recording = True
@@ -205,7 +230,7 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Stop recording samples')
         self.buttons['save'].setEnabled(False)
 
-        self.clear_plots_trigger.emit()
+        self.clear_plots_signal.emit()
 
         self.receiver_thread.start()
 
@@ -216,23 +241,10 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(True)
 
-
-    def save(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', '', '*.hdf5')
-        if filename:
-            if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
-                filename += '.hdf5'
-            self.message("data saved to  " + filename)
-            self.data_saved = True
-            self.buttons['save'].setEnabled(False)
-
-    def message_slot(self, the_string):
-        self.message(the_string)
-
     def error_slot(self, the_string):
-        self.message(the_string, True)
+        self.message_slot(the_string, True)
 
-    def message(self, the_string, red=False):
+    def message_slot(self, the_string, red=False):
         self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
         self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
 
