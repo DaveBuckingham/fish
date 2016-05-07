@@ -5,7 +5,6 @@ import sys
 import time
 import serial
 import struct
-import random
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from am_gui import Am_ui
@@ -24,41 +23,62 @@ class Am_settings(QDialog):
         top_layout = QGridLayout()
 
 
-        self.cb_post = QCheckBox('post trigger', self)
-        self.cb_post.stateChanged.connect(self.toggle_post)
+        self.cb_trigger = QCheckBox('trigger', self)
+        self.cb_trigger.setChecked(self.parent.use_trigger)
+        self.cb_trigger.stateChanged.connect(self.toggle_trigger)
 
 
-        self.slider_time = QSlider(Qt.Horizontal, self)
-        self.slider_time.setFocusPolicy(Qt.NoFocus)
-        self.slider_time.valueChanged[int].connect(self.change_time_slot)
-        self.slider_time.setMinimum(1)
-        self.slider_time.setMaximum(60)
-        self.slider_time.setValue(self.parent.post_trigger_time)
+        self.slider_pre_trigger = QSlider(Qt.Horizontal, self)
+        self.slider_pre_trigger.setValue(self.parent.pre_trigger_delay)
+        self.slider_pre_trigger.setEnabled(self.parent.use_trigger)
+        self.slider_pre_trigger.setFocusPolicy(Qt.NoFocus)
+        self.slider_pre_trigger.valueChanged[int].connect(self.change_pre_trigger_slot)
+        self.slider_pre_trigger.setMinimum(1)
+        self.slider_pre_trigger.setMaximum(180)
 
-        if (self.parent.post_trigger):
-            self.cb_post.setChecked(True)
-        else:
-            self.slider_time.setEnabled(False)
+
+        self.slider_post_trigger = QSlider(Qt.Horizontal, self)
+        self.slider_post_trigger.setValue(self.parent.post_trigger_delay)
+        self.slider_post_trigger.setEnabled(self.parent.use_trigger)
+        self.slider_post_trigger.setFocusPolicy(Qt.NoFocus)
+        self.slider_post_trigger.valueChanged[int].connect(self.change_post_trigger_slot)
+        self.slider_post_trigger.setMinimum(1)
+        self.slider_post_trigger.setMaximum(180)
 
 
         #self.cb.setStyle(QStyleFactory.create("Cleanlooks"))
 
-        top_layout.addWidget(self.cb_post, 1, 1)
-        top_layout.addWidget(self.slider_time, 2, 1)
+        self.text_pre_trigger = QLabel(str(self.parent.pre_trigger_delay) + " sec.")
+        self.text_post_trigger = QLabel(str(self.parent.post_trigger_delay) + " sec.")
+
+
+        top_layout.addWidget(self.cb_trigger, 1, 1)
+        top_layout.addWidget(QLabel("pre trigger delay"), 2, 1)
+        top_layout.addWidget(self.slider_pre_trigger, 3, 1)
+        top_layout.addWidget(QLabel("post trigger delay"), 4, 1)
+        top_layout.addWidget(self.slider_post_trigger, 5, 1)
+
+        top_layout.addWidget(self.text_pre_trigger, 3, 2)
+        top_layout.addWidget(self.text_post_trigger, 5, 2)
+
 
 
         self.setLayout(top_layout)
 
 
+    def toggle_trigger(self, state):
+        self.parent.use_trigger = not self.parent.use_trigger
+        self.slider_pre_trigger.setEnabled(self.parent.use_trigger)
+        self.slider_post_trigger.setEnabled(self.parent.use_trigger)
 
-    def toggle_post(self, state):
-        self.parent.post_trigger = not self.parent.post_trigger
-        self.slider_time.setEnabled(self.parent.post_trigger)
-
-    def change_time_slot(self, val):
-        self.parent.post_trigger_time = val    # EMIT
-        print val
           
 
+    def change_post_trigger_slot(self, val):
+        self.parent.post_trigger_delay = val
+        self.text_post_trigger.setText(str(val) + " sec.")
+
+    def change_pre_trigger_slot(self, val):
+        self.parent.pre_trigger_delay = val
+        self.text_pre_trigger.setText(str(val) + " sec.")
 
 

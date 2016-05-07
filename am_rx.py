@@ -27,8 +27,6 @@ class Am_rx(QObject):
         self.recording = False
 
 
-
-
     def calculate_accel_ft(self, a_test):
         # SEE MPU-6000, 6050 MANUAL PAGE 11
         # DON'T NEGATE Y-AXIS VALUE
@@ -78,9 +76,18 @@ class Am_rx(QObject):
 
 
         self.message_signal.emit("begin recording data")
+
+
+
+        # MAKE FAKE DATA
         while (self.recording):
             self.sample_signal.emit( [(10*random.random() - 5) for i in xrange(14)] )
             time.sleep(.1)
+
+        # COLLECT REAL DATA
+
+
+
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
 

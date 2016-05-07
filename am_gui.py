@@ -5,15 +5,11 @@
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-#import signal
 from am_rx import *
 from am_plot import *
 from am_settings import *
 from collections import namedtuple
 import time
-
-
-#signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 class Am_ui(QWidget):
@@ -34,8 +30,9 @@ class Am_ui(QWidget):
         self.data_saved = True
         self.recording = False
 
-        self.post_trigger = False
-        self.post_trigger_time = 10
+        self.use_trigger = False
+        self.pre_trigger_delay = 10
+        self.post_trigger_delay = 10
 
         self.buttons = {}
 
@@ -90,7 +87,7 @@ class Am_ui(QWidget):
 
 
         # STATS
-        self.stats = QtGui.QLabel("# Samples: \nTime: 37")
+        self.stats = QLabel("# Samples: \nTime: 37")
         self.stats.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)
 
 
@@ -228,9 +225,17 @@ class Am_ui(QWidget):
         self.recording = True
         self.receiver.recording = True
         self.data_saved = False
-        self.buttons['record'].setText('Stop')
+
+        if (self.use_trigger):
+            self.buttons['record'].setText('Trigger')
+        else:
+            self.buttons['record'].setText('Stop')
+
         self.buttons['record'].setToolTip('Stop recording samples')
+
         self.buttons['save'].setEnabled(False)
+        self.buttons['settings'].setEnabled(False)
+        self.buttons['test'].setEnabled(False)
 
         self.clear_plots_signal.emit()
 
@@ -242,6 +247,12 @@ class Am_ui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(True)
+        self.buttons['settings'].setEnabled(True)
+        self.buttons['test'].setEnabled(True)
+
+
+
+
 
     def error_slot(self, the_string):
         self.message_slot(the_string, True)
