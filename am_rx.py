@@ -58,6 +58,20 @@ class Am_rx(QObject):
 
 
     @pyqtSlot()
+    def run_fake(self):
+        self.message_signal.emit("fake connection established")
+        self.message_signal.emit("waiting to stabilize")
+        self.message_signal.emit("begin recording data")
+
+        while (self.recording):
+            self.sample_signal.emit( [(10*random.random() - 5) for i in xrange(14)] )
+            time.sleep(.1)
+
+        self.message_signal.emit("stop recording data")
+        self.finished_signal.emit()
+
+
+    @pyqtSlot()
     def run(self):
 
         try:
@@ -73,18 +87,42 @@ class Am_rx(QObject):
         except serial.serialutil.SerialException:
             self.error_signal.emit("serial connection failed")
             self.finished_signal.emit()
+            return
 
 
+        self.message_signal.emit("serial connection established")
+        self.message_signal.emit("waiting to stabilize")
+        self.connection.read(1000)
         self.message_signal.emit("begin recording data")
 
+        # RESET TIMER
+        start_time = time.time() * 1000
+        last_time = start_time
 
 
-        # MAKE FAKE DATA
         while (self.recording):
-            self.sample_signal.emit( [(10*random.random() - 5) for i in xrange(14)] )
-            time.sleep(.1)
 
-        # COLLECT REAL DATA
+            # WAIT TWO-BYTE SENTINEL, THEN READ DATA
+            flag = ord(connection.read(1))
+            while (flag != SENTINEL_1):
+                flag = ord(connection.read(1))
+
+            if (ord(connection.read(1)) == SENTINEL_2):
+                
+                # READ FROM IMU SENSORS
+                data = connection.read(30)
+                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, ax1, ay1, az1, gx1, gy1, gz1) = struct.unpack('!Lhhhhhhhhhhhhh', data)
+                timestamp = (time.time() * 1000) - start_time
+
+                # CONVERT
+                (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
+                (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
+                enc *= 0.3515625  # 360/1024
+
+            # UPDATE
+            last_time = timestamp
+            sample_index += 1
+
 
 
 

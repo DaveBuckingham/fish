@@ -10,6 +10,7 @@ from am_plot import *
 from am_settings import *
 from collections import namedtuple
 import time
+import h5py
 
 
 class Am_ui(QWidget):
@@ -35,6 +36,14 @@ class Am_ui(QWidget):
         self.post_trigger_delay = 10
 
         self.buttons = {}
+
+        self.data_time   = []
+        self.data_accel1 = []
+        self.data_accel2 = []
+        self.data_gyro1  = []
+        self.data_gyro2  = []
+
+
 
         top_layout = QGridLayout()
 
@@ -139,7 +148,7 @@ class Am_ui(QWidget):
         # CONNECTIONS
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
-        self.receiver_thread.started.connect(self.receiver.run)
+        self.receiver_thread.started.connect(self.receiver.run_fake)
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.sample_signal.connect(self.sample_slot)
@@ -158,14 +167,31 @@ class Am_ui(QWidget):
 
 
     def receiver_done(self):
-        pass
-        # do something?
+        self.recording = False
+        self.buttons['record'].setText('Record')
+        self.buttons['record'].setToolTip('Begin recording samples')
+        self.buttons['save'].setEnabled(len(self.data_time) > 0)
+        self.buttons['settings'].setEnabled(True)
+        self.buttons['test'].setEnabled(True)
 
     def sample_slot(self, values):
-        self.plot_a1_signal.emit(values[2:5])
-        self.plot_a2_signal.emit(values[5:8])
-        self.plot_g1_signal.emit(values[8:11])
-        self.plot_g2_signal.emit(values[11:14])
+
+        timestamp = values[0]
+        a1 = values[2:5]
+        g1 = values[5:8]
+        a2 = values[8:11]
+        g2 = values[11:14]
+
+        self.data_time.append(timestamp)
+        self.data_accel1.append(a1)
+        self.data_gyro1.append(g1)
+        self.data_accel2.append(a2)
+        self.data_gyro2.append(g2)
+
+        self.plot_a1_signal.emit(a1)
+        self.plot_a2_signal.emit(g1)
+        self.plot_g1_signal.emit(a2)
+        self.plot_g2_signal.emit(g2)
 
 
 
@@ -209,9 +235,20 @@ class Am_ui(QWidget):
         if filename:
             if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
                 filename += '.hdf5'
+
+            datafile = h5py.File(str(filename), 'w')
+            data = datafile.create_group("data")
+            data.create_dataset('t',      data=self.data_time)
+            data.create_dataset('Accel',  data=self.data_accel1)
+            data.create_dataset('Accel2', data=self.data_accel2)
+            data.create_dataset('Gyro',   data=self.data_gyro1)
+            data.create_dataset('Gyro2',  data=self.data_gyro2)
+            datafile.close()
+
             self.message_slot("data saved to  " + filename)
             self.data_saved = True
             self.buttons['save'].setEnabled(False)
+
 
     def settings_button_slot(self):
         settings = Am_settings(self)
@@ -242,13 +279,7 @@ class Am_ui(QWidget):
         self.receiver_thread.start()
 
     def stop_recording(self):
-        self.recording = False
         self.receiver.recording = False
-        self.buttons['record'].setText('Record')
-        self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(True)
-        self.buttons['settings'].setEnabled(True)
-        self.buttons['test'].setEnabled(True)
 
 
 
