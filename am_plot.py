@@ -16,7 +16,7 @@ class Am_plot(QtGui.QWidget):
         
         self.setMinimumSize(300, 100)
         self.data = deque([])
-        self.x_scale = 100
+        self.x_scale = 300
         self.y_scale = 10
 
         self.colors = [QtGui.QColor(220, 0, 0), \
@@ -26,13 +26,17 @@ class Am_plot(QtGui.QWidget):
         self.width = self.size().width()
         self.height = self.size().height()
 
+    def clear_slot(self):
+        self.data = deque([])
+        self.repaint()
 
 
-    def data_slot(self, values):
+    def data_slot(self, values, refresh=True):
         self.data.append(values)
         if (len(self.data) > self.x_scale):
             self.data.popleft()
-        self.repaint()
+        if (refresh):
+            self.repaint()
 
 
     def paintEvent(self, e):

@@ -15,12 +15,13 @@ import h5py
 
 class Am_ui(QWidget):
 
-    APPLICATION_NAME = 'AquaMetric 0.01'
+    APPLICATION_NAME = 'IMU Collect 0.01'
 
-    plot_a1_signal = pyqtSignal(list)
-    plot_a2_signal = pyqtSignal(list)
-    plot_g1_signal = pyqtSignal(list)
-    plot_g2_signal = pyqtSignal(list)
+    #plot_a1_signal = pyqtSignal(list)
+    #plot_a2_signal = pyqtSignal(list)
+    #plot_g1_signal = pyqtSignal(list)
+    #plot_g2_signal = pyqtSignal(list)
+    clear_plots_signal = pyqtSignal()
     
 
 
@@ -36,11 +37,8 @@ class Am_ui(QWidget):
 
         self.buttons = {}
 
-        self.data_time   = []
-        self.data_accel1 = []
-        self.data_accel2 = []
-        self.data_gyro1  = []
-        self.data_gyro2  = []
+        self.data = {}
+        self.timestamps   = []
 
         self.num_samples = 0
 
@@ -155,8 +153,16 @@ class Am_ui(QWidget):
 
         # CONNECTIONS
 
+        self.clear_plots_signal.connect(self.plot_a1.clear_slot)
+        self.clear_plots_signal.connect(self.plot_a2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_g1.clear_slot)
+        self.clear_plots_signal.connect(self.plot_g2.clear_slot)
+
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
+
         self.receiver_thread.started.connect(self.receiver.run_fake)
+        #self.receiver_thread.started.connect(self.receiver.run)
+
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.timestamp_signal.connect(self.sample_slot)
@@ -176,33 +182,14 @@ class Am_ui(QWidget):
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(len(self.data_time) > 0)
+        self.buttons['save'].setEnabled(len(self.timestamps) > 0)
         self.buttons['settings'].setEnabled(True)
         self.buttons['test'].setEnabled(True)
 
 
     def sample_slot(self, timestamp):
-    #def sample_slot(self):
 
-        #timestamp = values[0]
-        #a1 = values[2:5]
-        #g1 = values[5:8]
-        #a2 = values[8:11]
-        #g2 = values[11:14]
-
-        self.data_time.append(timestamp)
-        #self.data_accel1.append(values[2:5]  )
-        #self.data_gyro1.append( values[5:8]  )
-        #self.data_accel2.append(values[8:11] )
-        #self.data_gyro2.append( values[11:14])
-
-
-        #self.plot_a1_signal.emit(self.data_accel1[-self.plot_a1.x_scale:])
-        #self.plot_a2_signal.emit(self.data_accel2[-self.plot_a2.x_scale:])
-        #self.plot_g1_signal.emit(self.data_gyro1[-self.plot_g1.x_scale:])
-        #self.plot_g2_signal.emit(self.data_gyro2[-self.plot_g2.x_scale:])
-
-
+        self.timestamps.append(timestamp)
 
         self.stats_time.setText('%.1f' % (timestamp))
 
@@ -236,9 +223,9 @@ class Am_ui(QWidget):
     def record_button_slot(self):
         if (self.recording):
             if (self.use_trigger):
-                self.stop_recording_time = self.data_time[-1] + (self.post_trigger_delay * 1000)
+                self.stop_recording_time = self.timestamps[-1] + (self.post_trigger_delay * 1000)
             else:
-                self.stop_recording_time = self.data_time[-1]
+                self.stop_recording_time = self.timestamps[-1]
                 #self.stop_recording()
         else:
             if (not self.data_saved):
@@ -261,17 +248,17 @@ class Am_ui(QWidget):
                 filename += '.hdf5'
 
             datafile = h5py.File(str(filename), 'w')
-            data = datafile.create_group("data")
-            data.create_dataset('t',      data=self.data_time)
-            data.create_dataset('Accel',  data=self.data_accel1)
-            data.create_dataset('Accel2', data=self.data_accel2)
-            data.create_dataset('Gyro',   data=self.data_gyro1)
-            data.create_dataset('Gyro2',  data=self.data_gyro2)
+            save_data = datafile.create_group("data")
+            save_data.create_dataset('t',      data=self.data['time'])
+            save_data.create_dataset('Accel',  data=self.data['accel1'])
+            save_data.create_dataset('Accel2', data=self.data['accel2'])
+            save_data.create_dataset('Gyro',   data=self.data['gyro1'])
+            save_data.create_dataset('Gyro2',  data=self.data['gyro2'])
             datafile.close()
 
             self.message_slot("data saved to  " + filename)
             self.data_saved = True
-            self.buttons['save'].setEnabled(False)
+            #self.buttons['save'].setEnabled(False)
 
 
     def settings_button_slot(self):
@@ -298,20 +285,22 @@ class Am_ui(QWidget):
         self.buttons['settings'].setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.data_time   = []
+        self.timestamps   = []
         self.data_accel1 = []
         self.data_accel2 = []
         self.data_gyro1  = []
         self.data_gyro2  = []
 
-        self.plot_a1_signal.emit([])
-        self.plot_a2_signal.emit([])
-        self.plot_g1_signal.emit([])
-        self.plot_g2_signal.emit([])
+        self.clear_plots_signal.emit()
+        #self.plot_a1_signal.emit([])
+        #self.plot_a2_signal.emit([])
+        #self.plot_g1_signal.emit([])
+        #self.plot_g2_signal.emit([])
 
         self.receiver_thread.start()
 
     def stop_recording(self):
+        self.data = self.receiver.data
         self.receiver.recording = False
 
 

@@ -15,23 +15,25 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
+    PLOT_REFRESH_RATE          = 5
+
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
 
     timestamp_signal = pyqtSignal(float)
-    plot_a1_signal = pyqtSignal(list)
-    plot_a2_signal = pyqtSignal(list)
-    plot_g1_signal = pyqtSignal(list)
-    plot_g2_signal = pyqtSignal(list)
+    plot_a1_signal = pyqtSignal(list, bool)
+    plot_a2_signal = pyqtSignal(list, bool)
+    plot_g1_signal = pyqtSignal(list, bool)
+    plot_g2_signal = pyqtSignal(list, bool)
 
     def __init__(self, parent = None):
         super(Am_rx, self).__init__(parent)
 
-        self.sample_index = 0
         self.recording = False
 
         self.data = {'time':[], 'accel1':[], 'accel2':[], 'gyro1':[], 'gyro2':[]}
+        self.num_samples = 0
 
 
     def calculate_accel_ft(self, a_test):
@@ -74,7 +76,6 @@ class Am_rx(QObject):
         while (self.recording):
             data = [(10*random.random() - 5) for i in xrange(14)] 
             timestamp = (time.time() * 1000) -  start_time
-            #self.sample_signal.emit( data )
 
             self.data['time'].append(timestamp)
             self.data['accel1'].append(data[2:5]  )
@@ -82,16 +83,16 @@ class Am_rx(QObject):
             self.data['accel2'].append(data[8:11] )
             self.data['gyro2'].append( data[11:14])
 
+            refresh = (self.num_samples % Am_rx.PLOT_REFRESH_RATE) == 0
             self.timestamp_signal.emit(timestamp)
-            self.plot_a1_signal.emit(data[2:5])
-            self.plot_g1_signal.emit(data[5:8])
-            self.plot_a2_signal.emit(data[8:11])
-            self.plot_g2_signal.emit(data[11:14])
+            self.plot_a1_signal.emit(data[2:5], refresh)
+            self.plot_g1_signal.emit(data[5:8], refresh)
+            self.plot_a2_signal.emit(data[8:11], refresh)
+            self.plot_g2_signal.emit(data[11:14], refresh)
 
-
+            self.num_samples += 1
 
             time.sleep(.005)
-            #time.sleep(.01)
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -123,37 +124,43 @@ class Am_rx(QObject):
 
         # RESET TIMER
         start_time = time.time() * 1000
-        last_time = start_time
 
 
         while (self.recording):
 
             # WAIT TWO-BYTE SENTINEL, THEN READ DATA
             flag = ord(connection.read(1))
-            while (flag != SENTINEL_1):
+            while (flag != Am_rx.SENTINEL_1):
                 flag = ord(connection.read(1))
 
-            if (ord(connection.read(1)) == SENTINEL_2):
+            if (ord(connection.read(1)) == Am_rx.SENTINEL_2):
                 
                 # READ FROM IMU SENSORS
                 data = connection.read(30)
-                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, ax1, ay1, az1, gx1, gy1, gz1) = struct.unpack('!Lhhhhhhhhhhhhh', data)
+                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, ax2, ay2, az2, gx2, gy2, gz2) = struct.unpack('!Lhhhhhhhhhhhhh', data)
                 timestamp = (time.time() * 1000) - start_time
 
                 # CONVERT
-                (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
-                (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
+                (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
+                (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
                 enc *= 0.3515625  # 360/1024
 
                 self.data['time'].append(timestamp)
-                #self.data_accel1.append(values[2:5]  )
-                #self.data_gyro1.append( values[5:8]  )
-                #self.data_accel2.append(values[8:11] )
-                #self.data_gyro2.append( values[11:14])
+                self.data['accel1'].append( [ax1, ay1, az1])
+                self.data['gyro1'].append(  [gx1, gy1, gz1])
+                self.data['accel2'].append( [ax2, ay2, az2])
+                self.data['gyro2'].append(  [gx2, gy2, gz2])
+
+                refresh = (self.num_samples % Am_rx.PLOT_REFRESH_RATE) == 0
+                self.timestamp_signal.emit(timestamp)
+                self.plot_a1_signal.emit([ax1, ay1, az1], refresh)
+                self.plot_g1_signal.emit([gx1, gy1, gz1], refresh)
+                self.plot_a2_signal.emit([ax2, ay2, az2], refresh)
+                self.plot_g2_signal.emit([gx2, gy2, gz2], refresh)
+
 
             # UPDATE
-            last_time = timestamp
-            sample_index += 1
+            self.num_samples += 1
 
 
 
