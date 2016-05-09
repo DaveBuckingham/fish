@@ -145,6 +145,8 @@ class Am_rx(QObject):
                 (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
                 enc *= 0.3515625  # 360/1024
 
+                print enc
+
                 self.data['time'].append(timestamp)
                 self.data['accel1'].append( [ax1, ay1, az1])
                 self.data['gyro1'].append(  [gx1, gy1, gz1])
