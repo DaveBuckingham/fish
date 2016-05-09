@@ -21,6 +21,7 @@ class Am_settings(QDialog):
         self.setWindowTitle(Am_ui.APPLICATION_NAME) 
 
         top_layout = QGridLayout()
+        top_layout.setColumnMinimumWidth(2, 50)
 
 
         self.cb_trigger = QCheckBox('trigger', self)
@@ -53,9 +54,9 @@ class Am_settings(QDialog):
 
 
         top_layout.addWidget(self.cb_trigger, 1, 1)
-        top_layout.addWidget(QLabel("pre trigger delay"), 2, 1)
+        top_layout.addWidget(QLabel("pre-trigger delay"), 2, 1)
         top_layout.addWidget(self.slider_pre_trigger, 3, 1)
-        top_layout.addWidget(QLabel("post trigger delay"), 4, 1)
+        top_layout.addWidget(QLabel("post-trigger delay"), 4, 1)
         top_layout.addWidget(self.slider_post_trigger, 5, 1)
 
         top_layout.addWidget(self.text_pre_trigger, 3, 2)

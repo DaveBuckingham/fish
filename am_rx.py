@@ -16,15 +16,22 @@ class Am_rx(QObject):
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
     finished_signal = pyqtSignal()
-    sample_signal = pyqtSignal(list)
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
+
+    timestamp_signal = pyqtSignal(float)
+    plot_a1_signal = pyqtSignal(list)
+    plot_a2_signal = pyqtSignal(list)
+    plot_g1_signal = pyqtSignal(list)
+    plot_g2_signal = pyqtSignal(list)
 
     def __init__(self, parent = None):
         super(Am_rx, self).__init__(parent)
 
         self.sample_index = 0
         self.recording = False
+
+        self.data = {'time':[], 'accel1':[], 'accel2':[], 'gyro1':[], 'gyro2':[]}
 
 
     def calculate_accel_ft(self, a_test):
@@ -62,10 +69,27 @@ class Am_rx(QObject):
         self.message_signal.emit("fake connection established")
         self.message_signal.emit("waiting to stabilize")
         self.message_signal.emit("begin recording data")
+        start_time = time.time() * 1000
 
         while (self.recording):
-            self.sample_signal.emit( [(10*random.random() - 5) for i in xrange(14)] )
-            time.sleep(.1)
+            data = [(10*random.random() - 5) for i in xrange(13)] 
+            timestamp = (time.time() * 1000) -  start_time
+            #self.sample_signal.emit( data )
+
+            self.timestamp_signal.emit(timestamp)
+            self.plot_a1_signal.emit(data[2:5])
+            self.plot_g1_signal.emit(data[5:8])
+            self.plot_a2_signal.emit(data[8:11])
+            self.plot_g2_signal.emit(data[11:15])
+
+            self.data['time'].append(timestamp)
+            self.data['accel1'].append(data[2:5]  )
+            self.data['gyro1'].append( data[5:8]  )
+            self.data['accel2'].append(data[8:11] )
+            self.data['gyro2'].append( data[11:14])
+
+            time.sleep(.005)
+            #time.sleep(.01)
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -118,6 +142,12 @@ class Am_rx(QObject):
                 (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
                 (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
                 enc *= 0.3515625  # 360/1024
+
+                self.data['time'].append(timestamp)
+                #self.data_accel1.append(values[2:5]  )
+                #self.data_gyro1.append( values[5:8]  )
+                #self.data_accel2.append(values[8:11] )
+                #self.data_gyro2.append( values[11:14])
 
             # UPDATE
             last_time = timestamp

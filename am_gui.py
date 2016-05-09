@@ -22,7 +22,6 @@ class Am_ui(QWidget):
     plot_g1_signal = pyqtSignal(list)
     plot_g2_signal = pyqtSignal(list)
     
-    clear_plots_signal = pyqtSignal()
 
 
     def __init__(self, parent = None):
@@ -42,6 +41,8 @@ class Am_ui(QWidget):
         self.data_accel2 = []
         self.data_gyro1  = []
         self.data_gyro2  = []
+
+        self.num_samples = 0
 
 
 
@@ -96,15 +97,22 @@ class Am_ui(QWidget):
 
 
         # STATS
-        self.stats = QLabel("# Samples: \nTime: 37")
-        self.stats.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)
+        stats_layout = QGridLayout()
+        self.stats_num_samples = QLabel("0")
+        self.stats_time = QLabel("0")
+        stats_layout.addWidget(QLabel("Samples: "), 1, 1)
+        stats_layout.addWidget(QLabel("Time: "), 2, 1)
+        stats_layout.addWidget(self.stats_num_samples, 1, 2)
+        stats_layout.addWidget(self.stats_time, 2, 2)
+        stats_layout.setColumnMinimumWidth(2, 120)
+        #self.stats.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)
 
 
         # ADD WIDGETS TO LAYOUT
 
         top_layout.addWidget(self.button_container, 1, 3, 2, 1)
 
-        top_layout.addWidget(self.stats, 3, 3)
+        top_layout.addLayout(stats_layout, 3, 3)
 
         top_layout.addWidget(self.plot_a1, 1, 1)
         top_layout.addWidget(self.plot_g1, 1, 2)
@@ -151,19 +159,17 @@ class Am_ui(QWidget):
         self.receiver_thread.started.connect(self.receiver.run_fake)
         self.receiver_thread.finished.connect(self.receiver_done)
 
-        self.receiver.sample_signal.connect(self.sample_slot)
+        self.receiver.timestamp_signal.connect(self.sample_slot)
+        self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
+        self.receiver.plot_a2_signal.connect(self.plot_a2.data_slot)
+        self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
+        self.receiver.plot_g2_signal.connect(self.plot_g2.data_slot)
+
+
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
 
-        self.plot_a1_signal.connect(self.plot_a1.data_slot)
-        self.plot_a2_signal.connect(self.plot_a2.data_slot)
-        self.plot_g1_signal.connect(self.plot_g1.data_slot)
-        self.plot_a2_signal.connect(self.plot_g2.data_slot)
 
-        self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_a2.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g2.clear_slot)
 
 
     def receiver_done(self):
@@ -174,24 +180,38 @@ class Am_ui(QWidget):
         self.buttons['settings'].setEnabled(True)
         self.buttons['test'].setEnabled(True)
 
-    def sample_slot(self, values):
 
-        timestamp = values[0]
-        a1 = values[2:5]
-        g1 = values[5:8]
-        a2 = values[8:11]
-        g2 = values[11:14]
+    @pyqtSlot()
+    def sample_slot(self, timestamp):
+    #def sample_slot(self):
+
+        #timestamp = values[0]
+        #a1 = values[2:5]
+        #g1 = values[5:8]
+        #a2 = values[8:11]
+        #g2 = values[11:14]
 
         self.data_time.append(timestamp)
-        self.data_accel1.append(a1)
-        self.data_gyro1.append(g1)
-        self.data_accel2.append(a2)
-        self.data_gyro2.append(g2)
+        #self.data_accel1.append(values[2:5]  )
+        #self.data_gyro1.append( values[5:8]  )
+        #self.data_accel2.append(values[8:11] )
+        #self.data_gyro2.append( values[11:14])
 
-        self.plot_a1_signal.emit(a1)
-        self.plot_a2_signal.emit(g1)
-        self.plot_g1_signal.emit(a2)
-        self.plot_g2_signal.emit(g2)
+
+        #self.plot_a1_signal.emit(self.data_accel1[-self.plot_a1.x_scale:])
+        #self.plot_a2_signal.emit(self.data_accel2[-self.plot_a2.x_scale:])
+        #self.plot_g1_signal.emit(self.data_gyro1[-self.plot_g1.x_scale:])
+        #self.plot_g2_signal.emit(self.data_gyro2[-self.plot_g2.x_scale:])
+
+
+
+        self.stats_time.setText('%.1f' % (timestamp))
+
+        self.num_samples += 1
+        self.stats_num_samples.setText(str(self.num_samples))
+
+        if (timestamp >= self.stop_recording_time):
+            self.stop_recording()
 
 
 
@@ -209,15 +229,18 @@ class Am_ui(QWidget):
 
         if (result == QMessageBox.Yes):
             self.stop_recording()
-            self.message_slot("waiting for receiver to finish")
-            self.receiver_thread.wait()
+            time.sleep(.2)  # let thread finish
             self.message_slot("exiting")
             self.close()
 
 
     def record_button_slot(self):
         if (self.recording):
-            self.stop_recording()
+            if (self.use_trigger):
+                self.stop_recording_time = self.data_time[-1] + (self.post_trigger_delay * 1000)
+            else:
+                self.stop_recording_time = self.data_time[-1]
+                #self.stop_recording()
         else:
             if (not self.data_saved):
                 result = (QMessageBox.question(self,
@@ -227,6 +250,8 @@ class Am_ui(QWidget):
                                                QMessageBox.No))
 
             if (self.data_saved or (result == QMessageBox.Yes)):
+                self.num_samples = 0
+                self.stop_recording_time = float("inf")
                 self.record()
 
 
@@ -274,7 +299,16 @@ class Am_ui(QWidget):
         self.buttons['settings'].setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.clear_plots_signal.emit()
+        self.data_time   = []
+        self.data_accel1 = []
+        self.data_accel2 = []
+        self.data_gyro1  = []
+        self.data_gyro2  = []
+
+        self.plot_a1_signal.emit([])
+        self.plot_a2_signal.emit([])
+        self.plot_g1_signal.emit([])
+        self.plot_g2_signal.emit([])
 
         self.receiver_thread.start()
 
