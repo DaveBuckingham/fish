@@ -72,21 +72,23 @@ class Am_rx(QObject):
         start_time = time.time() * 1000
 
         while (self.recording):
-            data = [(10*random.random() - 5) for i in xrange(13)] 
+            data = [(10*random.random() - 5) for i in xrange(14)] 
             timestamp = (time.time() * 1000) -  start_time
             #self.sample_signal.emit( data )
-
-            self.timestamp_signal.emit(timestamp)
-            self.plot_a1_signal.emit(data[2:5])
-            self.plot_g1_signal.emit(data[5:8])
-            self.plot_a2_signal.emit(data[8:11])
-            self.plot_g2_signal.emit(data[11:15])
 
             self.data['time'].append(timestamp)
             self.data['accel1'].append(data[2:5]  )
             self.data['gyro1'].append( data[5:8]  )
             self.data['accel2'].append(data[8:11] )
             self.data['gyro2'].append( data[11:14])
+
+            self.timestamp_signal.emit(timestamp)
+            self.plot_a1_signal.emit(data[2:5])
+            self.plot_g1_signal.emit(data[5:8])
+            self.plot_a2_signal.emit(data[8:11])
+            self.plot_g2_signal.emit(data[11:14])
+
+
 
             time.sleep(.005)
             #time.sleep(.01)

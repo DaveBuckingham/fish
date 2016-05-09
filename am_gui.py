@@ -181,7 +181,6 @@ class Am_ui(QWidget):
         self.buttons['test'].setEnabled(True)
 
 
-    @pyqtSlot()
     def sample_slot(self, timestamp):
     #def sample_slot(self):
 

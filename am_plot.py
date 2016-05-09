@@ -1,6 +1,7 @@
 
 import sys
 from PyQt4 import QtGui, QtCore
+from collections import deque
 
 
 class Communicate(QtCore.QObject):
@@ -14,7 +15,7 @@ class Am_plot(QtGui.QWidget):
         super(Am_plot, self).__init__()
         
         self.setMinimumSize(300, 100)
-        self.data = []
+        self.data = deque([])
         self.x_scale = 100
         self.y_scale = 10
 
@@ -28,7 +29,9 @@ class Am_plot(QtGui.QWidget):
 
 
     def data_slot(self, values):
-        self.data = values
+        self.data.append(values)
+        if (len(self.data) > self.x_scale):
+            self.data.popleft()
         self.repaint()
 
 
