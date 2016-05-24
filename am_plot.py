@@ -19,6 +19,7 @@ class Am_plot(QtGui.QWidget):
         self.x_scale = 300
         self.y_scale = 10
 
+	# DRAW RED, GREEN, AND BLUE LINES
         self.colors = [QtGui.QColor(220, 0, 0), \
                       QtGui.QColor(0, 200, 0), \
                       QtGui.QColor(30, 30, 255)]
@@ -26,11 +27,14 @@ class Am_plot(QtGui.QWidget):
         self.width = self.size().width()
         self.height = self.size().height()
 
+    # RESET GRAPH
     def clear_slot(self):
-        self.data = deque([])
+	# DEQUE ALLOWS FAST ADD OR REMOVE FROM EITHER END
+        self.data = deque([]) 
         self.repaint()
 
 
+    # RECEIVE A NEW DATA SAMPLE AND REPAINT GRAPH
     def data_slot(self, values, refresh=True):
         self.data.append(values)
         if (len(self.data) > self.x_scale):
@@ -39,6 +43,7 @@ class Am_plot(QtGui.QWidget):
             self.repaint()
 
 
+    # REPAINT THE GRAPH
     def paintEvent(self, e):
         qp = QtGui.QPainter()
         qp.begin(self)
@@ -49,7 +54,6 @@ class Am_plot(QtGui.QWidget):
         self.width = self.size().width()
         self.height = self.size().height()
 
-
         pen = QtGui.QPen(QtGui.QColor(20, 20, 20), 1, QtCore.Qt.SolidLine)
         qp.setPen(pen)
         qp.setBrush(QtGui.QColor(120,120,120))
@@ -57,12 +61,14 @@ class Am_plot(QtGui.QWidget):
         qp.setBrush(QtCore.Qt.NoBrush)
 
         if (len(self.data) > 0):
+	    # FOR EACH OF THREE DIMENSIONS
             for i in range(0, len(self.data[0])):
                 path = QtGui.QPainterPath()
                 path.moveTo(0, self.height/2)
                 qp.setPen(self.colors[i % len(self.colors)])
                 num_samples = min(len(self.data), self.x_scale + 1)
                 x = 0
+		# FOR EACH DATA SAMPLE
                 for j in range(-num_samples, 0):
                     path.lineTo(x, (self.height/2) - (self.data[j][i] * self.y_scale))
                     x += float(self.width) / self.x_scale

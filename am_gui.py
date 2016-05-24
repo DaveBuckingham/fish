@@ -15,39 +15,62 @@ import h5py
 
 class Am_ui(QWidget):
 
+    # DISPLAYED IN WINDOW HEADER AND SUCH
     APPLICATION_NAME = 'IMU Collect 0.01'
 
-    #plot_a1_signal = pyqtSignal(list)
-    #plot_a2_signal = pyqtSignal(list)
-    #plot_g1_signal = pyqtSignal(list)
-    #plot_g2_signal = pyqtSignal(list)
+    # SIGNAL TO RESETS ALL THE PLOTS
     clear_plots_signal = pyqtSignal()
     
-
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
 
+
+
+	########################
+        #       VARIABLES      #
+	########################
+
+	# HAS THE COLLECTED DATA BEEN SAVED TO FILE?
         self.data_saved = True
+
+	# CURRENTLY RECORDING DATA?
         self.recording = False
 
+	# IF FALSE, RECORD BUTTON TO START AND STOP RECORDING
+	# IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
         self.use_trigger = False
         self.pre_trigger_delay = 10
         self.post_trigger_delay = 10
 
+	# ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
 
+	# COLLECTED DATA.
+	# WILL CONTAIN 5 LISTS (ACCEL1, ACCEL2, GYRO1, GYRO2, TIME)
         self.data = {}
+
+	# TIMESTAMPS OF COLLECTED DATA.
+	# am_rx.py WILL PUT THE SAME DATA IN HERE AND IN self.data['time']
+        # KIND OF REDUNDANT, BUT THIS IS REALLY FOR THE PROGRAM TO KEEP TRACK OF
+	# TIME, E.G. FOR TRIGGERS, self.data IS STORING IMU DATA FOR SAVING.
         self.timestamps   = []
 
+	# NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
-
-
+	# HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
 
-        # BUTTONS
+
+
+	##################################################
+        #   CREATE GUI ELEMENTS AND ADD TO MAIN WINDOW   #
+	##################################################
         
+
+	# CREATE BUTTONS AND ADD TO BUTTON LAYOUT
+
         button_layout = QVBoxLayout()
         self.button_container = QWidget()
         self.button_container.setLayout(button_layout)
@@ -76,14 +99,10 @@ class Am_ui(QWidget):
         button_layout.addWidget(self.buttons['quit'])
 
 
-
-
-
-        # TEXT WINDOW
+        # TEXT DISPLAY
 
         self.text_window = QTextEdit()
         self.text_window.setReadOnly(True)
-        #metrics = QFontMetrics(self.text_window.font())
 
 
         # GRAPHS
@@ -94,7 +113,9 @@ class Am_ui(QWidget):
         self.plot_g2 = Am_plot()
 
 
-        # STATS
+        # STATUS INFO
+	# CURRENTLY THIS IS TEXT APPEARING THE LOWER RIGHT CORNER.
+
         stats_layout = QGridLayout()
         self.stats_num_samples = QLabel("0")
         self.stats_time = QLabel("0")
@@ -103,7 +124,6 @@ class Am_ui(QWidget):
         stats_layout.addWidget(self.stats_num_samples, 1, 2)
         stats_layout.addWidget(self.stats_time, 2, 2)
         stats_layout.setColumnMinimumWidth(2, 120)
-        #self.stats.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)
 
 
         # ADD WIDGETS TO LAYOUT
@@ -120,7 +140,8 @@ class Am_ui(QWidget):
         top_layout.addWidget(self.text_window, 3, 1, 1, 2)
         
 
-        # ADD LABELS
+        # GRAPH LABELS
+
         label = QtGui.QLabel("IMU 1")
         label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
         top_layout.addWidget(label, 0, 1)
@@ -138,20 +159,28 @@ class Am_ui(QWidget):
         top_layout.addWidget(label, 2, 0)
 
 
-        # TOP LEVEL
-
+        # ADD TOP LEVEL LAYOUT
         self.setLayout(top_layout)
+
+
+	# SET WINDOW TITLE
         self.setWindowTitle(Am_ui.APPLICATION_NAME) 
 
 
-        # RECEIVER THREAD
+
+	##################################################
+        #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
+	##################################################
 
         self.receiver_thread = QThread()
         self.receiver = Am_rx()
         self.receiver.moveToThread(self.receiver_thread)
 
 
-        # CONNECTIONS
+
+	########################
+        #    QT CONNECTIONS    #
+	########################
 
         self.clear_plots_signal.connect(self.plot_a1.clear_slot)
         self.clear_plots_signal.connect(self.plot_a2.clear_slot)
@@ -160,51 +189,28 @@ class Am_ui(QWidget):
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
+	# USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
         self.receiver_thread.started.connect(self.receiver.run_fake)
+
+	# COLLECT DATA FROM Am_rx() i.e. from arduino
         #self.receiver_thread.started.connect(self.receiver.run)
 
         self.receiver_thread.finished.connect(self.receiver_done)
 
-        self.receiver.timestamp_signal.connect(self.sample_slot)
+        self.receiver.timestamp_signal.connect(self.timestamp_slot)
         self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
         self.receiver.plot_a2_signal.connect(self.plot_a2.data_slot)
         self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
         self.receiver.plot_g2_signal.connect(self.plot_g2.data_slot)
-
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
 
 
 
-
-    def receiver_done(self):
-        self.recording = False
-        self.buttons['record'].setText('Record')
-        self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-        self.buttons['settings'].setEnabled(True)
-        self.buttons['test'].setEnabled(True)
-
-
-    def sample_slot(self, timestamp):
-
-        self.timestamps.append(timestamp)
-
-        self.stats_time.setText('%.1f' % (timestamp))
-
-        self.num_samples += 1
-        self.stats_num_samples.setText(str(self.num_samples))
-
-        if (timestamp >= self.stop_recording_time):
-            self.stop_recording()
-
-
-
 ############################################
 #              BUTTON SLOTS                #
 ############################################
-
 
     def quit_button_slot(self):
         result = (QMessageBox.question(self,
@@ -226,7 +232,6 @@ class Am_ui(QWidget):
                 self.stop_recording_time = self.timestamps[-1] + (self.post_trigger_delay * 1000)
             else:
                 self.stop_recording_time = self.timestamps[-1]
-                #self.stop_recording()
         else:
             if (not self.data_saved):
                 result = (QMessageBox.question(self,
@@ -267,8 +272,60 @@ class Am_ui(QWidget):
 
 
 
+############################################
+#               OTHER SLOTS                #
+############################################
+
+    # CALLED WHEN REVEIVER THREAD FINISHES
+    def receiver_done(self):
+        self.recording = False
+        self.buttons['record'].setText('Record')
+        self.buttons['record'].setToolTip('Begin recording samples')
+        self.buttons['save'].setEnabled(len(self.timestamps) > 0)
+        self.buttons['settings'].setEnabled(True)
+        self.buttons['test'].setEnabled(True)
 
 
+    # CALLED BY am_rx.py FOR EVERY SAMPLE
+    def timestamp_slot(self, timestamp):
+
+        self.timestamps.append(timestamp)
+
+        self.stats_time.setText('%.1f' % (timestamp))
+
+        self.num_samples += 1
+        self.stats_num_samples.setText(str(self.num_samples))
+
+        if (timestamp >= self.stop_recording_time):
+            self.stop_recording()
+
+
+    # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT
+    def error_slot(self, the_string):
+        self.message_slot(the_string, True)
+
+
+    # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
+    def message_slot(self, the_string, red=False):
+        self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
+        self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
+
+        if (red):
+            self.text_window.setTextColor(QtGui.QColor(255,0,0))
+        else:
+            self.text_window.setTextColor(QtGui.QColor(0,0,0))
+        self.text_window.insertPlainText(the_string)
+        sb = self.text_window.verticalScrollBar();
+        sb.setValue(sb.maximum());
+
+
+
+############################################
+#         OTHER FUNCTIONS (NOT SLOTS)      #
+############################################
+
+
+    # START RECORDING DATA
     def record(self):
         self.recording = True
         self.receiver.recording = True
@@ -285,42 +342,25 @@ class Am_ui(QWidget):
         self.buttons['settings'].setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.timestamps   = []
+        self.timestamps  = []
         self.data_accel1 = []
         self.data_accel2 = []
         self.data_gyro1  = []
         self.data_gyro2  = []
 
         self.clear_plots_signal.emit()
-        #self.plot_a1_signal.emit([])
-        #self.plot_a2_signal.emit([])
-        #self.plot_g1_signal.emit([])
-        #self.plot_g2_signal.emit([])
 
         self.receiver_thread.start()
 
+
+    # STOP RECORDING DATA
+    # THE QUIT BUTTON SLOT CALLS THIS FUNCTION
+    # THIS FUNCTION SETS A FLAG, CAUSING THE am_rx.py PROCESS TO HALT
+    # THAT WILL CAUSE THE receiver_done SLOT TO EXECUTE,
+    # WHICH WILL FINISH UP STOP RECORDING DUTIES.
     def stop_recording(self):
         self.data = self.receiver.data
         self.receiver.recording = False
-
-
-
-
-
-    def error_slot(self, the_string):
-        self.message_slot(the_string, True)
-
-    def message_slot(self, the_string, red=False):
-        self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
-        self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
-
-        if (red):
-            self.text_window.setTextColor(QtGui.QColor(255,0,0))
-        else:
-            self.text_window.setTextColor(QtGui.QColor(0,0,0))
-        self.text_window.insertPlainText(the_string)
-        sb = self.text_window.verticalScrollBar();
-        sb.setValue(sb.maximum());
 
                                           
 def main():
