@@ -190,10 +190,10 @@ class Am_ui(QWidget):
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
 	# USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
-        self.receiver_thread.started.connect(self.receiver.run_fake)
+        #self.receiver_thread.started.connect(self.receiver.run_fake)
 
 	# COLLECT DATA FROM Am_rx() i.e. from arduino
-        #self.receiver_thread.started.connect(self.receiver.run)
+        self.receiver_thread.started.connect(self.receiver.run)
 
         self.receiver_thread.finished.connect(self.receiver_done)
 

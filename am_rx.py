@@ -63,7 +63,7 @@ class Am_rx(QObject):
 
     def cleanup(self):
         self.message_signal.emit("closing serial connection")
-        connection.close()
+        self.connection.close()
 
 
     @pyqtSlot()
@@ -126,17 +126,18 @@ class Am_rx(QObject):
         start_time = time.time() * 1000
 
 
+        print "recordling"
         while (self.recording):
 
             # WAIT TWO-BYTE SENTINEL, THEN READ DATA
-            flag = ord(connection.read(1))
+            flag = ord(self.connection.read(1))
             while (flag != Am_rx.SENTINEL_1):
-                flag = ord(connection.read(1))
+                flag = ord(self.connection.read(1))
 
-            if (ord(connection.read(1)) == Am_rx.SENTINEL_2):
+            if (ord(self.connection.read(1)) == Am_rx.SENTINEL_2):
                 
                 # READ FROM IMU SENSORS
-                data = connection.read(30)
+                data = self.connection.read(30)
                 (id, enc, ax1, ay1, az1, gx1, gy1, gz1, ax2, ay2, az2, gx2, gy2, gz2) = struct.unpack('!Lhhhhhhhhhhhhh', data)
                 timestamp = (time.time() * 1000) - start_time
 
