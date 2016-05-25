@@ -1,0 +1,45 @@
+I tried to use this approach to qthreads:
+https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
+
+This is my first forray into pyqt and multi-threading so signals and slots are
+kind of wierd, please give any advice. -db
+
+
+BUGS:
+
+
+TODO:
+tools to adjust plot ranges
+implement trigger
+tests: arduino com, imus com, imus self-test
+replace sentinels (longer?), or generally better system for com with arduino?
+get rid of settings winow, move contents to main window
+
+
+
+FILES:
+
+am_gui.py
+main program.
+includes am_plot.py, am_rx.py, am_settings.py
+
+am_plot.py
+module for plotting data.
+i.e. one of the 4 plot windows.
+
+am_rx.py
+module for com with arduino.
+
+am_settings.py
+module for program settings.
+currently, all of this is in accessed through the settings window.
+i plan to get rid of that so this is accessed through the main window.
+
+am_tx
+directory containing my arduino code and the timer library it uses.
+
+fish_rx.py
+not part of gui main program.
+this was the first program i wrote for reading data from the arduino.
+writes plain text to stdout.
+not used by gui.
