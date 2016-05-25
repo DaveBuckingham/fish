@@ -126,7 +126,7 @@ class Am_rx(QObject):
         start_time = time.time() * 1000
 
 
-        print "recordling"
+        print "recording"
         while (self.recording):
 
             # WAIT TWO-BYTE SENTINEL, THEN READ DATA

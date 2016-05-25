@@ -342,11 +342,11 @@ class Am_ui(QWidget):
         self.buttons['settings'].setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.timestamps  = []
-        self.data_accel1 = []
-        self.data_accel2 = []
-        self.data_gyro1  = []
-        self.data_gyro2  = []
+        self.['time']  = []
+        self.data['accel1'] = []
+        self.data['accel2'] = []
+        self.data['gyro1']  = []
+        self.data['gyro2']  = []
 
         self.clear_plots_signal.emit()
 
