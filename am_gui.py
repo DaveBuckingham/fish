@@ -48,12 +48,12 @@ class Am_ui(QWidget):
 
 	# COLLECTED DATA.
 	# WILL CONTAIN 5 LISTS (ACCEL1, ACCEL2, GYRO1, GYRO2, TIME)
-        self.data = {}
+        #self.data = {}
 
 	# TIMESTAMPS OF COLLECTED DATA.
-	# am_rx.py WILL PUT THE SAME DATA IN HERE AND IN self.data['time']
+	# am_rx.py WILL PUT THE SAME DATA IN HERE AND IN receiver.data['time']
         # KIND OF REDUNDANT, BUT THIS IS REALLY FOR THE PROGRAM TO KEEP TRACK OF
-	# TIME, E.G. FOR TRIGGERS, self.data IS STORING IMU DATA FOR SAVING.
+	# TIME, E.G. FOR TRIGGERS, receiver.data IS STORING IMU DATA FOR SAVING.
         self.timestamps   = []
 
 	# NUMBER OF SAMPLES COLLECTED
@@ -90,16 +90,12 @@ class Am_ui(QWidget):
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
-        self.buttons['settings'] = QPushButton('Settings')
-        self.buttons['settings'].clicked.connect(self.settings_button_slot)
-        button_layout.addWidget(self.buttons['settings'])
-
         self.buttons['quit'] = QPushButton('Quit')
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
         button_layout.addWidget(self.buttons['quit'])
 
 
-        # TEXT DISPLAY
+        # TEXT OUTPUT WINDOW
 
         self.text_window = QTextEdit()
         self.text_window.setReadOnly(True)
@@ -113,24 +109,22 @@ class Am_ui(QWidget):
         self.plot_g2 = Am_plot()
 
 
+	# SETTINGS
+
+	self.settings = Am_settings(self)
+
+
         # STATUS INFO
-	# CURRENTLY THIS IS TEXT APPEARING THE LOWER RIGHT CORNER.
 
         stats_layout = QGridLayout()
-        self.stats_num_samples = QLabel("0")
-        self.stats_time = QLabel("0")
-        stats_layout.addWidget(QLabel("Samples: "), 1, 1)
-        stats_layout.addWidget(QLabel("Time: "), 2, 1)
+        self.stats_num_samples = QLabel("Samples:")
+        self.stats_time = QLabel("Time:")
         stats_layout.addWidget(self.stats_num_samples, 1, 2)
-        stats_layout.addWidget(self.stats_time, 2, 2)
+        stats_layout.addWidget(self.stats_time, 1, 4)
         stats_layout.setColumnMinimumWidth(2, 120)
 
 
         # ADD WIDGETS TO LAYOUT
-
-        top_layout.addWidget(self.button_container, 1, 3, 2, 1)
-
-        top_layout.addLayout(stats_layout, 3, 3)
 
         top_layout.addWidget(self.plot_a1, 1, 1)
         top_layout.addWidget(self.plot_g1, 1, 2)
@@ -138,7 +132,11 @@ class Am_ui(QWidget):
         top_layout.addWidget(self.plot_g2, 2, 2)
 
         top_layout.addWidget(self.text_window, 3, 1, 1, 2)
-        
+        top_layout.addLayout(stats_layout, 4, 1, 1, 2)
+
+        top_layout.addWidget(self.button_container, 1, 3, 2, 1)
+        top_layout.addWidget(self.settings, 3, 3)
+
 
         # GRAPH LABELS
 
@@ -190,10 +188,10 @@ class Am_ui(QWidget):
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
 	# USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
-        #self.receiver_thread.started.connect(self.receiver.run_fake)
+        self.receiver_thread.started.connect(self.receiver.run_fake)
 
 	# COLLECT DATA FROM Am_rx() i.e. from arduino
-        self.receiver_thread.started.connect(self.receiver.run)
+        #self.receiver_thread.started.connect(self.receiver.run)
 
         self.receiver_thread.finished.connect(self.receiver_done)
 
@@ -205,6 +203,8 @@ class Am_ui(QWidget):
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
+
+
 
 
 
@@ -230,6 +230,7 @@ class Am_ui(QWidget):
         if (self.recording):
             if (self.use_trigger):
                 self.stop_recording_time = self.timestamps[-1] + (self.post_trigger_delay * 1000)
+		self.message_slot("trigger detected...will stop collecting data after post trigger delay")
             else:
                 self.stop_recording_time = self.timestamps[-1]
         else:
@@ -254,21 +255,17 @@ class Am_ui(QWidget):
 
             datafile = h5py.File(str(filename), 'w')
             save_data = datafile.create_group("data")
-            save_data.create_dataset('t',      data=self.data['time'])
-            save_data.create_dataset('Accel',  data=self.data['accel1'])
-            save_data.create_dataset('Accel2', data=self.data['accel2'])
-            save_data.create_dataset('Gyro',   data=self.data['gyro1'])
-            save_data.create_dataset('Gyro2',  data=self.data['gyro2'])
+            save_data.create_dataset('t',      data=self.receiver.data['time'])
+            save_data.create_dataset('Accel',  data=self.receiver.data['accel1'])
+            save_data.create_dataset('Accel2', data=self.receiver.data['accel2'])
+            save_data.create_dataset('Gyro',   data=self.receiver.data['gyro1'])
+            save_data.create_dataset('Gyro2',  data=self.receiver.data['gyro2'])
             datafile.close()
 
             self.message_slot("data saved to  " + filename)
             self.data_saved = True
             #self.buttons['save'].setEnabled(False)
 
-
-    def settings_button_slot(self):
-        settings = Am_settings(self)
-        settings.show()
 
 
 
@@ -282,7 +279,8 @@ class Am_ui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-        self.buttons['settings'].setEnabled(True)
+        #self.buttons['settings'].setEnabled(True)
+	self.settings.setEnabled(True)
         self.buttons['test'].setEnabled(True)
 
 
@@ -291,10 +289,10 @@ class Am_ui(QWidget):
 
         self.timestamps.append(timestamp)
 
-        self.stats_time.setText('%.1f' % (timestamp))
+        self.stats_time.setText('Time: %.1f' % (timestamp))
 
         self.num_samples += 1
-        self.stats_num_samples.setText(str(self.num_samples))
+        self.stats_num_samples.setText('Samples: %d' % self.num_samples)
 
         if (timestamp >= self.stop_recording_time):
             self.stop_recording()
@@ -339,14 +337,15 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        self.buttons['settings'].setEnabled(False)
+        #self.buttons['settings'].setEnabled(False)
+	self.settings.setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.['time']  = []
-        self.data['accel1'] = []
-        self.data['accel2'] = []
-        self.data['gyro1']  = []
-        self.data['gyro2']  = []
+        #self.data['time']  = []
+        #self.data['accel1'] = []
+        #self.data['accel2'] = []
+        #self.data['gyro1']  = []
+        #self.data['gyro2']  = []
 
         self.clear_plots_signal.emit()
 
@@ -359,7 +358,7 @@ class Am_ui(QWidget):
     # THAT WILL CAUSE THE receiver_done SLOT TO EXECUTE,
     # WHICH WILL FINISH UP STOP RECORDING DUTIES.
     def stop_recording(self):
-        self.data = self.receiver.data
+        #self.data = self.receiver.data
         self.receiver.recording = False
 
                                           

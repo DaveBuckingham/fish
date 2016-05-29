@@ -9,10 +9,17 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from am_gui import Am_ui
 
-class Am_settings(QDialog):
+#class Am_settings(QDialog):
+class Am_settings(QWidget):
 
 
     def __init__(self, parent=None):
+        
+	self.PRE_TRIGGER_MIN = 1
+	self.PRE_TRIGGER_MAX = 60
+	self.POST_TRIGGER_MIN = 1
+	self.POST_TRIGGER_MAX = 60
+
         super(Am_settings, self).__init__(parent)
 
         self.parent = parent
@@ -34,8 +41,8 @@ class Am_settings(QDialog):
         self.slider_pre_trigger.setEnabled(self.parent.use_trigger)
         self.slider_pre_trigger.setFocusPolicy(Qt.NoFocus)
         self.slider_pre_trigger.valueChanged[int].connect(self.change_pre_trigger_slot)
-        self.slider_pre_trigger.setMinimum(1)
-        self.slider_pre_trigger.setMaximum(180)
+        self.slider_pre_trigger.setMinimum(self.PRE_TRIGGER_MIN)
+        self.slider_pre_trigger.setMaximum(self.PRE_TRIGGER_MAX)
 
 
         self.slider_post_trigger = QSlider(Qt.Horizontal, self)
@@ -43,8 +50,8 @@ class Am_settings(QDialog):
         self.slider_post_trigger.setEnabled(self.parent.use_trigger)
         self.slider_post_trigger.setFocusPolicy(Qt.NoFocus)
         self.slider_post_trigger.valueChanged[int].connect(self.change_post_trigger_slot)
-        self.slider_post_trigger.setMinimum(1)
-        self.slider_post_trigger.setMaximum(180)
+        self.slider_post_trigger.setMinimum(self.POST_TRIGGER_MIN)
+        self.slider_post_trigger.setMaximum(self.POST_TRIGGER_MAX)
 
 
         #self.cb.setStyle(QStyleFactory.create("Cleanlooks"))

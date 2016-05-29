@@ -11,9 +11,10 @@ BUGS:
 TODO:
 tools to adjust plot ranges
 implement trigger
+    data stored in deque, size constrained by global variable or, if trigger, by trigger delays
 tests: arduino com, imus com, imus self-test
 replace sentinels (longer?), or generally better system for com with arduino?
-get rid of settings winow, move contents to main window
+move all plots and their labels to a separate widget
 
 
 
