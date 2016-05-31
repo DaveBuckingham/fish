@@ -75,9 +75,14 @@ class Am_settings(QWidget):
 
 
     def toggle_trigger(self, state):
-        self.parent.use_trigger = not self.parent.use_trigger
-        self.slider_pre_trigger.setEnabled(self.parent.use_trigger)
-        self.slider_post_trigger.setEnabled(self.parent.use_trigger)
+	if (state == Qt.Checked):
+	    self.slider_pre_trigger.setEnabled(True)
+	    self.slider_post_trigger.setEnabled(True)
+	    self.parent.use_trigger = True
+	else:
+	    self.slider_pre_trigger.setEnabled(False)
+	    self.slider_post_trigger.setEnabled(False)
+	    self.parent.use_trigger = False
 
           
 

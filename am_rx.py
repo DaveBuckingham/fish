@@ -6,6 +6,7 @@ import time
 import serial
 import struct
 import random
+import collections
 from PyQt4.QtCore import *
 
 class Am_rx(QObject):
@@ -27,13 +28,19 @@ class Am_rx(QObject):
     plot_g1_signal = pyqtSignal(list, bool)
     plot_g2_signal = pyqtSignal(list, bool)
 
+
     def __init__(self, parent = None):
         super(Am_rx, self).__init__(parent)
 
         self.recording = False
 
-        self.data = {'time':[], 'accel1':[], 'accel2':[], 'gyro1':[], 'gyro2':[]}
-        self.num_samples = 0
+        self.data = []
+        self.end_timestamp = 'inf'
+
+        self.use_trigger
+        self.pre_trigger
+        self.post_trigger
+
 
 
     def calculate_accel_ft(self, a_test):
@@ -66,6 +73,8 @@ class Am_rx(QObject):
         self.connection.close()
 
 
+
+    # GENERATE RANDOM DATA, FOR TESTING WITHOUT ARDUINO
     @pyqtSlot()
     def run_fake(self):
         self.message_signal.emit("fake connection established")
@@ -73,26 +82,49 @@ class Am_rx(QObject):
         self.message_signal.emit("begin recording data")
         start_time = time.time() * 1000
 
-        while (self.recording):
-            data = [(10*random.random() - 5) for i in xrange(14)] 
+
+        sample_index = 0
+        self.data = []
+        timestamp = 0
+        earliest_sample = 0
+
+        while (timestamp < self.end_time):
+            received = [(10*random.random() - 5) for i in xrange(14)] 
             timestamp = (time.time() * 1000) -  start_time
 
-            self.data['time'].append(timestamp)
-            self.data['accel1'].append(data[2:5]  )
-            self.data['gyro1'].append( data[5:8]  )
-            self.data['accel2'].append(data[8:11] )
-            self.data['gyro2'].append( data[11:14])
+            entry = {}
+            entry['time'] = timestamp
+            entry['accel1'] = received[2:5]
+            entry['gyro1'] = received[5:8]
+            entry['accel2'] = received[8:11]
+            entry['gyro2'] = received[11:14]
 
-            refresh = (self.num_samples % Am_rx.PLOT_REFRESH_RATE) == 0
+        if (not self.use_trigger):
+            self.data.append(entry)
+        else:
+            if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+                self.data.insert(sample_index, entry)
+            else:
+                if (sample_index == len(self.data)):
+                    sample_index = 0
+                self.data[sample_index] = entry
+            sample_index += 1
+            if (sample_index < len(self.data)):
+                earliest_sample = self.data[sample_index]['time']
+
+        refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
             self.timestamp_signal.emit(timestamp)
-            self.plot_a1_signal.emit(data[2:5], refresh)
-            self.plot_g1_signal.emit(data[5:8], refresh)
-            self.plot_a2_signal.emit(data[8:11], refresh)
-            self.plot_g2_signal.emit(data[11:14], refresh)
-
-            self.num_samples += 1
+            self.plot_a1_signal.emit(received[2:5], refresh)
+            self.plot_g1_signal.emit(received[5:8], refresh)
+            self.plot_a2_signal.emit(received[8:11], refresh)
+            self.plot_g2_signal.emit(received[11:14], refresh)
 
             time.sleep(.005)
+
+
+        # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
+        if (not self.use_trigger):
+            self.data = self.data[sample_index:] + self.data[:sample_index]
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -122,8 +154,12 @@ class Am_rx(QObject):
         self.connection.read(1000)
         self.message_signal.emit("begin recording data")
 
+
         # RESET TIMER
         start_time = time.time() * 1000
+
+        sample_index = 0
+        self.data = []
 
 
         print "recording"
@@ -137,8 +173,8 @@ class Am_rx(QObject):
             if (ord(self.connection.read(1)) == Am_rx.SENTINEL_2):
                 
                 # READ FROM IMU SENSORS
-                data = self.connection.read(30)
-                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, ax2, ay2, az2, gx2, gy2, gz2) = struct.unpack('!Lhhhhhhhhhhhhh', data)
+                received = self.connection.read(30)
+                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, ax2, ay2, az2, gx2, gy2, gz2) = struct.unpack('!Lhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
 
                 # CONVERT
@@ -148,13 +184,32 @@ class Am_rx(QObject):
 
                 print enc
 
-                self.data['time'].append(timestamp)
-                self.data['accel1'].append( [ax1, ay1, az1])
-                self.data['gyro1'].append(  [gx1, gy1, gz1])
-                self.data['accel2'].append( [ax2, ay2, az2])
-                self.data['gyro2'].append(  [gx2, gy2, gz2])
+                entry = {}
+                entry['time'] = timestamp
+                entry['accel1'] = [ax1, ay1, az1]
+                entry['gyro1']  = [gx1, gy1, gz1]
+                entry['accel2'] = [ax2, ay2, az2]
+                entry['gyro2']  = [gx2, gy2, gz2]
 
-                refresh = (self.num_samples % Am_rx.PLOT_REFRESH_RATE) == 0
+
+                # MAYBE THERE'S A BETTER WAY TO DO THIS?
+                if (not self.use_trigger):
+                    self.data.append(entry)
+                else:
+                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+                        self.data.insert(sample_index, entry)
+                    else:
+                        if (sample_index == len(self.data)):
+                            sample_index = 0
+                        self.data[sample_index] = entry
+                    sample_index += 1
+                    if (sample_index < len(self.data)):
+                        earliest_sample = self.data[sample_index]['time']
+
+
+
+
+                refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
                 self.timestamp_signal.emit(timestamp)
                 self.plot_a1_signal.emit([ax1, ay1, az1], refresh)
                 self.plot_g1_signal.emit([gx1, gy1, gz1], refresh)
@@ -162,13 +217,9 @@ class Am_rx(QObject):
                 self.plot_g2_signal.emit([gx2, gy2, gz2], refresh)
 
 
-            # UPDATE
-            self.num_samples += 1
+	# UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
+        self.data = self.data[sample_index:] + self.data[:sample_index]
 
-
-
-
-        self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
 
 

@@ -6,6 +6,7 @@ kind of wierd, please give any advice. -db
 
 
 BUGS:
+text window breaks when it gets too full
 
 
 TODO:
@@ -33,8 +34,6 @@ module for com with arduino.
 
 am_settings.py
 module for program settings.
-currently, all of this is in accessed through the settings window.
-i plan to get rid of that so this is accessed through the main window.
 
 am_tx
 directory containing my arduino code and the timer library it uses.

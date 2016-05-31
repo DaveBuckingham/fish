@@ -20,7 +20,7 @@ class Am_ui(QWidget):
 
     # SIGNAL TO RESETS ALL THE PLOTS
     clear_plots_signal = pyqtSignal()
-    
+
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
@@ -77,6 +77,7 @@ class Am_ui(QWidget):
 
         self.buttons['test'] = QPushButton('Test')
         self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
+        self.buttons['test'].clicked.connect(self.test_button_slot)
         button_layout.addWidget(self.buttons['test'])
 
         self.buttons['record'] = QPushButton('Record')
@@ -208,9 +209,24 @@ class Am_ui(QWidget):
 
 
 
+
 ############################################
 #              BUTTON SLOTS                #
 ############################################
+
+
+    def test_button_slot(self):
+        self.message_slot("arduino communication test:")
+        self.message_slot("test not implemented")
+        self.message_slot("imu1 communication test:")
+        self.message_slot("test not implemented")
+        self.message_slot("imu2 communication test:")
+        self.message_slot("test not implemented")
+        self.message_slot("imu1 self test:")
+        self.message_slot("test not implemented")
+        self.message_slot("imu2 self test:")
+        self.message_slot("test not implemented")
+        self.test_signal.emit("awesome")
 
     def quit_button_slot(self):
         result = (QMessageBox.question(self,
@@ -226,6 +242,7 @@ class Am_ui(QWidget):
             self.close()
 
 
+    # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
     def record_button_slot(self):
         if (self.recording):
             if (self.use_trigger):
@@ -255,11 +272,11 @@ class Am_ui(QWidget):
 
             datafile = h5py.File(str(filename), 'w')
             save_data = datafile.create_group("data")
-            save_data.create_dataset('t',      data=self.receiver.data['time'])
-            save_data.create_dataset('Accel',  data=self.receiver.data['accel1'])
-            save_data.create_dataset('Accel2', data=self.receiver.data['accel2'])
-            save_data.create_dataset('Gyro',   data=self.receiver.data['gyro1'])
-            save_data.create_dataset('Gyro2',  data=self.receiver.data['gyro2'])
+            save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
+            save_data.create_dataset('Accel',  data=[x['accel1'] for x in self.receiver.data])
+            save_data.create_dataset('Accel2', data=[x['accel2'] for x in self.receiver.data])
+            save_data.create_dataset('Gyro',   data=[x['gyro1']  for x in self.receiver.data])
+            save_data.create_dataset('Gyro2',  data=[x['gyro2']  for x in self.receiver.data])
             datafile.close()
 
             self.message_slot("data saved to  " + filename)
@@ -279,7 +296,6 @@ class Am_ui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-        #self.buttons['settings'].setEnabled(True)
 	self.settings.setEnabled(True)
         self.buttons['test'].setEnabled(True)
 
@@ -337,18 +353,14 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        #self.buttons['settings'].setEnabled(False)
-	self.settings.setEnabled(False)
+        self.settings.setEnabled(False)
         self.buttons['test'].setEnabled(False)
-
-        #self.data['time']  = []
-        #self.data['accel1'] = []
-        #self.data['accel2'] = []
-        #self.data['gyro1']  = []
-        #self.data['gyro2']  = []
 
         self.clear_plots_signal.emit()
 
+        receiver.use_trigger = self.use_trigger
+        receiver.post_trigger = self.post_trigger_delay * 1000
+        receiver.pre_trigger = self.pre_trigger_delay * 1000
         self.receiver_thread.start()
 
 
@@ -358,7 +370,6 @@ class Am_ui(QWidget):
     # THAT WILL CAUSE THE receiver_done SLOT TO EXECUTE,
     # WHICH WILL FINISH UP STOP RECORDING DUTIES.
     def stop_recording(self):
-        #self.data = self.receiver.data
         self.receiver.recording = False
 
                                           
