@@ -358,9 +358,9 @@ class Am_ui(QWidget):
 
         self.clear_plots_signal.emit()
 
-        receiver.use_trigger = self.use_trigger
-        receiver.post_trigger = self.post_trigger_delay * 1000
-        receiver.pre_trigger = self.pre_trigger_delay * 1000
+        #receiver.use_trigger = self.use_trigger
+        #receiver.post_trigger = self.post_trigger_delay * 1000
+        #receiver.pre_trigger = self.pre_trigger_delay * 1000
         self.receiver_thread.start()
 
 

@@ -1,21 +1,19 @@
 I tried to use this approach to qthreads:
 https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
 
-This is my first forray into pyqt and multi-threading so signals and slots are
-kind of wierd, please give any advice. -db
-
 
 BUGS:
 text window breaks when it gets too full
 
 
 TODO:
-tools to adjust plot ranges
-implement trigger
-    data stored in deque, size constrained by global variable or, if trigger, by trigger delays
+plot rangest adjustable
+    y adjusts automatically?
+implement pre-trigger delay
 tests: arduino com, imus com, imus self-test
 replace sentinels (longer?), or generally better system for com with arduino?
 move all plots and their labels to a separate widget
+    what else can we move out of am_gui?
 
 
 
@@ -39,7 +37,6 @@ am_tx
 directory containing my arduino code and the timer library it uses.
 
 fish_rx.py
-not part of gui main program.
 this was the first program i wrote for reading data from the arduino.
 writes plain text to stdout.
 not used by gui.

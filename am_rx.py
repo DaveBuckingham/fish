@@ -6,7 +6,6 @@ import time
 import serial
 import struct
 import random
-import collections
 from PyQt4.QtCore import *
 
 class Am_rx(QObject):
@@ -37,9 +36,9 @@ class Am_rx(QObject):
         self.data = []
         self.end_timestamp = 'inf'
 
-        self.use_trigger
-        self.pre_trigger
-        self.post_trigger
+        #self.use_trigger
+        #self.pre_trigger
+        #self.post_trigger
 
 
 
@@ -86,9 +85,10 @@ class Am_rx(QObject):
         sample_index = 0
         self.data = []
         timestamp = 0
-        earliest_sample = 0
+        #earliest_sample = 0
 
-        while (timestamp < self.end_time):
+        #while (timestamp < self.end_time):
+        while (self.recording):
             received = [(10*random.random() - 5) for i in xrange(14)] 
             timestamp = (time.time() * 1000) -  start_time
 
@@ -99,20 +99,26 @@ class Am_rx(QObject):
             entry['accel2'] = received[8:11]
             entry['gyro2'] = received[11:14]
 
-        if (not self.use_trigger):
-            self.data.append(entry)
-        else:
-            if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-                self.data.insert(sample_index, entry)
-            else:
-                if (sample_index == len(self.data)):
-                    sample_index = 0
-                self.data[sample_index] = entry
-            sample_index += 1
-            if (sample_index < len(self.data)):
-                earliest_sample = self.data[sample_index]['time']
 
-        refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
+            self.data.append(entry)
+            sample_index += 1
+
+
+        # PRE-TRIGGER DELAY DOESN'T WORK YET
+#        if (not self.use_trigger):
+#            self.data.append(entry)
+#        else:
+#            if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+#                self.data.insert(sample_index, entry)
+#            else:
+#                if (sample_index == len(self.data)):
+#                    sample_index = 0
+#                self.data[sample_index] = entry
+#            sample_index += 1
+#            if (sample_index < len(self.data)):
+#                earliest_sample = self.data[sample_index]['time']
+
+            refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
             self.timestamp_signal.emit(timestamp)
             self.plot_a1_signal.emit(received[2:5], refresh)
             self.plot_g1_signal.emit(received[5:8], refresh)
@@ -122,9 +128,9 @@ class Am_rx(QObject):
             time.sleep(.005)
 
 
-        # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
-        if (not self.use_trigger):
-            self.data = self.data[sample_index:] + self.data[:sample_index]
+            # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
+#            if (not self.use_trigger):
+#                self.data = self.data[sample_index:] + self.data[:sample_index]
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -182,6 +188,7 @@ class Am_rx(QObject):
                 (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
                 enc *= 0.3515625  # 360/1024
 
+                # TO PIPE TO FILE
                 print enc
 
                 entry = {}
@@ -191,21 +198,22 @@ class Am_rx(QObject):
                 entry['accel2'] = [ax2, ay2, az2]
                 entry['gyro2']  = [gx2, gy2, gz2]
 
+                self.data.append(entry)
+                sample_index += 1
 
-                # MAYBE THERE'S A BETTER WAY TO DO THIS?
-                if (not self.use_trigger):
-                    self.data.append(entry)
-                else:
-                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-                        self.data.insert(sample_index, entry)
-                    else:
-                        if (sample_index == len(self.data)):
-                            sample_index = 0
-                        self.data[sample_index] = entry
-                    sample_index += 1
-                    if (sample_index < len(self.data)):
-                        earliest_sample = self.data[sample_index]['time']
-
+                # PRE-TRIGGER DELAY DOESN'T WORK YET
+#                if (not self.use_trigger):
+#                    self.data.append(entry)
+#                else:
+#                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+#                        self.data.insert(sample_index, entry)
+#                    else:
+#                        if (sample_index == len(self.data)):
+#                            sample_index = 0
+#                        self.data[sample_index] = entry
+#                    sample_index += 1
+#                    if (sample_index < len(self.data)):
+#                        earliest_sample = self.data[sample_index]['time']
 
 
 
