@@ -4,9 +4,8 @@ from PyQt4 import QtGui, QtCore
 from collections import deque
 
 
-class Communicate(QtCore.QObject):
-    
-    updateBW = QtCore.pyqtSignal(int)
+#class Communicate(QtCore.QObject):
+#    updateBW = QtCore.pyqtSignal(int)
 
 
 class Am_plot(QtGui.QWidget):

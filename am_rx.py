@@ -15,17 +15,18 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
-    PLOT_REFRESH_RATE          = 5
+    #PLOT_REFRESH_RATE          = 5
+    PLOT_REFRESH_RATE          = 40      # dividable by 4
 
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
 
     timestamp_signal = pyqtSignal(float)
-    plot_a1_signal = pyqtSignal(list, bool)
-    plot_a2_signal = pyqtSignal(list, bool)
-    plot_g1_signal = pyqtSignal(list, bool)
-    plot_g2_signal = pyqtSignal(list, bool)
+    plot_a1_signal = pyqtSignal(float, list, bool)
+    plot_a2_signal = pyqtSignal(float, list, bool)
+    plot_g1_signal = pyqtSignal(float, list, bool)
+    plot_g2_signal = pyqtSignal(float, list, bool)
 
 
     def __init__(self, parent = None):
@@ -118,12 +119,13 @@ class Am_rx(QObject):
 #            if (sample_index < len(self.data)):
 #                earliest_sample = self.data[sample_index]['time']
 
-            refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
             self.timestamp_signal.emit(timestamp)
-            self.plot_a1_signal.emit(received[2:5], refresh)
-            self.plot_g1_signal.emit(received[5:8], refresh)
-            self.plot_a2_signal.emit(received[8:11], refresh)
-            self.plot_g2_signal.emit(received[11:14], refresh)
+
+            count = sample_index % Am_rx.PLOT_REFRESH_RATE
+            self.plot_a1_signal.emit(timestamp, received[2:5],   count == 0)
+            self.plot_a2_signal.emit(timestamp, received[8:11],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+            self.plot_g1_signal.emit(timestamp, received[5:8],   count == Am_rx.PLOT_REFRESH_RATE * .5)
+            self.plot_g2_signal.emit(timestamp, received[11:14], count == Am_rx.PLOT_REFRESH_RATE * .75)
 
             time.sleep(.005)
 
@@ -217,12 +219,15 @@ class Am_rx(QObject):
 
 
 
-                refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
                 self.timestamp_signal.emit(timestamp)
-                self.plot_a1_signal.emit([ax1, ay1, az1], refresh)
-                self.plot_g1_signal.emit([gx1, gy1, gz1], refresh)
-                self.plot_a2_signal.emit([ax2, ay2, az2], refresh)
-                self.plot_g2_signal.emit([gx2, gy2, gz2], refresh)
+
+                #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
+
+                count = sample_index % Am_rx.PLOT_REFRESH_RATE
+                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
+                self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+                self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
 
 	# UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED

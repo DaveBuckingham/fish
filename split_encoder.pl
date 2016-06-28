@@ -2,15 +2,16 @@
 use warnings;
 use strict;
 
+my $skip = <STDIN>;
 
 my $file_count  = 0;
-open(my $fh, '>', 'empty');
+open(my $fh, '>', 'encoder_calib.dat');
 
 while (<STDIN>) {
     if ($_ =~ 'recording') {
         close $fh;
-        my $filename = 'encoder_' . $file_count . '.dat';
         $file_count++;
+        my $filename = 'encoder_' . $file_count . '.dat';
         open($fh, '>', $filename);
     }
     else {

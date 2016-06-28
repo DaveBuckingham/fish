@@ -4,13 +4,14 @@ https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-
 
 BUGS:
 text window breaks when it gets too full
+seems like data collection warmup delay only works on first collection
 
 
 TODO:
 plot rangest adjustable
     y adjusts automatically?
 implement pre-trigger delay
-tests: arduino com, imus com, imus self-test
+tests: arduino com, imus com, imus self-test, magnetometer
 replace sentinels (longer?), or generally better system for com with arduino?
 move all plots and their labels to a separate widget
     what else can we move out of am_gui?

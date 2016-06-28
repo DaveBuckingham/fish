@@ -6,7 +6,9 @@ import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from am_rx import *
-from am_plot import *
+#from am_plot import *
+#from am_mpl import *
+from am_pyqtgraph import *
 from am_settings import *
 from collections import namedtuple
 import time
@@ -109,6 +111,11 @@ class Am_ui(QWidget):
         self.plot_g1 = Am_plot()
         self.plot_g2 = Am_plot()
 
+        #self.plot_a1 = Am_mpl()
+        #self.plot_a2 = Am_mpl()
+        #self.plot_g1 = Am_mpl()
+        #self.plot_g2 = Am_mpl()
+
 
 	# SETTINGS
 
@@ -167,9 +174,9 @@ class Am_ui(QWidget):
 
 
 
-	##################################################
+        ##################################################
         #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
-	##################################################
+        ##################################################
 
         self.receiver_thread = QThread()
         self.receiver = Am_rx()
@@ -177,9 +184,9 @@ class Am_ui(QWidget):
 
 
 
-	########################
+        ########################
         #    QT CONNECTIONS    #
-	########################
+        ########################
 
         self.clear_plots_signal.connect(self.plot_a1.clear_slot)
         self.clear_plots_signal.connect(self.plot_a2.clear_slot)
@@ -188,10 +195,10 @@ class Am_ui(QWidget):
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
-	# USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
+        # USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
         self.receiver_thread.started.connect(self.receiver.run_fake)
 
-	# COLLECT DATA FROM Am_rx() i.e. from arduino
+        # COLLECT DATA FROM Am_rx() i.e. from arduino
         #self.receiver_thread.started.connect(self.receiver.run)
 
         self.receiver_thread.finished.connect(self.receiver_done)

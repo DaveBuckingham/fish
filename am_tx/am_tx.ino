@@ -60,8 +60,7 @@
 #define REG_USER_CTRL            106
 #define REG_WHO_AM_I             117
 
-// self test output generated during manufacturing tests
-#define REG_SELF_TEST_X_GYRO     0
+#define REG_SELF_TEST_X_GYRO     0          // self test output generated during manufacturing tests
 #define REG_SELF_TEST_Y_GYRO     1
 #define REG_SELF_TEST_Z_GYRO     2
 #define REG_SELF_TEST_X_ACCEL    13
@@ -84,6 +83,35 @@
 #define REG_GYRO_YOUT_L          70
 #define REG_GYRO_ZOUT_H          71
 #define REG_GYRO_ZOUT_L          72
+
+
+// MAGNETOMETER REGISTERS
+#define REG_MAG_WHO_AM_I         0x00         // should return 0x48
+#define REG_MAG_INFO             0x01
+#define REG_MAG_ST1              0x02         // data ready status bit 0
+#define REG_MAG_XOUT_L           0x03         // data
+#define REG_MAG_XOUT_H           0x04
+#define REG_MAG_YOUT_L           0x05
+#define REG_MAG_YOUT_H           0x06
+#define REG_MAG_ZOUT_L           0x07
+#define REG_MAG_ZOUT_H           0x08
+#define REG_MAG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
+#define REG_MAG_CNTL             0x0A         // Power down (0000), single-measurement (0001), self-test (1000) and Fuse ROM (1111) modes on bits 3:0
+#define REG_MAG_ASTC             0x0C         // Self test control
+#define REG_MAG_I2CDIS           0x0F         // I2C disable
+#define REG_MAG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
+#define REG_MAG_ASAY             0x11         // Fuse ROM y-axis sensitivity adjustment value
+#define REG_MAG_ASAZ             0x12         // Fuse ROM z-axis sensitivity adjustment value
+
+#define MAG_ADDRESS          0x0C    // ????
+
+
+
+
+
+
+
+
 
 
 // IMU BYTES
