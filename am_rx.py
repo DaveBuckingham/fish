@@ -10,8 +10,7 @@ from PyQt4.QtCore import *
 
 class Am_rx(QObject):
 
-    SENTINEL_1                 = 0xF0
-    SENTINEL_2                 = 0x0D
+    COM_FLAG                   = 0x7E
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
@@ -173,12 +172,12 @@ class Am_rx(QObject):
         print "recording"
         while (self.recording):
 
-            # WAIT TWO-BYTE SENTINEL, THEN READ DATA
+            # WAIT FOR FOUR-BYTE SENTINEL, THEN READ DATA
             flag = ord(self.connection.read(1))
-            while (flag != Am_rx.SENTINEL_1):
+            while (flag != Am_rx.COM_FLAG):
                 flag = ord(self.connection.read(1))
 
-            if (ord(self.connection.read(1)) == Am_rx.SENTINEL_2):
+            if (map(ord(), (self.connection.read(3))) == [Am_rx.COM_FLAG, Am_rx.COM_FLAG, Am_rx.COM_FLAG]):
                 
                 # READ FROM IMU SENSORS
                 received = self.connection.read(30)
