@@ -3,8 +3,6 @@
 //             CODE BY                 //
 //          David Buckingham           //
 //     david.buckingham@tufts.edu      //
-//               and                   //
-//          Vishesh Vikas              //
 //                                     //
 /////////////////////////////////////////
 
@@ -43,7 +41,6 @@
 
 #include "SPI.h"
 #include "TimerOne.h"
-#include "MPU9250.h"
 
 
 // EMS PINS
@@ -57,27 +54,105 @@
 #define PIN_IMU_CS1          10
 
 
-#define SPI_CLOCK 8000000  // 8MHz clock works.
+// IMU REGISTERS
+#define REG_USER_CTRL            106
+#define REG_WHO_AM_I             117
 
-#define COM_FLAG          0x7e
+#define REG_SELF_TEST_X_GYRO     0          // self test output generated during manufacturing tests
+#define REG_SELF_TEST_Y_GYRO     1
+#define REG_SELF_TEST_Z_GYRO     2
+#define REG_SELF_TEST_X_ACCEL    13
+#define REG_SELF_TEST_Y_ACCEL    14
+#define REG_SELF_TEST_Z_ACCEL    15
 
-#define SERIAL_BUFF_LENGTH  33       // id = 4 bytes
-                                     // encoder = 2 bytes
-                                     // gyros = 2 bytes * 3 dims * 2 chips = 12 bytes
-                                     // accels = 2 bytes * 3 dims * 2 chips = 12 bytes
-                                     // flags = 3 bytes
+#define REG_GYRO_CONFIG          27
+#define REG_ACCEL_CONFIG         28
+
+#define REG_ACCEL_FIRST          59
+#define REG_ACCEL_XOUT_H         59
+#define REG_ACCEL_XOUT_L         60
+#define REG_ACCEL_YOUT_H         61
+#define REG_ACCEL_YOUT_L         62
+#define REG_ACCEL_ZOUT_H         63
+#define REG_ACCEL_ZOUT_L         64
+
+#define REG_GYRO_FIRST           67
+#define REG_GYRO_XOUT_H          67
+#define REG_GYRO_XOUT_L          68
+#define REG_GYRO_YOUT_H          69
+#define REG_GYRO_YOUT_L          70
+#define REG_GYRO_ZOUT_H          71
+#define REG_GYRO_ZOUT_L          72
+
+
+// MAGNETOMETER REGISTERS
+#define REG_MAG_WHO_AM_I         0x00         // should return 0x48
+#define REG_MAG_INFO             0x01
+#define REG_MAG_ST1              0x02         // data ready status bit 0
+#define REG_MAG_XOUT_L           0x03         // data
+#define REG_MAG_XOUT_H           0x04
+#define REG_MAG_YOUT_L           0x05
+#define REG_MAG_YOUT_H           0x06
+#define REG_MAG_ZOUT_L           0x07
+#define REG_MAG_ZOUT_H           0x08
+#define REG_MAG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
+#define REG_MAG_CNTL             0x0A         // Power down (0000), single-measurement (0001), self-test (1000) and Fuse ROM (1111) modes on bits 3:0
+#define REG_MAG_ASTC             0x0C         // Self test control
+#define REG_MAG_I2CDIS           0x0F         // I2C disable
+#define REG_MAG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
+#define REG_MAG_ASAY             0x11         // Fuse ROM y-axis sensitivity adjustment value
+#define REG_MAG_ASAZ             0x12         // Fuse ROM z-axis sensitivity adjustment value
+
+#define REG_I2C_SLV0_ADDR        0x25         // 0x0C ????????
+#define REG_I2C_SLV0_REG         0x26
+#define REG_I2C_SLV0_CTRL        0x27
+#define REG_EXT_SENS_DATA_00     0x49
+
+#define MAG_I2C_ADDRESS          0x0C
 
 
 
 
+// IMU BYTES
+// register 27 - gyroscope configuration
+#define XGYRO_Cten           1 << 7   // gyro self test
+#define YGYRO_Cten           1 << 6
+#define ZGYRO_Cten           1 << 5
+#define GYRO_FS_SEL          0        // gyro scale = +250dps
 
-MPU9250 mpu0(SPI_CLOCK, PIN_IMU_CS0);
-MPU9250 mpu1(SPI_CLOCK, PIN_IMU_CS1);
+// register 28 - accelerometer configuration
+#define ax_st_en             1 << 7   // accel self test
+#define ay_st_en             1 << 6
+#define az_st_en             1 << 5
+#define ACCEL_FS_SEL         0        // accel scale = +-2g
+
+// register 106 USER_CTRL
+#define I2C_IF_DIS      0x08         // bit to disable I2C on imu
+
+
+// OTHER CONSTANTS
+#define MAGNETOMETER_SCALE_FACTOR      0.15
+#define SERIAL_FLAG                    0X7E
+#define SAMPLE_FREQ_HZ                 200          // 250 seems ok. starts to break around 300.
+#define BAUD                           115200       // serial com
+#define SPI_SPEED_HZ                   1000000      // ms
+#define READ_FLAG                      0x80         // first byte of imu tx
+#define START_UP_TIME                  50           // typ:11ms max:100ms
+
+#define SERIAL_BUFF_LENGTH             45       // id = 4 bytes
+                                                // encoder = 2 bytes
+                                                // gyros = 2 bytes * 3 dims * 2 chips = 12 bytes
+                                                // accels = 2 bytes * 3 dims * 2 chips = 12 bytes
+                                                // mags = 12
+                                                // flags = 3 bytes
+
 
 
 // VARIABLES
-byte i;                               // for loops
-byte val;                             // for reading data
+unsigned long next_sample_id;            // count sample ids
+byte serial_buffer[SERIAL_BUFF_LENGTH];  // hold data for serial tx
+byte buffer_i;                           // index for perparing data to tx
+byte i;                                  // general purpose index
 int encoder_angle;
 
 
@@ -102,6 +177,40 @@ inline void read_encoder() {
 }
 
 
+// WRITE TO IMU
+void write_imu_register(byte chip, byte address, byte data) {
+    digitalWrite(chip, LOW);
+    SPI.transfer(address);
+    SPI.transfer(data);
+    digitalWrite(chip, HIGH);
+}
+
+// READ FROM IMU
+inline byte read_imu_register(byte chip, byte address) {
+    digitalWrite(chip, LOW);
+    SPI.transfer(address | READ_FLAG);
+    byte data = SPI.transfer(0x00);
+    digitalWrite(chip, HIGH);
+    return data;
+}
+
+inline void read_multiple_registers(byte chip, byte address, byte *buffer, unsigned int num_bytes) {
+    i = 0;
+    digitalWrite(chip, LOW);
+    SPI.transfer(address | READ_FLAG);
+    for(i = 0; i < num_bytes; i++) {
+        buffer[i] = SPI.transfer(0x00);
+    }
+    digitalWrite(chip, HIGH);
+}
+
+
+
+
+byte imu_test() {
+
+}
+
 
 // RX AND TX ALL DATA
 void read_sample() {
@@ -109,10 +218,8 @@ void read_sample() {
     buffer_i = 0;
     
     // SIGNAL A NEW SAMPLE
-    serial_buffer[buffer_i++] = COM_FLAG;
-    serial_buffer[buffer_i++] = COM_FLAG;
-    serial_buffer[buffer_i++] = COM_FLAG;
-
+    serial_buffer[buffer_i++] = SERIAL_FLAG;
+    serial_buffer[buffer_i++] = 42;             // packet size
 
     // SAMPLE ID
     serial_buffer[buffer_i++] = next_sample_id >> 24;
@@ -126,59 +233,72 @@ void read_sample() {
     serial_buffer[buffer_i++] = encoder_angle >> 8;
     serial_buffer[buffer_i++] = encoder_angle;
 
-	mpu.read_all();
-
-	Serial.print(mpu.gyro_data[0]); 
-	Serial.print(mpu.gyro_data[1]); 
-	Serial.print(mpu.gyro_data[2]); 
-	Serial.print(mpu.accel_data[0]);
-	Serial.print(mpu.accel_data[1]);
-	Serial.print(mpu.accel_data[2]);
-	Serial.print(mpu.mag_data[0]);  
-	Serial.print(mpu.mag_data[1]);  
-	Serial.print(mpu.mag_data[2]);  
-	Serial.println(mpu.temperature);
-
     // IMU 0 ACCELEROMETER VALUES
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_XOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_XOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_YOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_YOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_ZOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_ACCEL_ZOUT_L);
+    read_multiple_registers(PIN_IMU_CS0, REG_ACCEL_FIRST, serial_buffer + buffer_i, 6);
+    buffer_i += 6;
 
     // IMU 0 GYROSCOPE VALUES
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_XOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_XOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_YOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_YOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_ZOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS0, REG_GYRO_ZOUT_L);
+    read_multiple_registers(PIN_IMU_CS0, REG_GYRO_FIRST, serial_buffer + buffer_i, 6);
+    buffer_i += 6;
+
+    // IMU 0 MAG VALUES
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);     //I2C slave 0 register address to read data.  MOVE TO SETUP ???
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
+    read_multiple_registers(PIN_IMU_CS0, REG_GYRO_FIRST, serial_buffer + buffer_i, 7);
+    buffer_i += 6;
 
     // IMU 1 ACCELEROMETER VALUES
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_XOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_XOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_YOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_YOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_ZOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_ACCEL_ZOUT_L);
+    read_multiple_registers(PIN_IMU_CS1, REG_ACCEL_FIRST, serial_buffer + buffer_i, 6);
+    buffer_i += 6;
 
     // IMU 1 GYROSCOPE VALUES
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_XOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_XOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_YOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_YOUT_L);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_ZOUT_H);
-    serial_buffer[buffer_i++] = read_imu_register(PIN_IMU_CS1, REG_GYRO_ZOUT_L);
+    read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, serial_buffer + buffer_i, 6);
+    buffer_i += 6;
 
+    // IMU 1 MAG VALUES
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);     //I2C slave 0 register address to read data.  MOVE TO SETUP ???
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
+    read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, serial_buffer + buffer_i, 7);
+    buffer_i += 6;
+
+    serial_buffer[buffer_i++] = SERIAL_FLAG;
 
     // SERIAL TX
-    Serial.write(serial_buffer, SERIAL_BUFF_LENGTH);
+    Serial.write(serial_buffer, buffer_i);
 }
 
 
+// READ AND TX MAGNETOMETER SENSITIVITY ADJUSTMENT
+void tx_asa() {
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG); //SET THE I2C SLAVE ADDRES OF AK8963 AND SET FOR READ.
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_ASAX);                 //I2C SLAVE 0 REGISTER ADDRESS FROM WHERE TO READ ASA
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);            //READ 3 BYTES
 
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_ASAX);
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);
+
+    buffer_i = 0;
+    serial_buffer[buffer_i++] = SERIAL_FLAG;
+    serial_buffer[buffer_i++] = 6;
+
+    read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, serial_buffer + buffer_i, 3);
+    buffer_i += 3;
+
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, serial_buffer + buffer_i, 3);
+    buffer_i += 3;
+
+    serial_buffer[buffer_i++] = SERIAL_FLAG;
+    Serial.write(serial_buffer, buffer_i);
+}
+
+
+// INITIALIZE
 void setup() {
+
+    next_sample_id = 0;
+    Serial.begin(BAUD, SERIAL_8N1);  // 8 bits words, no parity, 1 stop bit
+
     // ENCODER
     pinMode(PIN_EMS_CS, OUTPUT);
     pinMode(PIN_EMS_CLK, OUTPUT);
@@ -189,29 +309,23 @@ void setup() {
     // IMU
     pinMode(PIN_IMU_CS0, OUTPUT);
     pinMode(PIN_IMU_CS1, OUTPUT);
-
-    // SERIAL
-    Serial.begin(BAUD, SERIAL_8N1);  // 8 bits words, no parity, 1 stop bit
-
     SPI.begin();
-	mpu.init(true, true);
+    SPI.beginTransaction(SPISettings(SPI_SPEED_HZ, MSBFIRST, SPI_MODE3));
+    delay(START_UP_TIME);
+    write_imu_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
+    write_imu_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
+    write_imu_register(PIN_IMU_CS0, REG_GYRO_CONFIG,  GYRO_FS_SEL);           // SET GYRO RANGE
+    write_imu_register(PIN_IMU_CS1, REG_GYRO_CONFIG,  GYRO_FS_SEL);
+    write_imu_register(PIN_IMU_CS0, REG_ACCEL_CONFIG, ACCEL_FS_SEL);          // SET ACCEL RANGE
+    write_imu_register(PIN_IMU_CS1, REG_ACCEL_CONFIG, ACCEL_FS_SEL);
 
-    tx(mpu.whoami() == 0x71);
-	tx(mpu.AK8963_whoami() == 0x48);
+    //imu_test();
+    tx_asa();
 
-    next_sample_id = 0;
-
+    
+    // TIMER
     Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
     Timer1.attachInterrupt(read_sample);
-}
-
-
-void tx(byte val) {
-    buffer_i = 0;
-    serial_buffer[buffer_i++] = COM_FLAG;
-    serial_buffer[buffer_i++] = val;
-    serial_buffer[buffer_i++] = COM_FLAG;
-    Serial.write(serial_buffer, 3);
 }
 
 
@@ -219,4 +333,3 @@ void tx(byte val) {
 // NOTHING HERE. MAIN PROCEDURE IS IN read_sample();
 void loop() {
 }
-

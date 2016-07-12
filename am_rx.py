@@ -17,6 +17,11 @@ class Am_rx(QObject):
     #PLOT_REFRESH_RATE          = 5
     PLOT_REFRESH_RATE          = 40      # dividable by 4
 
+    DATA_LENGTH = 42
+
+    mag_0_asa = []
+    mag_1_asa = []
+
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
@@ -89,15 +94,17 @@ class Am_rx(QObject):
 
         #while (timestamp < self.end_time):
         while (self.recording):
-            received = [(10*random.random() - 5) for i in xrange(14)] 
+            received = [(10*random.random() - 5) for i in xrange(20)] 
             timestamp = (time.time() * 1000) -  start_time
 
             entry = {}
-            entry['time'] = timestamp
+            entry['time']   = timestamp
             entry['accel1'] = received[2:5]
-            entry['gyro1'] = received[5:8]
-            entry['accel2'] = received[8:11]
-            entry['gyro2'] = received[11:14]
+            entry['gyro1']  = received[5:8]
+            entry['mag1']   = received[8:11]
+            entry['accel2'] = received[11:14]
+            entry['gyro2']  = received[14:17]
+            entry['mag2']   = received[17:20]
 
 
             self.data.append(entry)
@@ -129,9 +136,6 @@ class Am_rx(QObject):
             time.sleep(.005)
 
 
-            # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
-#            if (not self.use_trigger):
-#                self.data = self.data[sample_index:] + self.data[:sample_index]
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -157,6 +161,11 @@ class Am_rx(QObject):
 
 
         self.message_signal.emit("serial connection established")
+
+        self.message_signal.emit("calculating magnetometer sensitivty adjustment")
+
+
+
         self.message_signal.emit("waiting to stabilize")
         self.connection.read(1000)
         self.message_signal.emit("begin recording data")
@@ -177,56 +186,64 @@ class Am_rx(QObject):
             while (flag != Am_rx.COM_FLAG):
                 flag = ord(self.connection.read(1))
 
-            if (map(ord(), (self.connection.read(3))) == [Am_rx.COM_FLAG, Am_rx.COM_FLAG, Am_rx.COM_FLAG]):
+            flag = ord(self.connection.read(1))
+            if (flag == DATA_LENGTH):
                 
                 # READ FROM IMU SENSORS
                 received = self.connection.read(30)
-                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, ax2, ay2, az2, gx2, gy2, gz2) = struct.unpack('!Lhhhhhhhhhhhhh', received)
-                timestamp = (time.time() * 1000) - start_time
+                flag = ord(self.connection.read(1))
+                if (flag == Am_rx.COM_FLAG):
+                    (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
+                    timestamp = (time.time() * 1000) - start_time
 
-                # CONVERT
-                (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
-                (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
-                enc *= 0.3515625  # 360/1024
+                    # CONVERT
+                    (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
+                    (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
+                    (mx1, my1, mz1, mx2, my2, mz2) = map(adjust_mag,                                   (mx1, my1, mz1, mx2, my2, mz2))
+                    enc *= 0.3515625  # 360/1024
 
-                # TO PIPE TO FILE
-                print enc
+                    # TO PIPE TO FILE
+                    #print enc
 
-                entry = {}
-                entry['time'] = timestamp
-                entry['accel1'] = [ax1, ay1, az1]
-                entry['gyro1']  = [gx1, gy1, gz1]
-                entry['accel2'] = [ax2, ay2, az2]
-                entry['gyro2']  = [gx2, gy2, gz2]
+                    print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
 
-                self.data.append(entry)
-                sample_index += 1
+                    entry = {}
+                    entry['time'] = timestamp
+                    entry['accel1'] = [ax1, ay1, az1]
+                    entry['gyro1']  = [gx1, gy1, gz1]
+                    entry['mag1']   = [mx1, my1, mz1]
+                    entry['accel2'] = [ax2, ay2, az2]
+                    entry['gyro2']  = [gx2, gy2, gz2]
+                    entry['mag2']   = [mx2, my2, mz2]
 
-                # PRE-TRIGGER DELAY DOESN'T WORK YET
-#                if (not self.use_trigger):
-#                    self.data.append(entry)
-#                else:
-#                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-#                        self.data.insert(sample_index, entry)
-#                    else:
-#                        if (sample_index == len(self.data)):
-#                            sample_index = 0
-#                        self.data[sample_index] = entry
-#                    sample_index += 1
-#                    if (sample_index < len(self.data)):
-#                        earliest_sample = self.data[sample_index]['time']
+                    self.data.append(entry)
+                    sample_index += 1
+
+                    # PRE-TRIGGER DELAY DOESN'T WORK YET
+    #                if (not self.use_trigger):
+    #                    self.data.append(entry)
+    #                else:
+    #                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+    #                        self.data.insert(sample_index, entry)
+    #                    else:
+    #                        if (sample_index == len(self.data)):
+    #                            sample_index = 0
+    #                        self.data[sample_index] = entry
+    #                    sample_index += 1
+    #                    if (sample_index < len(self.data)):
+    #                        earliest_sample = self.data[sample_index]['time']
 
 
 
-                self.timestamp_signal.emit(timestamp)
+                    self.timestamp_signal.emit(timestamp)
 
-                #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
+                    #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
 
-                count = sample_index % Am_rx.PLOT_REFRESH_RATE
-                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
-                self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
-                self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
-                self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
+                    count = sample_index % Am_rx.PLOT_REFRESH_RATE
+                    self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
+                    self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+                    self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                    self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
 
 	# UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
