@@ -19,15 +19,15 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
-    #PLOT_REFRESH_RATE          = 5
+    #PLOT_REFRESH_RATE         = 5
     PLOT_REFRESH_RATE          = 40      # dividable by 4
 
     DATA_LENGTH = 42
 
-    #define MAGNETOMETER_SCALE_FACTOR      0.15
+    MAGNETOMETER_SCALE_FACTOR  =   0.15
 
-    mag_0_asa = []
-    mag_1_asa = []
+    mag_0_asa = [-1, -1, -1]
+    mag_1_asa = [-1, -1, -1]
 
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
@@ -96,7 +96,8 @@ class Am_rx(QObject):
         while (val != Am_rx.COM_FLAG):
             if (val == Am_rx.COM_ESCAPE):
                 val = ord(self.connection.read(1)) ^ COM_XOR
-            push(message, val)
+            message.append(val)
+            val = ord(self.connection.read(1))
 
         return message
 
@@ -194,12 +195,12 @@ class Am_rx(QObject):
         if (len(received) == 6):
 
             for i in (range(0, 3)):
-                magn_0_asa[i] = (((received[i]     - 128) / 256) + 1) * MAGNETOMETER_SCALE_FACTOR
-                magn_1_asa[i] = (((received[i + 3] - 128) / 256) + 1) * MAGNETOMETER_SCALE_FACTOR
+                Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
+                Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
 
             self.message_signal.emit("magnetometer adjustment succesful")
-            self.message_signal.emit("mag_0 asa: [%f, %f, %f]" (mag_0_asa[:]))
-            self.message_signal.emit("mag_1 asa: [%f, %f, %f]" (mag_1_asa[:]))
+            self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)))
+            self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)))
         else:
             self.message_signal.emit("magnetometer adjustment failed")
 
@@ -220,15 +221,15 @@ class Am_rx(QObject):
         while (self.recording):
 
             received = self.read_packet()
-            if (len(received) == DATA_LENGTH):
+            if (len(received) == Am_rx.DATA_LENGTH):
                 (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
 
                 # CONVERT
                 (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
                 (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
-                (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * mag_0_asa[i] for i in range(3)]
-                (mx2, my2, mz2) = [(mx2, my2, mz2)[i] * mag_1_asa[i] for i in range(3)]
+                (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
+                (mx2, my2, mz2) = [(mx2, my2, mz2)[i] * Am_rx.mag_1_asa[i] for i in range(3)]
                 enc *= 0.3515625  # 360/1024
 
                 # TO PIPE TO FILE

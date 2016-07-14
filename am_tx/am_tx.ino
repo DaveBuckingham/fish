@@ -210,6 +210,7 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes) {
     byte val;
     byte i;
     byte j = 0;
+    serial_buffer[j++] = COM_FLAG;
     for (i = 0; i < num_bytes; i++) {
         if (j >= SERIAL_BUFF_LENGTH - 1) {
             return;
@@ -223,10 +224,9 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes) {
             serial_buffer[j++] = val;
         }
     }
+    serial_buffer[j++] = COM_FLAG;
     Serial.write(serial_buffer, j);
 }
-
-
 
 
 byte imu_test() {
@@ -279,7 +279,7 @@ void read_sample() {
     read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, raw_buffer + i, 7);
     i += 6;
 
-    tx_packet(raw_buffer, i);
+    //tx_packet(raw_buffer, i);
 }
 
 
