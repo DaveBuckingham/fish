@@ -79,15 +79,19 @@ class Am_rx(QObject):
         self.message_signal.emit("closing serial connection")
         self.connection.close()
 
-    def read_packet():
+    def read_packet(self):
         reading = True
         while (reading):
+            print "READING"
             flag = ord(self.connection.read(1))
             while (flag != Am_rx.COM_FLAG):
+                print flag
                 flag = ord(self.connection.read(1))
 
+            print flag
             data_len = ord(self.connection.read(1))
-            received = self.connection.read(30)
+            print "len: " + str(data_len)
+            received = self.connection.read(data_len)
             flag = ord(self.connection.read(1))
             if (flag == Am_rx.COM_FLAG):
                 reading = False
@@ -183,12 +187,6 @@ class Am_rx(QObject):
 
         self.message_signal.emit("calculating magnetometer sensitivty adjustment")
 
-
-
-        self.message_signal.emit("waiting to stabilize")
-        self.connection.read(1000)
-        self.message_signal.emit("begin recording data")
-
         received = self.read_packet()
         if (len(received) == 6):
 
@@ -202,6 +200,10 @@ class Am_rx(QObject):
         else:
             self.message_signal.emit("magnetometer adjustment failed")
 
+
+        self.message_signal.emit("waiting to stabilize")
+        self.connection.read(1000)
+        self.message_signal.emit("begin recording data")
 
 
         # RESET TIMER
@@ -222,7 +224,6 @@ class Am_rx(QObject):
                 # CONVERT
                 (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
                 (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
-                (mx1, my1, mz1, mx2, my2, mz2) = map(lambda x: float(x) * ,                        (mx1, my1, mz1, mx2, my2, mz2))
                 (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * mag_0_asa[i] for i in range(3)]
                 (mx2, my2, mz2) = [(mx2, my2, mz2)[i] * mag_1_asa[i] for i in range(3)]
                 enc *= 0.3515625  # 360/1024
