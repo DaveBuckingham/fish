@@ -11,6 +11,11 @@ from PyQt4.QtCore import *
 class Am_rx(QObject):
 
     COM_FLAG                   = 0x7E
+    COM_ESCAPE                 = 0X7D
+    COM_XOR                    = 0X20
+    COM_MAX_PACKET_LENGTH      = 500
+
+
     GYRO_SENSITIVITY           = 131     # if range is +- 250
     ACCEL_SENSITIVITY          = 16384   # if range is +- 2
 
@@ -79,23 +84,21 @@ class Am_rx(QObject):
         self.message_signal.emit("closing serial connection")
         self.connection.close()
 
-    def read_packet(self):
-        reading = True
-        while (reading):
-            print "READING"
-            flag = ord(self.connection.read(1))
-            while (flag != Am_rx.COM_FLAG):
-                print flag
-                flag = ord(self.connection.read(1))
 
-            print flag
-            data_len = ord(self.connection.read(1))
-            print "len: " + str(data_len)
-            received = self.connection.read(data_len)
-            flag = ord(self.connection.read(1))
-            if (flag == Am_rx.COM_FLAG):
-                reading = False
-        return received
+    def read_packet(self):
+        message = []
+
+        val = ord(self.connection.read(1))
+        while (val != Am_rx.COM_FLAG):
+            val = ord(self.connection.read(1))
+
+        val = ord(self.connection.read(1))
+        while (val != Am_rx.COM_FLAG):
+            if (val == Am_rx.COM_ESCAPE):
+                val = ord(self.connection.read(1)) ^ COM_XOR
+            push(message, val)
+
+        return message
 
 
 
