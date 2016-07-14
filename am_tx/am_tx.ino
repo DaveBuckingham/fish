@@ -131,7 +131,6 @@
 
 
 // OTHER CONSTANTS
-#define MAGNETOMETER_SCALE_FACTOR      0.15
 #define SERIAL_FLAG                    0X7E
 #define SAMPLE_FREQ_HZ                 200          // 250 seems ok. starts to break around 300.
 #define BAUD                           115200       // serial com
@@ -322,7 +321,6 @@ void setup() {
     //imu_test();
     tx_asa();
 
-    
     // TIMER
     Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
     Timer1.attachInterrupt(read_sample);

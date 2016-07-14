@@ -19,6 +19,8 @@ class Am_rx(QObject):
 
     DATA_LENGTH = 42
 
+    #define MAGNETOMETER_SCALE_FACTOR      0.15
+
     mag_0_asa = []
     mag_1_asa = []
 
@@ -72,9 +74,25 @@ class Am_rx(QObject):
         pass
 
 
+
     def cleanup(self):
         self.message_signal.emit("closing serial connection")
         self.connection.close()
+
+    def read_packet():
+        reading = True
+        while (reading):
+            flag = ord(self.connection.read(1))
+            while (flag != Am_rx.COM_FLAG):
+                flag = ord(self.connection.read(1))
+
+            data_len = ord(self.connection.read(1))
+            received = self.connection.read(30)
+            flag = ord(self.connection.read(1))
+            if (flag == Am_rx.COM_FLAG):
+                reading = False
+        return received
+
 
 
 
@@ -98,13 +116,14 @@ class Am_rx(QObject):
             timestamp = (time.time() * 1000) -  start_time
 
             entry = {}
-            entry['time']   = timestamp
-            entry['accel1'] = received[2:5]
-            entry['gyro1']  = received[5:8]
-            entry['mag1']   = received[8:11]
-            entry['accel2'] = received[11:14]
-            entry['gyro2']  = received[14:17]
-            entry['mag2']   = received[17:20]
+            entry['time']    = timestamp
+            entry['encoder'] = enc
+            entry['accel1']  = received[2:5]
+            entry['gyro1']   = received[5:8]
+            entry['mag1']    = received[8:11]
+            entry['accel2']  = received[11:14]
+            entry['gyro2']   = received[14:17]
+            entry['mag2']    = received[17:20]
 
 
             self.data.append(entry)
@@ -170,6 +189,20 @@ class Am_rx(QObject):
         self.connection.read(1000)
         self.message_signal.emit("begin recording data")
 
+        received = self.read_packet()
+        if (len(received) == 6):
+
+            for i in (range(0, 3)):
+                magn_0_asa[i] = (((received[i]     - 128) / 256) + 1) * MAGNETOMETER_SCALE_FACTOR
+                magn_1_asa[i] = (((received[i + 3] - 128) / 256) + 1) * MAGNETOMETER_SCALE_FACTOR
+
+            self.message_signal.emit("magnetometer adjustment succesful")
+            self.message_signal.emit("mag_0 asa: [%f, %f, %f]" (mag_0_asa[:]))
+            self.message_signal.emit("mag_1 asa: [%f, %f, %f]" (mag_1_asa[:]))
+        else:
+            self.message_signal.emit("magnetometer adjustment failed")
+
+
 
         # RESET TIMER
         start_time = time.time() * 1000
@@ -178,77 +211,69 @@ class Am_rx(QObject):
         self.data = []
 
 
-        print "recording"
+        # print "recording"
         while (self.recording):
 
-            # WAIT FOR FOUR-BYTE SENTINEL, THEN READ DATA
-            flag = ord(self.connection.read(1))
-            while (flag != Am_rx.COM_FLAG):
-                flag = ord(self.connection.read(1))
+            received = self.read_packet()
+            if (len(received) == DATA_LENGTH):
+                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
+                timestamp = (time.time() * 1000) - start_time
 
-            flag = ord(self.connection.read(1))
-            if (flag == DATA_LENGTH):
-                
-                # READ FROM IMU SENSORS
-                received = self.connection.read(30)
-                flag = ord(self.connection.read(1))
-                if (flag == Am_rx.COM_FLAG):
-                    (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
-                    timestamp = (time.time() * 1000) - start_time
+                # CONVERT
+                (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
+                (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
+                (mx1, my1, mz1, mx2, my2, mz2) = map(lambda x: float(x) * ,                        (mx1, my1, mz1, mx2, my2, mz2))
+                (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * mag_0_asa[i] for i in range(3)]
+                (mx2, my2, mz2) = [(mx2, my2, mz2)[i] * mag_1_asa[i] for i in range(3)]
+                enc *= 0.3515625  # 360/1024
 
-                    # CONVERT
-                    (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
-                    (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
-                    (mx1, my1, mz1, mx2, my2, mz2) = map(adjust_mag,                                   (mx1, my1, mz1, mx2, my2, mz2))
-                    enc *= 0.3515625  # 360/1024
+                # TO PIPE TO FILE
+                #print enc
 
-                    # TO PIPE TO FILE
-                    #print enc
+                print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
 
-                    print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
+                entry = {}
+                entry['time']    = timestamp
+                entry['encoder'] = enc
+                entry['accel1']  = [ax1, ay1, az1]
+                entry['gyro1']   = [gx1, gy1, gz1]
+                entry['mag1']    = [mx1, my1, mz1]
+                entry['accel2']  = [ax2, ay2, az2]
+                entry['gyro2']   = [gx2, gy2, gz2]
+                entry['mag2']    = [mx2, my2, mz2]
 
-                    entry = {}
-                    entry['time'] = timestamp
-                    entry['accel1'] = [ax1, ay1, az1]
-                    entry['gyro1']  = [gx1, gy1, gz1]
-                    entry['mag1']   = [mx1, my1, mz1]
-                    entry['accel2'] = [ax2, ay2, az2]
-                    entry['gyro2']  = [gx2, gy2, gz2]
-                    entry['mag2']   = [mx2, my2, mz2]
+                self.data.append(entry)
+                sample_index += 1
 
-                    self.data.append(entry)
-                    sample_index += 1
-
-                    # PRE-TRIGGER DELAY DOESN'T WORK YET
-    #                if (not self.use_trigger):
-    #                    self.data.append(entry)
-    #                else:
-    #                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-    #                        self.data.insert(sample_index, entry)
-    #                    else:
-    #                        if (sample_index == len(self.data)):
-    #                            sample_index = 0
-    #                        self.data[sample_index] = entry
-    #                    sample_index += 1
-    #                    if (sample_index < len(self.data)):
-    #                        earliest_sample = self.data[sample_index]['time']
+                # PRE-TRIGGER DELAY DOESN'T WORK YET
+#                if (not self.use_trigger):
+#                    self.data.append(entry)
+#                else:
+#                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
+#                        self.data.insert(sample_index, entry)
+#                    else:
+#                        if (sample_index == len(self.data)):
+#                            sample_index = 0
+#                        self.data[sample_index] = entry
+#                    sample_index += 1
+#                    if (sample_index < len(self.data)):
+#                        earliest_sample = self.data[sample_index]['time']
 
 
 
-                    self.timestamp_signal.emit(timestamp)
+                self.timestamp_signal.emit(timestamp)
 
-                    #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
+                #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
 
-                    count = sample_index % Am_rx.PLOT_REFRESH_RATE
-                    self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
-                    self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
-                    self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
-                    self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
+                count = sample_index % Am_rx.PLOT_REFRESH_RATE
+                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
+                self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+                self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
 
 	# UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
-        self.data = self.data[sample_index:] + self.data[:sample_index]
-
+        #self.data = self.data[sample_index:] + self.data[:sample_index]
         self.finished_signal.emit()
 
 
