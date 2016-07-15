@@ -14,6 +14,7 @@ tests: arduino com, imus com, imus self-test, magnetometer
 replace sentinels (longer?), or generally better system for com with arduino?
 move all plots and their labels to a separate widget
     what else can we move out of am_gui?
+READ -> REG 39 GROUPING
 
 
 

@@ -87,6 +87,9 @@
 #define REG_GYRO_ZOUT_L          0x48
 
 // FOR READING FROM MAGNETOMETER
+
+#define REG_I2C_MST_CTRL         0x24
+
 #define REG_EXT_SENS_DATA_FIRST  0x49
 #define REG_EXT_SENS_DATA_00     0x49
 #define REG_EXT_SENS_DATA_01     0x4A
@@ -110,8 +113,8 @@
 #define MAG_REG_ZOUT_L           0x07
 #define MAG_REG_ZOUT_H           0x08
 #define MAG_REG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
-#define MAG_REG_CNTL_1           0x0A
-#define MAG_REG_CNTL_1           0x0B
+#define MAG_REG_CNTL1            0x0A
+#define MAG_REG_CNTL2            0x0B
 #define MAG_REG_ASTC             0x0C         // Self test control
 #define MAG_REG_I2CDIS           0x0F         // I2C disable
 #define MAG_REG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
@@ -122,6 +125,8 @@
 #define REG_I2C_SLV0_ADDR        0x25
 #define REG_I2C_SLV0_REG         0x26
 #define REG_I2C_SLV0_CTRL        0x27
+
+#define REG_I2C_SLV0_DATA_OUT    0x63
 
 #define MAG_I2C_ADDRESS          0x0C
 
@@ -201,6 +206,12 @@ void write_imu_register(byte chip, byte address, byte data) {
     SPI.transfer(address);
     SPI.transfer(data);
     digitalWrite(chip, HIGH);
+}
+
+// USEFUL FOR SPI
+void write_imu_register_slow(byte chip, byte address, byte data) {
+    write_imu_register(chip, address, data);
+    delay(1);
 }
 
 // READ FROM IMU
@@ -337,15 +348,19 @@ void record_data() {
 
 
     // SET UP I2C AND MAG
-    write_imu_register_slow(PIN_IMU_CS0, REG_USER_CTRL,     0x20            );       // I2C master mode
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_MST_CTRL,  0x0D            );    // I2C configuration multi-master  IIC 400KHz
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDR    );   // Set the I2C slave addres of AK8963 and set for write.
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_CNTL2   );    // I2C slave 0 register address from where to begin data transfer
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DO,   0x01            );     // reset mag
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x81            );   // enable I2C and set 1 byte
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_CNTL1   );    // I2C slave 0 register address from where to begin data transfer
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DO,   0x16            );     // set mag to 100hz
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x81            );   //Enable I2C and set 1 byte
+    write_imu_register_slow(PIN_IMU_CS0, REG_USER_CTRL,         0x20            );   // I2C master mode
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_MST_CTRL,      0x0D            );   // I2C configuration multi-master  IIC 400KHz
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_ADDR,     MAG_I2C_ADDRESS );   // Set the I2C slave addres of AK8963 and set for write.
+
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,      MAG_REG_CNTL2   );
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DATA_OUT, 0x01            );   // soft reset (initialize mag registers)
+
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL,     0x81            );   // enable I2C and set 1 byte
+
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,      MAG_REG_CNTL1   );
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DATA_OUT, 0x16            );   // 16-bit output, continuous measurement mode 2 (100hz)
+
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL,     0x81            );   // enable I2C and set 1 byte
     
 
 
