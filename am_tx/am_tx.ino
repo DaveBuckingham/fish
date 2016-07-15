@@ -261,7 +261,8 @@ void read_sample() {
     i += 6;
 
     // IMU 0 MAG VALUES
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);     //I2C slave 0 register address to read data.  MOVE TO SETUP ???
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
     read_multiple_registers(PIN_IMU_CS0, REG_GYRO_FIRST, raw_buffer + i, 7);
     i += 6;
@@ -275,7 +276,8 @@ void read_sample() {
     i += 6;
 
     // IMU 1 MAG VALUES
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);     //I2C slave 0 register address to read data.  MOVE TO SETUP ???
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);
     write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
     read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, raw_buffer + i, 7);
     i += 6;
