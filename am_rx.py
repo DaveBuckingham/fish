@@ -108,51 +108,6 @@ class Am_rx(QObject):
 
 
 
-    # GENERATE RANDOM DATA, FOR TESTING WITHOUT ARDUINO
-    @pyqtSlot()
-    def run_fake(self):
-        self.message_signal.emit("fake connection established\n")
-        self.message_signal.emit("waiting to stabilize\n")
-        self.message_signal.emit("begin recording data\n")
-        start_time = time.time() * 1000
-
-
-        sample_index = 0
-        self.data = []
-        timestamp = 0
-        #earliest_sample = 0
-
-        #while (timestamp < self.end_time):
-        while (self.recording):
-            received = [(10*random.random() - 5) for i in xrange(20)] 
-            timestamp = (time.time() * 1000) -  start_time
-
-            entry = {}
-            entry['time']    = timestamp
-            entry['encoder'] = enc
-            entry['accel1']  = received[2:5]
-            entry['gyro1']   = received[5:8]
-            entry['mag1']    = received[8:11]
-            entry['accel2']  = received[11:14]
-            entry['gyro2']   = received[14:17]
-            entry['mag2']    = received[17:20]
-
-
-            self.data.append(entry)
-            sample_index += 1
-
-            self.timestamp_signal.emit(timestamp)
-
-            count = sample_index % Am_rx.PLOT_REFRESH_RATE
-            self.plot_a1_signal.emit(timestamp, received[2:5],   count == 0)
-            self.plot_a2_signal.emit(timestamp, received[8:11],  count == Am_rx.PLOT_REFRESH_RATE * .25)
-            self.plot_g1_signal.emit(timestamp, received[5:8],   count == Am_rx.PLOT_REFRESH_RATE * .5)
-            self.plot_g2_signal.emit(timestamp, received[11:14], count == Am_rx.PLOT_REFRESH_RATE * .75)
-
-            time.sleep(.005)
-
-        self.message_signal.emit("stop recording data")
-        self.finished_signal.emit()
 
 
     @pyqtSlot()
@@ -227,6 +182,7 @@ class Am_rx(QObject):
             received = self.rx_packet()
             if (len(received) == Am_rx.DATA_LENGTH):
                 received = array.array('B', received).tostring()
+                # print map(ord, received)
                 (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
 
@@ -262,9 +218,12 @@ class Am_rx(QObject):
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
                 self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
-                self.plot_a2_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .25)
-                self.plot_g1_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                self.plot_a2_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .5)
                 self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
+
+                #self.plot_a1_signal.emit(timestamp, [mx1, my1, mz1],  count == 0)
+                #self.plot_g1_signal.emit(timestamp, [mx2, my2, mz2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
 
 
         self.tx_byte('s')

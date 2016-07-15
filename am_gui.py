@@ -135,8 +135,8 @@ class Am_ui(QWidget):
         # ADD WIDGETS TO LAYOUT
 
         top_layout.addWidget(self.plot_a1, 1, 1)
-        top_layout.addWidget(self.plot_g1, 1, 2)
-        top_layout.addWidget(self.plot_a2, 2, 1)
+        top_layout.addWidget(self.plot_a2, 1, 2)
+        top_layout.addWidget(self.plot_g1, 2, 1)
         top_layout.addWidget(self.plot_g2, 2, 2)
 
         top_layout.addWidget(self.text_window, 3, 1, 1, 2)
