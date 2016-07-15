@@ -8,8 +8,7 @@ seems like data collection warmup delay only works on first collection
 
 
 TODO:
-plot rangest adjustable
-    y adjusts automatically?
+communication hand shake at connect
 implement pre-trigger delay
 tests: arduino com, imus com, imus self-test, magnetometer
 replace sentinels (longer?), or generally better system for com with arduino?

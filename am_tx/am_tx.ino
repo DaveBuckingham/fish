@@ -43,6 +43,8 @@
 #include "TimerOne.h"
 
 
+
+
 // EMS PINS
 #define PIN_EMS_CLK          5
 #define PIN_EMS_DATA         6
@@ -68,45 +70,58 @@
 #define REG_GYRO_CONFIG          27
 #define REG_ACCEL_CONFIG         28
 
-#define REG_ACCEL_FIRST          59
-#define REG_ACCEL_XOUT_H         59
-#define REG_ACCEL_XOUT_L         60
-#define REG_ACCEL_YOUT_H         61
-#define REG_ACCEL_YOUT_L         62
-#define REG_ACCEL_ZOUT_H         63
-#define REG_ACCEL_ZOUT_L         64
+#define REG_ACCEL_FIRST          0x3B
+#define REG_ACCEL_XOUT_H         0x3B
+#define REG_ACCEL_XOUT_L         0x3C
+#define REG_ACCEL_YOUT_H         0x3D
+#define REG_ACCEL_YOUT_L         0x3E
+#define REG_ACCEL_ZOUT_H         0x3F
+#define REG_ACCEL_ZOUT_L         0x40
 
-#define REG_GYRO_FIRST           67
-#define REG_GYRO_XOUT_H          67
-#define REG_GYRO_XOUT_L          68
-#define REG_GYRO_YOUT_H          69
-#define REG_GYRO_YOUT_L          70
-#define REG_GYRO_ZOUT_H          71
-#define REG_GYRO_ZOUT_L          72
+#define REG_GYRO_FIRST           0x43
+#define REG_GYRO_XOUT_H          0x43
+#define REG_GYRO_XOUT_L          0x44
+#define REG_GYRO_YOUT_H          0x45
+#define REG_GYRO_YOUT_L          0x46
+#define REG_GYRO_ZOUT_H          0x47
+#define REG_GYRO_ZOUT_L          0x48
+
+// FOR READING FROM MAGNETOMETER
+#define REG_EXT_SENS_DATA_FIRST  0x49
+#define REG_EXT_SENS_DATA_00     0x49
+#define REG_EXT_SENS_DATA_01     0x4A
+#define REG_EXT_SENS_DATA_02     0x4B
+#define REG_EXT_SENS_DATA_03     0x4C
+#define REG_EXT_SENS_DATA_04     0x4D
+#define REG_EXT_SENS_DATA_05     0x4E
+#define REG_EXT_SENS_DATA_06     0x4F
+#define REG_EXT_SENS_DATA_07     0x50
+
 
 
 // MAGNETOMETER REGISTERS
-#define REG_MAG_WHO_AM_I         0x00         // should return 0x48
-#define REG_MAG_INFO             0x01
-#define REG_MAG_ST1              0x02         // data ready status bit 0
-#define REG_MAG_XOUT_L           0x03         // data
-#define REG_MAG_XOUT_H           0x04
-#define REG_MAG_YOUT_L           0x05
-#define REG_MAG_YOUT_H           0x06
-#define REG_MAG_ZOUT_L           0x07
-#define REG_MAG_ZOUT_H           0x08
-#define REG_MAG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
-#define REG_MAG_CNTL             0x0A         // Power down (0000), single-measurement (0001), self-test (1000) and Fuse ROM (1111) modes on bits 3:0
-#define REG_MAG_ASTC             0x0C         // Self test control
-#define REG_MAG_I2CDIS           0x0F         // I2C disable
-#define REG_MAG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
-#define REG_MAG_ASAY             0x11         // Fuse ROM y-axis sensitivity adjustment value
-#define REG_MAG_ASAZ             0x12         // Fuse ROM z-axis sensitivity adjustment value
+#define MAG_REG_WHO_AM_I         0x00         // should return 0x48
+#define MAG_REG_INFO             0x01
+#define MAG_REG_ST1              0x02         // data ready status bit 0
+#define MAG_REG_XOUT_L           0x03         // data
+#define MAG_REG_XOUT_H           0x04
+#define MAG_REG_YOUT_L           0x05
+#define MAG_REG_YOUT_H           0x06
+#define MAG_REG_ZOUT_L           0x07
+#define MAG_REG_ZOUT_H           0x08
+#define MAG_REG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
+#define MAG_REG_CNTL_1           0x0A
+#define MAG_REG_CNTL_1           0x0B
+#define MAG_REG_ASTC             0x0C         // Self test control
+#define MAG_REG_I2CDIS           0x0F         // I2C disable
+#define MAG_REG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
+#define MAG_REG_ASAY             0x11         // Fuse ROM y-axis sensitivity adjustment value
+#define MAG_REG_ASAZ             0x12         // Fuse ROM z-axis sensitivity adjustment value
 
-#define REG_I2C_SLV0_ADDR        0x25         // 0x0C ????????
+
+#define REG_I2C_SLV0_ADDR        0x25
 #define REG_I2C_SLV0_REG         0x26
 #define REG_I2C_SLV0_CTRL        0x27
-#define REG_EXT_SENS_DATA_00     0x49
 
 #define MAG_I2C_ADDRESS          0x0C
 
@@ -261,10 +276,11 @@ void read_sample() {
     i += 6;
 
     // IMU 0 MAG VALUES
+
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_XOUT_L);
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
-    read_multiple_registers(PIN_IMU_CS0, REG_GYRO_FIRST, raw_buffer + i, 7);
+    read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_FIRST, raw_buffer + i, 7);
     i += 6;
 
     // IMU 1 ACCELEROMETER VALUES
@@ -277,9 +293,9 @@ void read_sample() {
 
     // IMU 1 MAG VALUES
     write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_XOUT_L);
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  MAG_REG_XOUT_L);
     write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
-    read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, raw_buffer + i, 7);
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_FIRST, raw_buffer + i, 7);
     i += 6;
 
     tx_packet(raw_buffer, i);
@@ -299,11 +315,11 @@ void tx_asa() {
     int i = 0;
 
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG); //SET THE I2C SLAVE ADDRES OF AK8963 AND SET FOR READ.
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_ASAX);                 //I2C SLAVE 0 REGISTER ADDRESS FROM WHERE TO READ ASA
+    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_ASAX);                 //I2C SLAVE 0 REGISTER ADDRESS FROM WHERE TO READ ASA
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);            //READ 3 BYTES
 
     write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  REG_MAG_ASAX);
+    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  MAG_REG_ASAX);
     write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);
 
     read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, raw_buffer, 3);
@@ -318,6 +334,21 @@ void record_data() {
     write_imu_register(PIN_IMU_CS1, REG_GYRO_CONFIG,  GYRO_FS_SEL);
     write_imu_register(PIN_IMU_CS0, REG_ACCEL_CONFIG, ACCEL_FS_SEL);          // SET ACCEL RANGE
     write_imu_register(PIN_IMU_CS1, REG_ACCEL_CONFIG, ACCEL_FS_SEL);
+
+
+    // SET UP I2C AND MAG
+    write_imu_register_slow(PIN_IMU_CS0, REG_USER_CTRL,     0x20            );       // I2C master mode
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_MST_CTRL,  0x0D            );    // I2C configuration multi-master  IIC 400KHz
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDR    );   // Set the I2C slave addres of AK8963 and set for write.
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_CNTL2   );    // I2C slave 0 register address from where to begin data transfer
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DO,   0x01            );     // reset mag
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x81            );   // enable I2C and set 1 byte
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_CNTL1   );    // I2C slave 0 register address from where to begin data transfer
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DO,   0x16            );     // set mag to 100hz
+    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x81            );   //Enable I2C and set 1 byte
+    
+
+
 
     Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
     Timer1.attachInterrupt(read_sample);

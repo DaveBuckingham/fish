@@ -197,7 +197,7 @@ class Am_rx(QObject):
                 #print enc
 
                 #print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
-                #print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
+                print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
 
                 entry = {}
                 entry['time']    = timestamp
@@ -219,11 +219,12 @@ class Am_rx(QObject):
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
                 self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
                 self.plot_a2_signal.emit(timestamp, [ax2, ay2, az2],  count == Am_rx.PLOT_REFRESH_RATE * .25)
+
                 self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE * .5)
                 self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
                 #self.plot_a1_signal.emit(timestamp, [mx1, my1, mz1],  count == 0)
-                #self.plot_g1_signal.emit(timestamp, [mx2, my2, mz2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                #self.plot_a2_signal.emit(timestamp, [mx2, my2, mz2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
 
 
         self.tx_byte('s')
