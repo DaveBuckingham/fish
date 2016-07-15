@@ -25,9 +25,10 @@ class Am_rx(QObject):
     DATA_LENGTH = 42
 
     MAGNETOMETER_SCALE_FACTOR  =   0.15
+    WHO_AM_I                   =   0x71
 
-    mag_0_asa = [-1, -1, -1]
-    mag_1_asa = [-1, -1, -1]
+    mag_0_asa = [0, 0, 0]
+    mag_1_asa = [0, 0, 0]
 
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
@@ -64,7 +65,7 @@ class Am_rx(QObject):
             return (1392.64 * ((0.092 ** exponent) / 0.34))
 
 
-    def calculage_gyro_ft(self, g_test):
+    def calculate_gyro_ft(self, g_test):
         # SEE MPU-6000, 6050 MANUAL PAGE 10
         # FOR Y-AXIS, NEGATE RETURN VALUE
         if (g_test == 0):
@@ -79,13 +80,15 @@ class Am_rx(QObject):
         pass
 
 
-
     def cleanup(self):
         self.message_signal.emit("closing serial connection")
         self.connection.close()
 
+    def tx_byte(self, val):
+        print self.connection.write(struct.pack('!c', val))
+        
 
-    def read_packet(self):
+    def rx_packet(self):
         message = []
 
         val = ord(self.connection.read(1))
@@ -137,21 +140,6 @@ class Am_rx(QObject):
             self.data.append(entry)
             sample_index += 1
 
-
-        # PRE-TRIGGER DELAY DOESN'T WORK YET
-#        if (not self.use_trigger):
-#            self.data.append(entry)
-#        else:
-#            if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-#                self.data.insert(sample_index, entry)
-#            else:
-#                if (sample_index == len(self.data)):
-#                    sample_index = 0
-#                self.data[sample_index] = entry
-#            sample_index += 1
-#            if (sample_index < len(self.data)):
-#                earliest_sample = self.data[sample_index]['time']
-
             self.timestamp_signal.emit(timestamp)
 
             count = sample_index % Am_rx.PLOT_REFRESH_RATE
@@ -161,8 +149,6 @@ class Am_rx(QObject):
             self.plot_g2_signal.emit(timestamp, received[11:14], count == Am_rx.PLOT_REFRESH_RATE * .75)
 
             time.sleep(.005)
-
-
 
         self.message_signal.emit("stop recording data")
         self.finished_signal.emit()
@@ -189,26 +175,36 @@ class Am_rx(QObject):
 
         self.message_signal.emit("serial connection established")
 
+        self.tx_byte('w')
+        received = self.rx_packet()
+        if (received == [WHO_AM_I, WHO_AM_I]):
+            self.message_signal.emit("imu whoami succesful")
+        else:
+            self.error_signal.emit("imu whoami failed: " + ', '.join(map(str, received)))
+            return
+
+
         self.message_signal.emit("calculating magnetometer sensitivty adjustment")
+        self.tx_byte('m')
+        received = self.rx_packet()
 
-        received = self.read_packet()
         if (len(received) == 6):
-
             for i in (range(0, 3)):
                 Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
                 Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-
-            self.message_signal.emit("magnetometer adjustment succesful")
             self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)))
             self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)))
+
         else:
-            self.message_signal.emit("magnetometer adjustment failed")
+            self.error_signal.emit("magnetometer adjustment failed, using 0 adjustment")
 
 
+        self.tx_byte('r')
         self.message_signal.emit("waiting to stabilize")
-        self.connection.read(1000)
-        self.message_signal.emit("begin recording data")
+        for i in range(0, 100):
+            self.rx_packet()
 
+        self.message_signal.emit("recording data")
 
         # RESET TIMER
         start_time = time.time() * 1000
@@ -216,11 +212,9 @@ class Am_rx(QObject):
         sample_index = 0
         self.data = []
 
-
-        # print "recording"
         while (self.recording):
 
-            received = self.read_packet()
+            received = self.rx_packet()
             if (len(received) == Am_rx.DATA_LENGTH):
                 (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
@@ -250,22 +244,6 @@ class Am_rx(QObject):
                 self.data.append(entry)
                 sample_index += 1
 
-                # PRE-TRIGGER DELAY DOESN'T WORK YET
-#                if (not self.use_trigger):
-#                    self.data.append(entry)
-#                else:
-#                    if (timestamp - earliest_sample < self.pre_trigger + self.post_trigger)
-#                        self.data.insert(sample_index, entry)
-#                    else:
-#                        if (sample_index == len(self.data)):
-#                            sample_index = 0
-#                        self.data[sample_index] = entry
-#                    sample_index += 1
-#                    if (sample_index < len(self.data)):
-#                        earliest_sample = self.data[sample_index]['time']
-
-
-
                 self.timestamp_signal.emit(timestamp)
 
                 #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
@@ -277,8 +255,11 @@ class Am_rx(QObject):
                 self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
 
-	# UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
+        self.tx_byte('s')
+
+        # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
         #self.data = self.data[sample_index:] + self.data[:sample_index]
+
         self.finished_signal.emit()
 
 

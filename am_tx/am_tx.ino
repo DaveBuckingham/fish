@@ -279,7 +279,14 @@ void read_sample() {
     read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, raw_buffer + i, 7);
     i += 6;
 
-    //tx_packet(raw_buffer, i);
+    tx_packet(raw_buffer, i);
+}
+
+// READ WHOAMI FROM BOTH IMUS AND TX RESULTS OVER SERIAL
+void imu_whoami() {
+    raw_buffer[0] = read_imu_register(PIN_IMU_CS0, REG_WHO_AM_I);
+    raw_buffer[1] = read_imu_register(PIN_IMU_CS1, REG_WHO_AM_I);
+    tx_packet(raw_buffer, 2);
 }
 
 
@@ -287,7 +294,6 @@ void read_sample() {
 void tx_asa() {
 
     int i = 0;
-
 
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG); //SET THE I2C SLAVE ADDRES OF AK8963 AND SET FOR READ.
     write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  REG_MAG_ASAX);                 //I2C SLAVE 0 REGISTER ADDRESS FROM WHERE TO READ ASA
@@ -302,6 +308,16 @@ void tx_asa() {
     read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, raw_buffer + 3, 3);
 
     tx_packet(raw_buffer, 6);
+}
+
+void record_data() {
+    write_imu_register(PIN_IMU_CS0, REG_GYRO_CONFIG,  GYRO_FS_SEL);           // SET GYRO RANGE
+    write_imu_register(PIN_IMU_CS1, REG_GYRO_CONFIG,  GYRO_FS_SEL);
+    write_imu_register(PIN_IMU_CS0, REG_ACCEL_CONFIG, ACCEL_FS_SEL);          // SET ACCEL RANGE
+    write_imu_register(PIN_IMU_CS1, REG_ACCEL_CONFIG, ACCEL_FS_SEL);
+
+    Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
+    Timer1.attachInterrupt(read_sample);
 }
 
 
@@ -326,21 +342,33 @@ void setup() {
     delay(START_UP_TIME);
     write_imu_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
     write_imu_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
-    write_imu_register(PIN_IMU_CS0, REG_GYRO_CONFIG,  GYRO_FS_SEL);           // SET GYRO RANGE
-    write_imu_register(PIN_IMU_CS1, REG_GYRO_CONFIG,  GYRO_FS_SEL);
-    write_imu_register(PIN_IMU_CS0, REG_ACCEL_CONFIG, ACCEL_FS_SEL);          // SET ACCEL RANGE
-    write_imu_register(PIN_IMU_CS1, REG_ACCEL_CONFIG, ACCEL_FS_SEL);
 
-    //imu_test();
-    tx_asa();
-
-    // TIMER
-    Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
-    Timer1.attachInterrupt(read_sample);
 }
 
 
 
 // NOTHING HERE. MAIN PROCEDURE IS IN read_sample();
 void loop() {
+    if (Serial.available() > 0) {
+
+        switch (Serial.read()) {
+            case 'r':
+                record_data();
+                break;
+            case 's':
+                Timer1.detachInterrupt();
+                break;
+            case 'm':
+                tx_asa();
+                break;
+            case 'w':
+                imu_whoami();
+                break;
+            case 't':
+                // imu self tests
+                break;
+            default:
+                break;
+        }
+    }
 }
