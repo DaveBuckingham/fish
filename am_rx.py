@@ -6,6 +6,7 @@ import time
 import serial
 import struct
 import random
+import array
 from PyQt4.QtCore import *
 
 class Am_rx(QObject):
@@ -110,9 +111,9 @@ class Am_rx(QObject):
     # GENERATE RANDOM DATA, FOR TESTING WITHOUT ARDUINO
     @pyqtSlot()
     def run_fake(self):
-        self.message_signal.emit("fake connection established")
-        self.message_signal.emit("waiting to stabilize")
-        self.message_signal.emit("begin recording data")
+        self.message_signal.emit("fake connection established\n")
+        self.message_signal.emit("waiting to stabilize\n")
+        self.message_signal.emit("begin recording data\n")
         start_time = time.time() * 1000
 
 
@@ -157,7 +158,7 @@ class Am_rx(QObject):
     @pyqtSlot()
     def run(self):
 
-        self.message_signal.emit("establishing serial connection")
+        self.message_signal.emit("establishing serial connection... ")
 
         try:
             self.connection = serial.Serial(
@@ -170,28 +171,28 @@ class Am_rx(QObject):
             )
 
         except serial.serialutil.SerialException:
-            self.error_signal.emit("serial connection failed")
+            self.error_signal.emit("FAILED\n")
             self.finished_signal.emit()
             return
 
+        self.message_signal.emit("OK\n")
 
-        self.message_signal.emit("serial connection established")
+        self.message_signal.emit("waiting for arduino to reset\n")
+        time.sleep(4)
 
-        self.message_signal.emit("waiting for arduino to reset")
-        time.sleep(3)
-
-        self.message_signal.emit("reading imu whoamis")
+        self.message_signal.emit("reading imu whoamis... ")
 
         self.tx_byte('w')
         received = self.rx_packet()
         if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-            self.message_signal.emit("imu whoamis succesful")
+            self.message_signal.emit("OK\n")
         else:
-            self.error_signal.emit("imu whoamis failed: " + ', '.join(map(str, received)))
+            self.error_signal.emit("FAILED\n")
+            self.error_signal.emit("values read: " + ', '.join(map(str, received)) + "\n")
             return
 
 
-        self.message_signal.emit("calculating magnetometer sensitivty adjustment")
+        self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte('m')
         received = self.rx_packet()
 
@@ -199,19 +200,21 @@ class Am_rx(QObject):
             for i in (range(0, 3)):
                 Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
                 Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-            self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)))
-            self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)))
+            self.message_signal.emit("OK\n")
+            self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
+            self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
 
         else:
-            self.error_signal.emit("magnetometer adjustment failed, using 0 adjustment")
+            self.error_signal.emit("FAILED\n")
+            self.error_signal.emit("using 0 adjustment\n")
 
 
         self.tx_byte('r')
-        self.message_signal.emit("waiting to stabilize")
+        self.message_signal.emit("waiting to stabilize\n")
         for i in range(0, 100):
             self.rx_packet()
 
-        self.message_signal.emit("recording data")
+        self.message_signal.emit("recording data\n")
 
         # RESET TIMER
         start_time = time.time() * 1000
@@ -223,6 +226,7 @@ class Am_rx(QObject):
 
             received = self.rx_packet()
             if (len(received) == Am_rx.DATA_LENGTH):
+                received = array.array('B', received).tostring()
                 (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
 
@@ -236,7 +240,8 @@ class Am_rx(QObject):
                 # TO PIPE TO FILE
                 #print enc
 
-                print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
+                #print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
+                #print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
 
                 entry = {}
                 entry['time']    = timestamp

@@ -135,6 +135,7 @@
 #define COM_ESCAPE                     0X7D
 #define COM_XOR                        0X20
 
+// #define SAMPLE_FREQ_HZ                 3
 #define SAMPLE_FREQ_HZ                 200          // 250 seems ok. starts to break around 300.
 #define BAUD                           115200       // serial com
 #define SPI_SPEED_HZ                   1000000      // ms
