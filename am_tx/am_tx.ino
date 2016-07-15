@@ -320,6 +320,18 @@ void record_data() {
     Timer1.attachInterrupt(read_sample);
 }
 
+void blink() {
+    pinMode(13, OUTPUT);
+    while(1) {
+
+        digitalWrite(13, HIGH);
+        delay(500);
+        digitalWrite(13, LOW);
+        delay(500);
+    }
+}
+    
+
 
 // INITIALIZE
 void setup() {
@@ -350,8 +362,10 @@ void setup() {
 // NOTHING HERE. MAIN PROCEDURE IS IN read_sample();
 void loop() {
     if (Serial.available() > 0) {
-
         switch (Serial.read()) {
+            case 'b':
+                blink();
+                break;
             case 'r':
                 record_data();
                 break;

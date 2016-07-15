@@ -254,7 +254,7 @@ class Am_ui(QWidget):
         if (self.recording):
             if (self.use_trigger):
                 self.stop_recording_time = self.timestamps[-1] + (self.post_trigger_delay * 1000)
-		self.message_slot("trigger detected...will stop collecting data after post trigger delay")
+		self.message_slot("trigger detected...will stop collecting data after post trigger delay\n")
             else:
                 self.stop_recording_time = self.timestamps[-1]
         else:
@@ -286,7 +286,7 @@ class Am_ui(QWidget):
             save_data.create_dataset('Gyro2',  data=[x['gyro2']  for x in self.receiver.data])
             datafile.close()
 
-            self.message_slot("data saved to  " + filename)
+            self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
             #self.buttons['save'].setEnabled(False)
 
@@ -328,8 +328,8 @@ class Am_ui(QWidget):
 
     # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
     def message_slot(self, the_string, red=False):
-        self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
-        self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
+        # self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
+        # self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
 
         if (red):
             self.text_window.setTextColor(QtGui.QColor(255,0,0))

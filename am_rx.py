@@ -85,7 +85,7 @@ class Am_rx(QObject):
         self.connection.close()
 
     def tx_byte(self, val):
-        print self.connection.write(struct.pack('!c', val))
+        self.connection.write(struct.pack('!c', val))
         
 
     def rx_packet(self):
@@ -98,7 +98,7 @@ class Am_rx(QObject):
         val = ord(self.connection.read(1))
         while (val != Am_rx.COM_FLAG):
             if (val == Am_rx.COM_ESCAPE):
-                val = ord(self.connection.read(1)) ^ COM_XOR
+                val = ord(self.connection.read(1)) ^ Am_rx.COM_XOR
             message.append(val)
             val = ord(self.connection.read(1))
 
@@ -157,6 +157,8 @@ class Am_rx(QObject):
     @pyqtSlot()
     def run(self):
 
+        self.message_signal.emit("establishing serial connection")
+
         try:
             self.connection = serial.Serial(
                 port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
@@ -175,12 +177,17 @@ class Am_rx(QObject):
 
         self.message_signal.emit("serial connection established")
 
+        self.message_signal.emit("waiting for arduino to reset")
+        time.sleep(3)
+
+        self.message_signal.emit("reading imu whoamis")
+
         self.tx_byte('w')
         received = self.rx_packet()
-        if (received == [WHO_AM_I, WHO_AM_I]):
-            self.message_signal.emit("imu whoami succesful")
+        if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+            self.message_signal.emit("imu whoamis succesful")
         else:
-            self.error_signal.emit("imu whoami failed: " + ', '.join(map(str, received)))
+            self.error_signal.emit("imu whoamis failed: " + ', '.join(map(str, received)))
             return
 
 
