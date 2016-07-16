@@ -16,6 +16,9 @@ move all plots and their labels to a separate widget
     what else can we move out of am_gui?
 READ -> REG 39 GROUPING
 
+mag whoami
+load up data in fifo, then average it when we read?
+
 
 
 FILES:

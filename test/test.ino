@@ -1,16 +1,16 @@
-/**
- * Invensense MPU-9250 library using the SPI interface
- *
- * Copyright (C) 2015 Brian Chen
- * 
- * Open source under the MIT License. See LICENSE.txt.
- */
+#include <SPI.h>
+
+#define SPI_CLOCK 8000000  // 8MHz clock works.
+
+#define SS_PIN   10 
+#define INT_PIN  3
+#define LED      13
+
 
 #ifndef MPU9250_h
 #define MPU9250_h
 #include "Arduino.h"
 
-#define AK8963FASTMODE
 
 // mpu9250 registers
 #define MPUREG_XG_OFFS_TC 0x00
@@ -220,20 +220,11 @@ public:
     void ReadRegs(uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes );
  
     bool init(bool calib_gyro = true, bool calib_acc = true);
-    void read_temp();
-    void read_acc();
-    void read_gyro();
-    unsigned int set_gyro_scale(int scale);
     unsigned int set_acc_scale(int scale);
-    void calib_acc();
     void calib_mag();
     void select();
     void deselect();
-    unsigned int whoami();
-    uint8_t AK8963_whoami();
-    uint8_t get_CNTL1();
     void read_mag();
-    void read_all();
     void calibrate(float *dest1, float *dest2);
  
     
@@ -264,3 +255,267 @@ private:
 };
  
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+unsigned int MPU9250::WriteReg( uint8_t WriteAddr, uint8_t WriteData )
+{
+    unsigned int temp_val;
+
+    select();
+    SPI.transfer(WriteAddr);
+    temp_val=SPI.transfer(WriteData);
+    deselect();
+
+    //delayMicroseconds(50);
+    return temp_val;
+}
+unsigned int  MPU9250::ReadReg( uint8_t WriteAddr, uint8_t WriteData )
+{
+    return WriteReg(WriteAddr | READ_FLAG,WriteData);
+}
+void MPU9250::ReadRegs( uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes )
+{
+    unsigned int  i = 0;
+
+    select();
+    SPI.transfer(ReadAddr | READ_FLAG);
+    for(i = 0; i < Bytes; i++)
+        ReadBuf[i] = SPI.transfer(0x00);
+    deselect();
+
+    //delayMicroseconds(50);
+}
+
+
+/*                                     INITIALIZATION
+ * usage: call this function at startup, giving the sample rate divider (raging from 0 to 255) and
+ * low pass filter value; suitable values are:
+ * BITS_DLPF_CFG_256HZ_NOLPF2
+ * BITS_DLPF_CFG_188HZ
+ * BITS_DLPF_CFG_98HZ
+ * BITS_DLPF_CFG_42HZ
+ * BITS_DLPF_CFG_20HZ
+ * BITS_DLPF_CFG_10HZ 
+ * BITS_DLPF_CFG_5HZ 
+ * BITS_DLPF_CFG_2100HZ_NOLPF
+ * returns 1 if an error occurred
+ */
+
+#define MPU_InitRegNum 17
+
+bool MPU9250::init(bool calib_gyro, bool calib_acc){
+    pinMode(my_cs, OUTPUT);
+    digitalWrite(my_cs, HIGH);
+    float temp[3];
+
+    if(calib_gyro && calib_acc){
+        calibrate(g_bias, a_bias);
+    }
+    else if(calib_gyro){
+        calibrate(g_bias, temp);
+    }
+    else if(calib_acc){
+        calibrate(temp, a_bias);
+    }
+    
+    uint8_t i = 0;
+    uint8_t MPU_Init_Data[MPU_InitRegNum][2] = {
+        {BIT_H_RESET, MPUREG_PWR_MGMT_1},     // Reset Device
+        {0x01, MPUREG_PWR_MGMT_1},     // Clock Source
+        {0x00, MPUREG_PWR_MGMT_2},     // Enable Acc & Gyro
+        {my_low_pass_filter, MPUREG_CONFIG},         // Use DLPF set Gyroscope bandwidth 184Hz, temperature bandwidth 188Hz
+        {BITS_FS_250DPS, MPUREG_GYRO_CONFIG},    // +-250dps
+        {BITS_FS_2G, MPUREG_ACCEL_CONFIG},   // +-2G
+        {my_low_pass_filter_acc, MPUREG_ACCEL_CONFIG_2}, // Set Acc Data Rates, Enable Acc LPF , Bandwidth 184Hz
+        {0x30, MPUREG_INT_PIN_CFG},    //
+        //{0x40, MPUREG_I2C_MST_CTRL},   // I2C Speed 348 kHz
+        //{0x20, MPUREG_USER_CTRL},      // Enable AUX
+        {0x20, MPUREG_USER_CTRL},       // I2C Master mode
+        {0x0D, MPUREG_I2C_MST_CTRL}, //  I2C configuration multi-master  IIC 400KHz
+        
+        {AK8963_I2C_ADDR, MPUREG_I2C_SLV0_ADDR},  //Set the I2C slave addres of AK8963 and set for write.
+        //{0x09, MPUREG_I2C_SLV4_CTRL},
+        //{0x81, MPUREG_I2C_MST_DELAY_CTRL}, //Enable I2C delay
+
+        {AK8963_CNTL2, MPUREG_I2C_SLV0_REG}, //I2C slave 0 register address from where to begin data transfer
+        {0x01, MPUREG_I2C_SLV0_DO}, // Reset AK8963
+        {0x81, MPUREG_I2C_SLV0_CTRL},  //Enable I2C and set 1 byte
+
+        {AK8963_CNTL1, MPUREG_I2C_SLV0_REG}, //I2C slave 0 register address from where to begin data transfer
+#ifdef AK8963FASTMODE
+        {0x16, MPUREG_I2C_SLV0_DO}, // Register value to 100Hz continuous measurement in 16bit
+#else
+        {0x12, MPUREG_I2C_SLV0_DO}, // Register value to 8Hz continuous measurement in 16bit
+#endif
+        {0x81, MPUREG_I2C_SLV0_CTRL}  //Enable I2C and set 1 byte
+        
+    };
+
+    for(i = 0; i < MPU_InitRegNum; i++) {
+        WriteReg(MPU_Init_Data[i][1], MPU_Init_Data[i][0]);
+        delayMicroseconds(1000);  //I2C must slow down the write speed, otherwise it won't work
+    }
+
+    
+    //calib_mag();  //Can't load this function here , strange problem?
+    return 0;
+}
+
+
+
+
+
+
+void MPU9250::calib_mag(){
+    uint8_t response[3];
+    float data;
+    int i;
+
+    WriteReg(MPUREG_I2C_SLV0_ADDR,AK8963_I2C_ADDR|READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
+    WriteReg(MPUREG_I2C_SLV0_REG, AK8963_ASAX); //I2C slave 0 register address from where to begin data transfer
+    WriteReg(MPUREG_I2C_SLV0_CTRL, 0x83); //Read 3 bytes from the magnetometer
+
+    //WriteReg(MPUREG_I2C_SLV0_CTRL, 0x81);    //Enable I2C and set bytes
+    //delayMicroseconds(1000);
+    //response[0]=WriteReg(MPUREG_EXT_SENS_DATA_01|READ_FLAG, 0x00);    //Read I2C 
+    ReadRegs(MPUREG_EXT_SENS_DATA_00,response,3);
+    
+    //response=WriteReg(MPUREG_I2C_SLV0_DO, 0x00);    //Read I2C 
+    for(i = 0; i < 3; i++) {
+        data=response[i];
+        Magnetometer_ASA[i] = ((data-128)/256+1)*Magnetometer_Sensitivity_Scale_Factor;
+    }
+}
+void MPU9250::read_mag(){
+    uint8_t response[7];
+    float data;
+    int i;
+
+    WriteReg(MPUREG_I2C_SLV0_ADDR,AK8963_I2C_ADDR|READ_FLAG); //Set the I2C slave addres of AK8963 and set for read.
+    WriteReg(MPUREG_I2C_SLV0_REG, AK8963_HXL); //I2C slave 0 register address from where to begin data transfer
+    WriteReg(MPUREG_I2C_SLV0_CTRL, 0x87); //Read 6 bytes from the magnetometer
+
+    //delayMicroseconds(1000);
+    ReadRegs(MPUREG_EXT_SENS_DATA_00,response,7);
+    //must start your read from AK8963A register 0x03 and read seven bytes so that upon read of ST2 register 0x09 the AK8963A will unlatch the data registers for the next measurement.
+    for(i = 0; i < 3; i++) {
+        mag_data_raw[i] = ((int16_t)response[i*2+1]<<8)|response[i*2];
+        data = (float)mag_data_raw[i];
+        mag_data[i] = data*Magnetometer_ASA[i];
+    }
+}
+
+
+void MPU9250::calibrate(float *dest1, float *dest2){  
+    uint8_t data[12]; // data array to hold accelerometer and gyro x, y, z, data
+    uint16_t ii, packet_count, fifo_count;
+    int32_t gyro_bias[3]  = {0, 0, 0}, accel_bias[3] = {0, 0, 0};
+  
+    // reset device
+    WriteReg(MPUREG_PWR_MGMT_1, 0x80); // Write a one to bit 7 reset bit; toggle reset device
+    delay(100);
+   
+    // get stable time source; Auto select clock source to be PLL gyroscope reference if ready 
+    // else use the internal oscillator, bits 2:0 = 001
+    WriteReg(MPUREG_PWR_MGMT_1, 0x01);  
+    WriteReg(MPUREG_PWR_MGMT_2, 0x00);
+    delay(200);                                    
+
+    // Configure device for bias calculation
+    WriteReg(MPUREG_INT_ENABLE, 0x00);   // Disable all interrupts
+    WriteReg(MPUREG_FIFO_EN, 0x00);      // Disable FIFO
+    WriteReg(MPUREG_PWR_MGMT_1, 0x00);   // Turn on internal clock source
+    WriteReg(MPUREG_I2C_MST_CTRL, 0x00); // Disable I2C master
+    WriteReg(MPUREG_USER_CTRL, 0x00);    // Disable FIFO and I2C master modes
+    WriteReg(MPUREG_USER_CTRL, 0x0C);    // Reset FIFO and DMP
+    delay(15);
+  
+    // Configure MPU6050 gyro and accelerometer for bias calculation
+    WriteReg(MPUREG_CONFIG, 0x01);      // Set low-pass filter to 188 Hz
+    WriteReg(MPUREG_SMPLRT_DIV, 0x00);  // Set sample rate to 1 kHz
+    WriteReg(MPUREG_GYRO_CONFIG, 0x00);  // Set gyro full-scale to 250 degrees per second, maximum sensitivity
+    WriteReg(MPUREG_ACCEL_CONFIG, 0x00); // Set accelerometer full-scale to 2 g, maximum sensitivity
+    
+    uint16_t  gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
+    uint16_t  accelsensitivity = 16384;  // = 16384 LSB/g
+    
+      // Configure FIFO to capture accelerometer and gyro data for bias calculation
+    WriteReg(MPUREG_USER_CTRL, 0x40);   // Enable FIFO  
+    WriteReg(MPUREG_FIFO_EN, 0x78);     // Enable gyro and accelerometer sensors for FIFO  (max size 512 bytes in MPU-9150)
+    delay(40); // accumulate 40 samples in 40 milliseconds = 480 bytes
+
+    // At end of sample accumulation, turn off FIFO sensor read
+    WriteReg(MPUREG_FIFO_EN, 0x00);        // Disable gyro and accelerometer sensors for FIFO
+    ReadRegs(MPUREG_FIFO_COUNTH, data, 2); // read FIFO sample count
+    fifo_count = ((uint16_t)data[0] << 8) | data[1];
+    packet_count = fifo_count/12;// How many sets of full gyro and accelerometer data for averaging
+    
+}
+  
+  
+    
+
+void MPU9250::select() {
+    SPI.beginTransaction(SPISettings(my_clock, MSBFIRST, SPI_MODE3));
+    digitalWrite(my_cs, LOW);
+}
+void MPU9250::deselect() {
+    digitalWrite(my_cs, HIGH);
+    SPI.endTransaction();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MPU9250 mpu(SPI_CLOCK, SS_PIN);
+
+void setup() {
+	Serial.begin(115200);
+
+	pinMode(INT_PIN, INPUT);
+	pinMode(LED, OUTPUT);
+	digitalWrite(LED, HIGH);
+
+	SPI.begin();
+
+	mpu.init(true);
+
+	mpu.calib_mag();
+
+        delay(100);;
+}
+
+void loop() {
+	mpu.read_mag();
+
+
+	Serial.print(mpu.mag_data[0]);    Serial.print('\t');
+	Serial.print(mpu.mag_data[1]);    Serial.print('\t');
+	Serial.println(mpu.mag_data[2]);
+
+	delay(10);
+}
