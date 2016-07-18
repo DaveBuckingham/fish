@@ -15,7 +15,6 @@
 #define MPUREG_USER_CTRL 0x6A
 #define MPUREG_PWR_MGMT_1 0x6B
 #define MPUREG_PWR_MGMT_2 0x6C
-#define MPUREG_INT_ENABLE 0x38
  
 #define AK8963_I2C_ADDR             0x0c//0x18
 #define AK8963_HXL                  0x03
@@ -89,7 +88,6 @@ void initialize(){
     WriteReg( MPUREG_PWR_MGMT_1    ,  0x01                );     // Clock Source (or 0x81?? -db)
     delayMicroseconds(1000);
     WriteReg( MPUREG_PWR_MGMT_2    ,  0x00                );     // Enable Acc & Gyro
-    delayMicroseconds(1000);
 
     delayMicroseconds(1000);
     WriteReg( MPUREG_USER_CTRL     ,  0x20                );       // I2C Master mode
@@ -106,8 +104,7 @@ void initialize(){
     delayMicroseconds(1000);
     WriteReg( MPUREG_I2C_SLV0_REG  ,  AK8963_CNTL1        );  //I2C slave 0 register address from where to begin data transfer
     delayMicroseconds(1000);
-    //WriteReg( MPUREG_I2C_SLV0_DO   ,  0x16                );   // Register value to 100Hz continuous measurement in 16bit
-    WriteReg( MPUREG_I2C_SLV0_DO   ,  0x12                );
+    WriteReg( MPUREG_I2C_SLV0_DO   ,  0x16                );   // Register value to 100Hz continuous measurement in 16bit
     delayMicroseconds(1000);
     WriteReg( MPUREG_I2C_SLV0_CTRL ,  0x81                ); //Enable I2C and set 1 byte (constant vals without this -db)
     delayMicroseconds(1000);
