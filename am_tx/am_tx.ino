@@ -210,8 +210,8 @@ void write_imu_register(byte chip, byte address, byte data) {
 
 // USEFUL FOR SPI
 void write_imu_register_slow(byte chip, byte address, byte data) {
-    write_imu_register(chip, address, data);
     delay(1);
+    write_imu_register(chip, address, data);
 }
 
 // READ FROM IMU
