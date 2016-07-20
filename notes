@@ -1,3 +1,16 @@
+
+bad (freezes):
+test_working6
+test_working5
+
+good
+test_working4
+test_working2
+
+
+
+
+
 I tried to use this approach to qthreads:
 https://mayaposch.wordpress.com/2011/11/01/how-to-really-truly-use-qthreads-the-full-explanation/
 

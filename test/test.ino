@@ -1,49 +1,46 @@
 #include <SPI.h>
 
 #define SPI_CLOCK 8000000  // 8MHz clock works.
+
 #define SS_PIN   10 
 #define INT_PIN  3
 
 
+
+
 // mpu9250 registers
+#define MPUREG_CONFIG 0x1A
 #define MPUREG_I2C_MST_CTRL        0x24
 #define MPUREG_I2C_SLV0_ADDR       0x25
 #define MPUREG_I2C_SLV0_REG        0x26
 #define MPUREG_I2C_SLV0_CTRL       0x27
+#define MPUREG_INT_PIN_CFG 0x37
 #define MPUREG_EXT_SENS_DATA_00    0x49
 #define MPUREG_I2C_SLV0_DO         0x63
 #define MPUREG_USER_CTRL 0x6A
 #define MPUREG_PWR_MGMT_1 0x6B
 #define MPUREG_PWR_MGMT_2 0x6C
-#define MPUREG_INT_ENABLE 0x38
  
-#define AK8963_I2C_ADDR             0x0c//0x18
+#define AK8963_I2C_ADDR             0x0c
+ 
 #define AK8963_HXL                  0x03
 #define AK8963_CNTL1                0x0A
 #define AK8963_CNTL2                0x0B
 #define AK8963_ASAX                 0x10
+
+#define BIT_H_RESET 0x80
+#define BITS_DLPF_CFG_188HZ         0x01
+#define READ_FLAG   0x80
  
-#define READ_FLAG                   0x80
- 
-#define MAG_SENSITIVITY_SCALE       ((float)0.15f)    
+#define     Magnetometer_Sensitivity_Scale_Factor ((float)0.15f)    
  
 
-
-unsigned int WriteReg(uint8_t WriteAddr, uint8_t WriteData );
-unsigned int ReadReg(uint8_t WriteAddr, uint8_t WriteData );
-void ReadRegs(uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes );
-
-
-
-int calib_data[3];
 float Magnetometer_ASA[3];
-
+ 
 float mag_data[3];
 int16_t mag_data_raw[3];    
-
-
-
  
+
 
 
 
@@ -62,7 +59,7 @@ unsigned int WriteReg( uint8_t WriteAddr, uint8_t WriteData ) {
     return temp_val;
 }
 
-unsigned int ReadReg( uint8_t WriteAddr, uint8_t WriteData ) {
+unsigned int  ReadReg( uint8_t WriteAddr, uint8_t WriteData ) {
     return WriteReg(WriteAddr | READ_FLAG,WriteData);
 }
 
@@ -84,13 +81,25 @@ void ReadRegs( uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes ) {
 void initialize(){
     pinMode(SS_PIN, OUTPUT);
     digitalWrite(SS_PIN, HIGH);
+
   
+    delay(200);                                    
+    WriteReg(MPUREG_PWR_MGMT_1, 0x00);   // Turn on internal clock source
+    WriteReg(MPUREG_USER_CTRL, 0x0C);    // Reset FIFO and DMP
+    delay(15);
+  
+    WriteReg(MPUREG_PWR_MGMT_1, BIT_H_RESET);   // RESET
     delayMicroseconds(1000);
-    WriteReg( MPUREG_PWR_MGMT_1    ,  0x01                );     // Clock Source (or 0x81?? -db)
+    WriteReg(MPUREG_PWR_MGMT_1, 0x01);   // clock source
     delayMicroseconds(1000);
-    WriteReg( MPUREG_PWR_MGMT_2    ,  0x00                );     // Enable Acc & Gyro
+    WriteReg(MPUREG_PWR_MGMT_2, BIT_H_RESET);   // enable acc, gyro
     delayMicroseconds(1000);
 
+    // FREEZES WITHOUT THIS
+    WriteReg(MPUREG_CONFIG, BITS_DLPF_CFG_188HZ);         // Use DLPF set Gyroscope bandwidth 184Hz, temperature bandwidth 188Hz
+    delayMicroseconds(1000);
+
+    WriteReg(MPUREG_INT_PIN_CFG, 0x30);
     delayMicroseconds(1000);
     WriteReg( MPUREG_USER_CTRL     ,  0x20                );       // I2C Master mode
     delayMicroseconds(1000);
@@ -106,12 +115,14 @@ void initialize(){
     delayMicroseconds(1000);
     WriteReg( MPUREG_I2C_SLV0_REG  ,  AK8963_CNTL1        );  //I2C slave 0 register address from where to begin data transfer
     delayMicroseconds(1000);
-    //WriteReg( MPUREG_I2C_SLV0_DO   ,  0x16                );   // Register value to 100Hz continuous measurement in 16bit
-    WriteReg( MPUREG_I2C_SLV0_DO   ,  0x12                );
+    WriteReg( MPUREG_I2C_SLV0_DO   ,  0x16                );   // Register value to 100Hz continuous measurement in 16bit
     delayMicroseconds(1000);
     WriteReg( MPUREG_I2C_SLV0_CTRL ,  0x81                ); //Enable I2C and set 1 byte (constant vals without this -db)
     delayMicroseconds(1000);
+
 }
+
+
 
 
 
@@ -126,12 +137,12 @@ void calib_mag(){
     WriteReg(MPUREG_I2C_SLV0_CTRL, 0x83); //Read 3 bytes from the magnetometer
 
     ReadRegs(MPUREG_EXT_SENS_DATA_00,response,3);
+    
     for(i = 0; i < 3; i++) {
         data=response[i];
-        Magnetometer_ASA[i] = ((data-128)/256+1)* MAG_SENSITIVITY_SCALE;
+        Magnetometer_ASA[i] = ((data-128)/256+1)*Magnetometer_Sensitivity_Scale_Factor;
     }
 }
-
 
 void read_mag(){
     uint8_t response[7];
@@ -155,7 +166,7 @@ void setup() {
 	Serial.begin(115200);
 	pinMode(INT_PIN, INPUT);
 	SPI.begin();
-	initialize();
+        initialize();
 	calib_mag();
         delay(100);;
 }
