@@ -57,16 +57,19 @@
 
 
 // IMU REGISTERS
-#define REG_USER_CTRL            106
-#define REG_WHO_AM_I             117
+#define REG_USER_CTRL            0x6A         // 106
+#define REG_WHO_AM_I             0x75         // 117
+#define REG_PWR_MGMT_1           0x6B         // 107
+#define REG_PWR_MGMT_2           0x6C         // 108
 
-#define REG_SELF_TEST_X_GYRO     0          // self test output generated during manufacturing tests
+#define REG_SELF_TEST_X_GYRO     0
 #define REG_SELF_TEST_Y_GYRO     1
 #define REG_SELF_TEST_Z_GYRO     2
 #define REG_SELF_TEST_X_ACCEL    13
 #define REG_SELF_TEST_Y_ACCEL    14
 #define REG_SELF_TEST_Z_ACCEL    15
 
+#define REG_CONFIG               0x1A
 #define REG_GYRO_CONFIG          27
 #define REG_ACCEL_CONFIG         28
 
@@ -88,6 +91,7 @@
 
 // FOR READING FROM MAGNETOMETER
 
+#define ENABLE_SLAVE_FLAG        0x80        // use when specifying data length to SLV0_CTRL
 #define REG_I2C_MST_CTRL         0x24
 
 #define REG_EXT_SENS_DATA_FIRST  0x49
@@ -126,7 +130,7 @@
 #define REG_I2C_SLV0_REG         0x26
 #define REG_I2C_SLV0_CTRL        0x27
 
-#define REG_I2C_SLV0_DATA_OUT    0x63
+#define REG_I2C_SLV0_DO          0x63
 
 #define MAG_I2C_ADDRESS          0x0C
 
