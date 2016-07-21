@@ -35,7 +35,7 @@
 #define PIN_IMU_CS0          9
 #define PIN_IMU_CS1          10
  
-#define SAMPLE_FREQ_HZ                 200          // 250 seems ok. starts to break around 300.
+#define SAMPLE_FREQ_HZ                 50          // 250 seems ok. starts to break around 300.
 
 float magnetometer_asa[3];
 float mag_data[3];
@@ -154,38 +154,40 @@ void tx_asa(){
     int i;
 
     // READ 3 BYTES FROM MAGNETOMETERS
-    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register_2(REG_I2C_SLV0_REG, MAG_ASAX);
-    write_register_2(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_REG, MAG_ASAX);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
 
     read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, response, 3);
-    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, response + 3, 3);
     tx_packet(response, 6);
+    response[3] = 1;
+    response[4] = 1;
+    response[5] = 1;
 }
 
 void read_sample(){
-    uint8_t response[7];
-    float data;
+    uint8_t response[43];
     int i;
 
-    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
-    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register_2(REG_I2C_SLV0_REG, MAG_HXL);
-    write_register_2(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
-
-    read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, response, 7);
-    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, response, 7);
-    for(i = 0; i < 3; i++) {
-        mag_data_raw[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
-        data = (float)mag_data_raw[i];
-        mag_data[i] = data * magnetometer_asa[i];
+    for (i=0; i < 43; i++) {
+        response[i] = 0;
     }
+
+    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_REG, MAG_HXL);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
+    read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, response + 18, 7);
+    response[24] = 0;
+
+    tx_packet(response, 42);
+
 }
 
 void imu_whoami() {
     uint8_t response[2];
     response[0] = read_register(PIN_IMU_CS0, REG_WHO_AM_I);
-    response[1] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
+    response[1] = read_register(PIN_IMU_CS0, REG_WHO_AM_I);
     tx_packet(response, 2);
 }
 

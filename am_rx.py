@@ -137,7 +137,8 @@ class Am_rx(QObject):
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte('i')
-        time.sleep(5)
+
+        time.sleep(3)
 
         self.message_signal.emit("reading imu whoamis... ")
 
@@ -151,7 +152,7 @@ class Am_rx(QObject):
             #return
 
 
-        time.sleep(4)
+        time.sleep(3)
 
 
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
@@ -203,8 +204,8 @@ class Am_rx(QObject):
                 # TO PIPE TO FILE
                 #print enc
 
-                #print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
-                print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
+                print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
+                #print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
 
                 entry = {}
                 entry['time']    = timestamp
