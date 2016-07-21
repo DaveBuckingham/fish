@@ -15,7 +15,7 @@
 #define REG_USER_CTRL           0x6A
 #define REG_PWR_MGMT_1          0x6B
 #define REG_PWR_MGMT_2          0x6C
-#define REG_MAG_I2C_ADDR        0x0c
+#define I2C_ADDRESS_MAG         0x0c
 
 // MAG REGISTERS
 #define MAG_HXL                 0x03
@@ -78,7 +78,7 @@ void initialize(){
     write_register(REG_I2C_MST_CTRL, 0x0D);
 
     // SET MAGNETOMETER I2C ADDRESS
-    write_register( REG_I2C_SLV0_ADDR,  REG_MAG_I2C_ADDR);           delay(1); // DELAYS FOR SLOW I2C
+    write_register( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(1); // DELAYS FOR SLOW I2C
 
     // SOFT RESET MAGNETOMETER
     write_register(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
@@ -98,7 +98,7 @@ void calib_mag(){
     int i;
 
     // READ 3 BYTES FROM MAGNETOMETERS
-    write_register(REG_I2C_SLV0_ADDR, REG_MAG_I2C_ADDR|READ_FLAG);
+    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
     write_register(REG_I2C_SLV0_REG, MAG_ASAX);
     write_register(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
 
@@ -116,7 +116,7 @@ void read_mag(){
     int i;
 
     // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
-    write_register(REG_I2C_SLV0_ADDR, REG_MAG_I2C_ADDR | READ_FLAG);
+    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
     write_register(REG_I2C_SLV0_REG, MAG_HXL);
     write_register(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
 

@@ -89,6 +89,14 @@
 #define REG_GYRO_ZOUT_H          0x47
 #define REG_GYRO_ZOUT_L          0x48
 
+#define REG_I2C_SLV0_ADDR        0x25
+#define REG_I2C_SLV0_REG         0x26
+#define REG_I2C_SLV0_CTRL        0x27
+#define REG_I2C_SLV0_DO          0x63
+
+#define I2C_ADDRESS_MAG          0x0C
+
+
 // FOR READING FROM MAGNETOMETER
 
 #define ENABLE_SLAVE_FLAG        0x80        // use when specifying data length to SLV0_CTRL
@@ -96,43 +104,16 @@
 
 #define REG_EXT_SENS_DATA_FIRST  0x49
 #define REG_EXT_SENS_DATA_00     0x49
-#define REG_EXT_SENS_DATA_01     0x4A
-#define REG_EXT_SENS_DATA_02     0x4B
-#define REG_EXT_SENS_DATA_03     0x4C
-#define REG_EXT_SENS_DATA_04     0x4D
-#define REG_EXT_SENS_DATA_05     0x4E
-#define REG_EXT_SENS_DATA_06     0x4F
-#define REG_EXT_SENS_DATA_07     0x50
+
 
 
 
 // MAGNETOMETER REGISTERS
-#define MAG_REG_WHO_AM_I         0x00         // should return 0x48
-#define MAG_REG_INFO             0x01
-#define MAG_REG_ST1              0x02         // data ready status bit 0
-#define MAG_REG_XOUT_L           0x03         // data
-#define MAG_REG_XOUT_H           0x04
-#define MAG_REG_YOUT_L           0x05
-#define MAG_REG_YOUT_H           0x06
-#define MAG_REG_ZOUT_L           0x07
-#define MAG_REG_ZOUT_H           0x08
-#define MAG_REG_ST2              0x09         // Data overflow bit 3 and data read error status bit 2
-#define MAG_REG_CNTL1            0x0A
-#define MAG_REG_CNTL2            0x0B
-#define MAG_REG_ASTC             0x0C         // Self test control
-#define MAG_REG_I2CDIS           0x0F         // I2C disable
-#define MAG_REG_ASAX             0x10         // Fuse ROM x-axis sensitivity adjustment value
-#define MAG_REG_ASAY             0x11         // Fuse ROM y-axis sensitivity adjustment value
-#define MAG_REG_ASAZ             0x12         // Fuse ROM z-axis sensitivity adjustment value
+#define MAG_HXL                 0x03
+#define MAG_CNTL1               0x0A
+#define MAG_CNTL2               0x0B
+#define MAG_ASAX                0x10
 
-
-#define REG_I2C_SLV0_ADDR        0x25
-#define REG_I2C_SLV0_REG         0x26
-#define REG_I2C_SLV0_CTRL        0x27
-
-#define REG_I2C_SLV0_DO          0x63
-
-#define MAG_I2C_ADDRESS          0x0C
 
 
 
@@ -142,13 +123,11 @@
 #define XGYRO_Cten           1 << 7   // gyro self test
 #define YGYRO_Cten           1 << 6
 #define ZGYRO_Cten           1 << 5
-#define GYRO_FS_SEL          0        // gyro scale = +250dps
 
 // register 28 - accelerometer configuration
 #define ax_st_en             1 << 7   // accel self test
 #define ay_st_en             1 << 6
 #define az_st_en             1 << 5
-#define ACCEL_FS_SEL         0        // accel scale = +-2g
 
 // register 106 USER_CTRL
 #define I2C_IF_DIS      0x08         // bit to disable I2C on imu
@@ -205,17 +184,23 @@ inline void read_encoder() {
 
 
 // WRITE TO IMU
-void write_imu_register(byte chip, byte address, byte data) {
+void write_register(byte chip, byte address, byte data) {
     digitalWrite(chip, LOW);
     SPI.transfer(address);
     SPI.transfer(data);
     digitalWrite(chip, HIGH);
 }
 
-// USEFUL FOR SPI
-void write_imu_register_slow(byte chip, byte address, byte data) {
+void write_register_2(byte address, byte data) {
+    write_register(PIN_IMU_CS0, address, data);
+    write_register(PIN_IMU_CS1, address, data);
+}
+
+// SPI NEEDS US TO SLOW DOWN
+void write_register_2_slow(byte address, byte data) {
+    write_register(PIN_IMU_CS0, address, data);
+    write_register(PIN_IMU_CS1, address, data);
     delay(1);
-    write_imu_register(chip, address, data);
 }
 
 // READ FROM IMU
@@ -291,10 +276,10 @@ void read_sample() {
     i += 6;
 
     // IMU 0 MAG VALUES
-
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_XOUT_L);
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_REG, MAG_HXL);
+    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
+    write_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
     read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_FIRST, raw_buffer + i, 7);
     i += 6;
 
@@ -307,9 +292,9 @@ void read_sample() {
     i += 6;
 
     // IMU 1 MAG VALUES
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  MAG_REG_XOUT_L);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x07 | READ_FLAG);
+    write_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register(PIN_IMU_CS1, REG_I2C_SLV0_REG, MAG_HXL);
+    write_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
     read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_FIRST, raw_buffer + i, 7);
     i += 6;
 
@@ -329,45 +314,44 @@ void tx_asa() {
 
     int i = 0;
 
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG); //SET THE I2C SLAVE ADDRES OF AK8963 AND SET FOR READ.
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_REG,  MAG_REG_ASAX);                 //I2C SLAVE 0 REGISTER ADDRESS FROM WHERE TO READ ASA
-    write_imu_register(PIN_IMU_CS0, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);            //READ 3 BYTES
-
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_ADDR, MAG_I2C_ADDRESS | READ_FLAG);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_REG,  MAG_REG_ASAX);
-    write_imu_register(PIN_IMU_CS1, REG_I2C_SLV0_CTRL, 0x03 | READ_FLAG);
+    // READ 3 BYTES FROM MAGNETOMETERS
+    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register_2(REG_I2C_SLV0_REG, MAG_ASAX);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
 
     read_multiple_registers(PIN_IMU_CS0, REG_EXT_SENS_DATA_00, raw_buffer, 3);
-
     read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, raw_buffer + 3, 3);
 
     tx_packet(raw_buffer, 6);
 }
 
 void record_data() {
-    write_imu_register(PIN_IMU_CS0, REG_GYRO_CONFIG,  GYRO_FS_SEL);           // SET GYRO RANGE
-    write_imu_register(PIN_IMU_CS1, REG_GYRO_CONFIG,  GYRO_FS_SEL);
-    write_imu_register(PIN_IMU_CS0, REG_ACCEL_CONFIG, ACCEL_FS_SEL);          // SET ACCEL RANGE
-    write_imu_register(PIN_IMU_CS1, REG_ACCEL_CONFIG, ACCEL_FS_SEL);
+    write_register_2_slow(REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
 
+    write_register_2(REG_GYRO_CONFIG,  0x0);          // SET GYRO SCALE = +250dps
+    write_register_2(REG_ACCEL_CONFIG, 0x0);          // SET ACCEL SCALE = +-2G
 
-    // SET UP I2C AND MAG
-    write_imu_register_slow(PIN_IMU_CS0, REG_USER_CTRL,         0x20            );   // I2C master mode
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_MST_CTRL,      0x0D            );   // I2C configuration multi-master  IIC 400KHz
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_ADDR,     MAG_I2C_ADDRESS );   // Set the I2C slave addres of AK8963 and set for write.
+    // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
+    // MAG DOESN'T WORK WITHOUT THIS, NOT SURE WHY...
+    write_register_2(REG_CONFIG, 0x01);
+    write_register_2(REG_USER_CTRL, 0x20);
+    write_register_2(REG_I2C_MST_CTRL, 0x0D);
+    write_register_2(REG_CONFIG, 0x01);
+    write_register_2(REG_USER_CTRL, 0x20);
+    write_register_2(REG_I2C_MST_CTRL, 0x0D);
 
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,      MAG_REG_CNTL2   );
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DATA_OUT, 0x01            );   // soft reset (initialize mag registers)
+    // SET MAGNETOMETER I2C ADDRESS
+    write_register_2_slow(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);
 
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL,     0x81            );   // enable I2C and set 1 byte
+    // SOFT RESET MAGNETOMETER
+    write_register_2_slow(REG_I2C_SLV0_REG, MAG_CNTL2);
+    write_register_2_slow(REG_I2C_SLV0_DO, 0x01);
+    write_register_2_slow(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_REG,      MAG_REG_CNTL1   );
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_DATA_OUT, 0x16            );   // 16-bit output, continuous measurement mode 2 (100hz)
-
-    write_imu_register_slow(PIN_IMU_CS0, REG_I2C_SLV0_CTRL,     0x81            );   // enable I2C and set 1 byte
-    
-
-
+    // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2 AND 100HZ
+    write_register_2_slow(REG_I2C_SLV0_REG, MAG_CNTL1);
+    write_register_2_slow(REG_I2C_SLV0_DO, 0x16);
+    write_register_2_slow(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 
     Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
     Timer1.attachInterrupt(read_sample);
@@ -405,8 +389,8 @@ void setup() {
     SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_SPEED_HZ, MSBFIRST, SPI_MODE3));
     delay(START_UP_TIME);
-    write_imu_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
-    write_imu_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
+    write_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
+    write_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
 
 }
 
