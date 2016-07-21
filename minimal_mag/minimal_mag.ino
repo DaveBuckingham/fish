@@ -5,6 +5,7 @@
 #define SS_PIN                  10 
 
 // IMU REGISTERS
+#define REG_WHO_AM_I            0x75         // 117
 #define REG_CONFIG              0x1A
 #define REG_I2C_MST_CTRL        0x24
 #define REG_I2C_SLV0_ADDR       0x25
@@ -32,17 +33,16 @@
 float magnetometer_asa[3];
 float mag_data[3];
 int16_t mag_data_raw[3];    
+int whoami;
 
 
 unsigned int write_register( uint8_t WriteAddr, uint8_t WriteData ) {
     unsigned int temp_val;
 
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
     digitalWrite(SS_PIN, LOW);
     SPI.transfer(WriteAddr);
     temp_val=SPI.transfer(WriteData);
     digitalWrite(SS_PIN, HIGH);
-    SPI.endTransaction();
 
     return temp_val;
 }
@@ -50,19 +50,18 @@ unsigned int write_register( uint8_t WriteAddr, uint8_t WriteData ) {
 void read_registers( uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes ) {
     unsigned int  i = 0;
 
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
     digitalWrite(SS_PIN, LOW);
     SPI.transfer(ReadAddr | READ_FLAG);
     for(i = 0; i < Bytes; i++)
         ReadBuf[i] = SPI.transfer(0x00);
     digitalWrite(SS_PIN, HIGH);
-    SPI.endTransaction();
 
 }
 
 
 void initialize(){
     pinMode(SS_PIN, OUTPUT);
+
     digitalWrite(SS_PIN, HIGH);
 
   
@@ -128,18 +127,37 @@ void read_mag(){
     }
 }
 
+void get_whoami() {
+    uint8_t response[1];
+    read_registers(REG_WHO_AM_I, response, 1);
+    whoami = (int)response[0];
+}
+
 void setup() {
 	Serial.begin(115200);
 	SPI.begin();
+        SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
         initialize();
+        get_whoami();
 	calib_mag();
         delay(100);;
 }
 
 void loop() {
+        get_whoami();
 	read_mag();
-	Serial.print(mag_data[0]);    Serial.print('\t');
-	Serial.print(mag_data[1]);    Serial.print('\t');
+        Serial.print(whoami);
+        Serial.print('\t');
+        Serial.print(magnetometer_asa[0]);
+        Serial.print('\t');
+        Serial.print(magnetometer_asa[1]);
+        Serial.print('\t');
+        Serial.print(magnetometer_asa[2]);
+        Serial.print('\t');
+	Serial.print(mag_data[0]);
+        Serial.print('\t');
+	Serial.print(mag_data[1]);
+        Serial.print('\t');
 	Serial.println(mag_data[2]);
 	delay(10);
 }

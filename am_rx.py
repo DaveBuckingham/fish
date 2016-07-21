@@ -224,7 +224,7 @@ class Am_rx(QObject):
                 self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE * .75)
 
                 #self.plot_a1_signal.emit(timestamp, [mx1, my1, mz1],  count == 0)
-                #self.plot_a2_signal.emit(timestamp, [mx2, my2, mz2],  count == Am_rx.PLOT_REFRESH_RATE * .5)
+                #self.plot_a2_signal.emit(timestamp, [mx2, my2, mz2],  count == Am_rx.PLOT_REFRESH_RATE * .25)
 
 
         self.tx_byte('s')

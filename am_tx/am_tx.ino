@@ -326,6 +326,15 @@ void tx_asa() {
 }
 
 void record_data() {
+    SPI.begin();
+    SPI.beginTransaction(SPISettings(SPI_SPEED_HZ, MSBFIRST, SPI_MODE3));
+    delay(START_UP_TIME);
+    //write_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
+    //write_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
+
+
+
+
     write_register_2_slow(REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
 
     write_register_2(REG_GYRO_CONFIG,  0x0);          // SET GYRO SCALE = +250dps
@@ -333,9 +342,6 @@ void record_data() {
 
     // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
     // MAG DOESN'T WORK WITHOUT THIS, NOT SURE WHY...
-    write_register_2(REG_CONFIG, 0x01);
-    write_register_2(REG_USER_CTRL, 0x20);
-    write_register_2(REG_I2C_MST_CTRL, 0x0D);
     write_register_2(REG_CONFIG, 0x01);
     write_register_2(REG_USER_CTRL, 0x20);
     write_register_2(REG_I2C_MST_CTRL, 0x0D);
@@ -386,12 +392,6 @@ void setup() {
     // IMU
     pinMode(PIN_IMU_CS0, OUTPUT);
     pinMode(PIN_IMU_CS1, OUTPUT);
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(SPI_SPEED_HZ, MSBFIRST, SPI_MODE3));
-    delay(START_UP_TIME);
-    write_register(PIN_IMU_CS0, REG_USER_CTRL,    I2C_IF_DIS);            // PREVENT SWITCHING TO I2C
-    write_register(PIN_IMU_CS1, REG_USER_CTRL,    I2C_IF_DIS);
-
 }
 
 
@@ -408,6 +408,8 @@ void loop() {
                 break;
             case 's':
                 Timer1.detachInterrupt();
+                SPI.endTransaction();
+                SPI.end();
                 break;
             case 'm':
                 tx_asa();
