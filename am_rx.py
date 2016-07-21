@@ -135,6 +135,10 @@ class Am_rx(QObject):
         self.message_signal.emit("waiting for arduino to reset\n")
         time.sleep(4)
 
+        self.message_signal.emit("initializing imus\n")
+        self.tx_byte('i')
+        time.sleep(5)
+
         self.message_signal.emit("reading imu whoamis... ")
 
         self.tx_byte('w')
@@ -144,7 +148,10 @@ class Am_rx(QObject):
         else:
             self.error_signal.emit("FAILED\n")
             self.error_signal.emit("values read: " + ', '.join(map(str, received)) + "\n")
-            return
+            #return
+
+
+        time.sleep(4)
 
 
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")

@@ -204,7 +204,7 @@ void write_register_2_slow(byte address, byte data) {
 }
 
 // READ FROM IMU
-inline byte read_imu_register(byte chip, byte address) {
+inline byte read_register(byte chip, byte address) {
     digitalWrite(chip, LOW);
     SPI.transfer(address | READ_FLAG);
     byte data = SPI.transfer(0x00);
@@ -303,8 +303,8 @@ void read_sample() {
 
 // READ WHOAMI FROM BOTH IMUS AND TX RESULTS OVER SERIAL
 void imu_whoami() {
-    raw_buffer[0] = read_imu_register(PIN_IMU_CS0, REG_WHO_AM_I);
-    raw_buffer[1] = read_imu_register(PIN_IMU_CS1, REG_WHO_AM_I);
+    raw_buffer[0] = read_register(PIN_IMU_CS0, REG_WHO_AM_I);
+    raw_buffer[1] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
     tx_packet(raw_buffer, 2);
 }
 
@@ -396,7 +396,6 @@ void setup() {
 
 
 
-// NOTHING HERE. MAIN PROCEDURE IS IN read_sample();
 void loop() {
     if (Serial.available() > 0) {
         switch (Serial.read()) {

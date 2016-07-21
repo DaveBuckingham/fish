@@ -2,7 +2,7 @@
 
 #define SPI_CLOCK               8000000  // 8MHz clock
 
-#define SS_PIN                  10 
+#define SS_PIN                  10
 
 // IMU REGISTERS
 #define REG_WHO_AM_I            0x75         // 117
@@ -136,28 +136,27 @@ void get_whoami() {
 void setup() {
 	Serial.begin(115200);
 	SPI.begin();
-        SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
-        initialize();
-        get_whoami();
+    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
+    initialize();
+    get_whoami();
 	calib_mag();
-        delay(100);;
+    delay(100);;
 }
 
 void loop() {
-        get_whoami();
 	read_mag();
-        Serial.print(whoami);
-        Serial.print('\t');
-        Serial.print(magnetometer_asa[0]);
-        Serial.print('\t');
-        Serial.print(magnetometer_asa[1]);
-        Serial.print('\t');
-        Serial.print(magnetometer_asa[2]);
-        Serial.print('\t');
+    Serial.print(whoami);
+    Serial.print('\t');
+    Serial.print(magnetometer_asa[0]);
+    Serial.print('\t');
+    Serial.print(magnetometer_asa[1]);
+    Serial.print('\t');
+    Serial.print(magnetometer_asa[2]);
+    Serial.print('\t');
 	Serial.print(mag_data[0]);
-        Serial.print('\t');
+    Serial.print('\t');
 	Serial.print(mag_data[1]);
-        Serial.print('\t');
+    Serial.print('\t');
 	Serial.println(mag_data[2]);
 	delay(10);
 }
