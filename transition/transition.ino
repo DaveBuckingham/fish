@@ -71,6 +71,15 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes) {
     Serial.write(serial_buffer, j);
 }
 
+byte read_register(byte chip, byte address) {
+    digitalWrite(chip, LOW);
+    SPI.transfer(address | READ_FLAG);
+    byte data = SPI.transfer(0x00);
+    delay(1);
+    digitalWrite(chip, HIGH);
+    return data;
+}
+
 
 
 unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
@@ -86,7 +95,7 @@ unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
 
 
 void write_register_2(byte address, byte data) {
-    write_register(PIN_IMU_CS0, address, data);
+    //write_register(PIN_IMU_CS0, address, data);
     write_register(PIN_IMU_CS1, address, data);
 }
 
@@ -106,8 +115,10 @@ void initialize(){
 	SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
-    pinMode(SS_PIN, OUTPUT);
-    digitalWrite(SS_PIN, HIGH);
+    pinMode(PIN_IMU_CS0, OUTPUT);
+    digitalWrite(PIN_IMU_CS0, HIGH);
+    pinMode(PIN_IMU_CS1, OUTPUT);
+    digitalWrite(PIN_IMU_CS1, HIGH);
 
   
     delay(200);                                    
@@ -197,18 +208,16 @@ void read_mag(){
 
     tx_packet(response, 42);
 
-    //for(i = 18; i < 24; i++) {
-    //    Serial.print(response[i]);
-    //    Serial.print('\t');
-    //}
-	//Serial.println();
 }
 
-void get_whoami() {
-    uint8_t response[1];
-    read_multiple_registers(PIN_IMU_CS1, REG_WHO_AM_I, response, 1);
-    whoami = (int)response[0];
+
+void imu_whoami() {
+    uint8_t response[2];
+    response[0] = read_register(PIN_IMU_CS0, REG_WHO_AM_I);
+    response[1] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
+    tx_packet(response, 2);
 }
+
 
 void setup() {
 	Serial.begin(115200);
@@ -238,7 +247,7 @@ void loop() {
                 tx_asa();
                 break;
             case 'w':
-                //imu_whoami();
+                imu_whoami();
                 break;
             case 't':
                 // imu self tests
