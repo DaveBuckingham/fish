@@ -28,8 +28,8 @@ class Am_rx(QObject):
     MAGNETOMETER_SCALE_FACTOR  =   0.15
     WHO_AM_I                   =   0x71
 
-    mag_0_asa = [0, 0, 0]
-    mag_1_asa = [0, 0, 0]
+    mag_0_asa = [1, 1, 1]
+    mag_1_asa = [1, 1, 1]
 
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
@@ -88,20 +88,48 @@ class Am_rx(QObject):
     def tx_byte(self, val):
         self.connection.write(struct.pack('!c', val))
         
+    def rx_byte(self):
+        val = self.connection.read(1)
+        if (len(val) == 0):
+            return None
+        else:
+            return ord(val)
 
+    # READ A PACKAGE FROM SERIAL AND RETURN ITS CONTENTS
+    # IF TIMEOUT, RETURN AN EMPTY LIST
     def rx_packet(self):
         message = []
+        val = None
 
-        val = ord(self.connection.read(1))
         while (val != Am_rx.COM_FLAG):
-            val = ord(self.connection.read(1))
+            val = self.rx_byte()
+            if (val == None):
+                print "rx packet failed A"
+                return []
 
-        val = ord(self.connection.read(1))
+        val = self.rx_byte()
+        if (val == None):
+            print "rx packet failed B"
+            return []
+
+        if (val == Am_rx.COM_FLAG):
+            val = self.rx_byte()
+            if (val == None):
+                print "rx packet failed E"
+                return []
+
         while (val != Am_rx.COM_FLAG):
             if (val == Am_rx.COM_ESCAPE):
-                val = ord(self.connection.read(1)) ^ Am_rx.COM_XOR
+                val = self.rx_byte()
+                if (val == None):
+                    print "rx packet failed C"
+                    return []
+                val = val ^ Am_rx.COM_XOR
             message.append(val)
-            val = ord(self.connection.read(1))
+            val = self.rx_byte()
+            if (val == None):
+                print "rx packet failed D"
+                return []
 
         return message
 
@@ -122,7 +150,9 @@ class Am_rx(QObject):
                 parity   = serial.PARITY_NONE,
                 stopbits = serial.STOPBITS_ONE,
                 bytesize = serial.EIGHTBITS,
-                timeout  = None   # block, wait forever
+               #timeout  = None   # block, wait forever
+               #timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
+                timeout  = 1.0    # 1 second timeout 
             )
 
         except serial.serialutil.SerialException:
@@ -133,28 +163,28 @@ class Am_rx(QObject):
         self.message_signal.emit("OK\n")
 
         self.message_signal.emit("waiting for arduino to reset\n")
-        time.sleep(4)
+        time.sleep(2)
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte('i')
 
-        time.sleep(3)
-
-        self.message_signal.emit("reading imu whoamis... ")
-
-        self.tx_byte('w')
-        received = self.rx_packet()
-        if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-            self.message_signal.emit("OK\n")
-        else:
-            self.error_signal.emit("FAILED\n")
-            self.error_signal.emit("values read: " + ', '.join(map(str, received)) + "\n")
-            #return
 
 
-        time.sleep(3)
-
-
+#        received = []
+#        while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
+#            self.message_signal.emit("reading imu whoamis... ")
+#            self.tx_byte('w')
+#            received = self.rx_packet()
+#            if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+#                self.message_signal.emit("OK\n")
+#            elif (len(received) == 0):
+#                self.error_signal.emit("FAILED (timeout)\n")
+#            elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+#                self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
+#
+#
+#
+#
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte('m')
         received = self.rx_packet()
@@ -169,13 +199,13 @@ class Am_rx(QObject):
 
         else:
             self.error_signal.emit("FAILED\n")
-            self.error_signal.emit("using 0 adjustment\n")
+            self.error_signal.emit("using 1 adjustment\n")
 
 
         self.tx_byte('r')
-        self.message_signal.emit("waiting to stabilize\n")
-        for i in range(0, 100):
-            self.rx_packet()
+        #self.message_signal.emit("waiting to stabilize\n")
+        #for i in range(0, 100):
+        #    self.rx_packet()
 
         self.message_signal.emit("recording data\n")
 
@@ -204,8 +234,8 @@ class Am_rx(QObject):
                 # TO PIPE TO FILE
                 #print enc
 
-                print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
-                #print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
+                #print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
+                print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
 
                 entry = {}
                 entry['time']    = timestamp

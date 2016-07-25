@@ -252,11 +252,7 @@ class Am_ui(QWidget):
     # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
     def record_button_slot(self):
         if (self.recording):
-            if (self.use_trigger):
-                self.stop_recording_time = self.timestamps[-1] + (self.post_trigger_delay * 1000)
-		self.message_slot("trigger detected...will stop collecting data after post trigger delay\n")
-            else:
-                self.stop_recording_time = self.timestamps[-1]
+            self.stop_recording()
         else:
             if (not self.data_saved):
                 result = (QMessageBox.question(self,
@@ -267,7 +263,6 @@ class Am_ui(QWidget):
 
             if (self.data_saved or (result == QMessageBox.Yes)):
                 self.num_samples = 0
-                self.stop_recording_time = float("inf")
                 self.record()
 
 
@@ -317,8 +312,8 @@ class Am_ui(QWidget):
         self.num_samples += 1
         self.stats_num_samples.setText('Samples: %d' % self.num_samples)
 
-        if (timestamp >= self.stop_recording_time):
-            self.stop_recording()
+        #if (timestamp >= self.stop_recording_time):
+            #self.stop_recording()
 
 
     # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT

@@ -402,6 +402,8 @@ void loop() {
             case 'b':
                 blink();
                 break;
+            case 'i':
+                break;
             case 'r':
                 record_data();
                 break;

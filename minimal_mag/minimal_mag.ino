@@ -2,7 +2,7 @@
 
 #define SPI_CLOCK               8000000  // 8MHz clock
 
-#define SS_PIN                  9
+#define SS_PIN                  10
 
 // IMU REGISTERS
 #define REG_WHO_AM_I            0x75         // 117
@@ -121,9 +121,10 @@ void read_mag(){
 
     read_registers(REG_EXT_SENS_DATA_00, response, 7);
     for(i = 0; i < 3; i++) {
-        mag_data_raw[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
-        data = (float)mag_data_raw[i];
-        mag_data[i] = data * magnetometer_asa[i];
+        //mag_data_raw[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
+        //data = (float)mag_data_raw[i];
+        //mag_data[i] = data * magnetometer_asa[i];
+        mag_data[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
     }
 }
 
