@@ -163,28 +163,29 @@ class Am_rx(QObject):
         self.message_signal.emit("OK\n")
 
         self.message_signal.emit("waiting for arduino to reset\n")
-        time.sleep(2)
+        time.sleep(3)
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte('i')
 
 
 
-#        received = []
-#        while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
-#            self.message_signal.emit("reading imu whoamis... ")
-#            self.tx_byte('w')
-#            received = self.rx_packet()
-#            if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-#                self.message_signal.emit("OK\n")
-#            elif (len(received) == 0):
-#                self.error_signal.emit("FAILED (timeout)\n")
-#            elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-#                self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
-#
-#
-#
-#
+        received = []
+        while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
+            self.message_signal.emit("reading imu whoamis... ")
+            self.tx_byte('w')
+            received = self.rx_packet()
+            if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+                self.message_signal.emit("OK\n")
+            elif (len(received) == 0):
+                self.error_signal.emit("FAILED (timeout)\n")
+            elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+                self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
+
+
+
+
+
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte('m')
         received = self.rx_packet()
