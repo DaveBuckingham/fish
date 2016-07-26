@@ -3,8 +3,7 @@
 
 #define SPI_CLOCK               8000000  // 8MHz clock
 
-#define SS_PIN                  10
-#define PIN_IMU_CS0             10
+#define PIN_IMU_CS0             9
 #define PIN_IMU_CS1             10
 
 // IMU REGISTERS
@@ -19,6 +18,10 @@
 #define REG_USER_CTRL           0x6A
 #define REG_PWR_MGMT_1          0x6B
 #define REG_PWR_MGMT_2          0x6C
+#define REG_ACCEL_FIRST          0x3B
+#define REG_GYRO_FIRST           0x43
+
+
 #define I2C_ADDRESS_MAG         0x0c
 
 // MAG REGISTERS
@@ -34,11 +37,23 @@
 
 #define SAMPLE_FREQ_HZ          100          // 250 seems ok. starts to break around 300.
 
+
+// COMMUNICATION
 #define COM_FLAG                0x7E
 #define COM_ESCAPE              0X7D
 #define COM_XOR                 0X20
+
+
+// EMS PINS
+#define PIN_EMS_CLK          5
+#define PIN_EMS_DATA         6
+#define PIN_EMS_CS           7
+
+
  
 
+int encoder_angle;
+unsigned long next_sample_id;            // count sample ids
 float magnetometer_asa[3];
 float mag_data[3];
 int16_t mag_data_raw[3];    
@@ -73,15 +88,20 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes) {
 
 
 
-unsigned int write_register( uint8_t WriteAddr, uint8_t WriteData ) {
+unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
     unsigned int temp_val;
 
-    digitalWrite(SS_PIN, LOW);
+    digitalWrite(chip, LOW);
     SPI.transfer(WriteAddr);
     temp_val=SPI.transfer(WriteData);
-    digitalWrite(SS_PIN, HIGH);
+    digitalWrite(chip, HIGH);
 
     return temp_val;
+}
+
+void write_register_2(uint8_t address, uint8_t data) {
+    //write_register(PIN_IMU_CS0, address, data);
+    write_register(PIN_IMU_CS1, address, data);
 }
 
 byte read_register(byte chip, byte address) {
@@ -94,50 +114,75 @@ byte read_register(byte chip, byte address) {
 }
 
 
-void read_registers( uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes ) {
+void read_multiple_registers(byte chip, uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes ) {
     unsigned int  i = 0;
 
-    digitalWrite(SS_PIN, LOW);
+    digitalWrite(chip, LOW);
     SPI.transfer(ReadAddr | READ_FLAG);
     for(i = 0; i < Bytes; i++)
         ReadBuf[i] = SPI.transfer(0x00);
-    digitalWrite(SS_PIN, HIGH);
+    digitalWrite(chip, HIGH);
+}
 
+// READ FROM EMS
+inline void read_encoder() {
+    byte i;
+    digitalWrite(PIN_EMS_CS, HIGH);
+    digitalWrite(PIN_EMS_CS, LOW);
+    encoder_angle = 0;
+
+    for (i = 0; i < 10; i++) {
+        digitalWrite(PIN_EMS_CLK, LOW);
+        digitalWrite(PIN_EMS_CLK, HIGH);
+        if (digitalRead(PIN_EMS_DATA)) {
+            encoder_angle |= 1 << (9 - i);
+        }
+    }
+
+    for (i = 0; i < 7; i++) {
+        digitalWrite(PIN_EMS_CLK, LOW);
+        digitalWrite(PIN_EMS_CLK, HIGH);
+    }
 }
 
 
+
+
+
+
 void initialize(){
+    next_sample_id = 0;
 	SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
-    pinMode(SS_PIN, OUTPUT);
-
-    digitalWrite(SS_PIN, HIGH);
-
+    //pinMode(PIN_IMU_CS0, OUTPUT);
+    //digitalWrite(PIN_IMU_CS0, HIGH);
+    pinMode(PIN_IMU_CS1, OUTPUT);
+    digitalWrite(PIN_IMU_CS1, HIGH);
   
     delay(200);                                    
   
-    write_register(REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
+    write_register_2(REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
     delay(1);
 
     // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
     // MAG DOESN'T WORK WITHOUT THIS, NOT SURE WHY...
-    write_register(REG_CONFIG, 0x01);
-    write_register(REG_USER_CTRL, 0x20);
-    write_register(REG_I2C_MST_CTRL, 0x0D);
+    write_register_2(REG_CONFIG, 0x01);
+    write_register_2(REG_USER_CTRL, 0x20);
+    write_register_2(REG_I2C_MST_CTRL, 0x0D);
 
     // SET MAGNETOMETER I2C ADDRESS
-    write_register( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(1); // DELAYS FOR SLOW I2C
+    write_register_2( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(1); // DELAYS FOR SLOW I2C
 
     // SOFT RESET MAGNETOMETER
-    write_register(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
-    write_register(REG_I2C_SLV0_DO, 0x01);                           delay(1);
-    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register_2(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
+    write_register_2(REG_I2C_SLV0_DO, 0x01);                           delay(1);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
 
     // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2 AND 100HZ
-    write_register(REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(1);
-    write_register(REG_I2C_SLV0_DO, 0x16);                           delay(1);
-    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register_2(REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(1);
+    write_register_2(REG_I2C_SLV0_DO, 0x16);                           delay(1);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
 
     delay(100);;
 }
@@ -149,17 +194,17 @@ void tx_asa(){
     int i;
 
     // READ 3 BYTES FROM MAGNETOMETERS
-    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(REG_I2C_SLV0_REG, MAG_ASAX);
-    write_register(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
-    read_registers(REG_EXT_SENS_DATA_00,response,3);
+    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register_2(REG_I2C_SLV0_REG, MAG_ASAX);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00,response,3);
 
     delay(1);
 
-    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(REG_I2C_SLV0_REG, MAG_ASAX);
-    write_register(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
-    read_registers(REG_EXT_SENS_DATA_00,response + 3,3);
+    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register_2(REG_I2C_SLV0_REG, MAG_ASAX);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00,response + 3,3);
     
     tx_packet(response, 6);
 }
@@ -173,22 +218,45 @@ void read_sample(){
     }
 
 
-    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
-    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(REG_I2C_SLV0_REG, MAG_HXL);
-    write_register(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
+    i = 0;
+    
+    // SAMPLE ID
+    response[i++] = next_sample_id >> 24;
+    response[i++] = next_sample_id >> 16;
+    response[i++] = next_sample_id >> 8;
+    response[i++] = next_sample_id;
+    next_sample_id++;
 
-    read_registers(REG_EXT_SENS_DATA_00, response + 18, 7);
-    response[24] = 0;
+    // ENCODER VALUE
+    read_encoder();
+    response[i++] = encoder_angle >> 8;
+    response[i++] = encoder_angle;
+
+    // IMU 0 ACCELEROMETER VALUES
+    read_multiple_registers(PIN_IMU_CS1, REG_ACCEL_FIRST, response + i, 6);
+    i += 6;
+
+    // IMU 0 GYROSCOPE VALUES
+    read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, response + i, 6);
+    i += 6;
+
+
+    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
+    write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    write_register_2(REG_I2C_SLV0_REG, MAG_HXL);
+    write_register_2(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
+
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, response + i, 7);
+    i += 6;
+    response[i] = 0;
 
     tx_packet(response, 42);
 
 }
 
 void imu_whoami() {
-
     uint8_t response[2];
-    response[0] = read_register(PIN_IMU_CS0, REG_WHO_AM_I);
+    response[0] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
     delay(1);
     response[1] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
     tx_packet(response, 2);
@@ -201,6 +269,15 @@ void setup() {
 void loop() {
     if (Serial.available() > 0) {
         switch (Serial.read()) {
+            case 'i':
+                initialize();
+                break;
+            case 'w':
+                imu_whoami();
+                break;
+            case 'm':
+                tx_asa();
+                break;
             case 'r':
                 Timer1.initialize(1000000 / SAMPLE_FREQ_HZ);  // arg in microseconds
                 Timer1.attachInterrupt(read_sample);
@@ -209,15 +286,6 @@ void loop() {
                 Timer1.detachInterrupt();
                 SPI.endTransaction();
                 SPI.end();
-                break;
-            case 'i':
-                initialize();
-                break;
-            case 'm':
-                tx_asa();
-                break;
-            case 'w':
-                imu_whoami();
                 break;
             case 't':
                 // imu self tests

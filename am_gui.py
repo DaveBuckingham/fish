@@ -29,49 +29,49 @@ class Am_ui(QWidget):
 
 
 
-	########################
+        ########################
         #       VARIABLES      #
-	########################
+        ########################
 
-	# HAS THE COLLECTED DATA BEEN SAVED TO FILE?
+        # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
         self.data_saved = True
 
-	# CURRENTLY RECORDING DATA?
+        # CURRENTLY RECORDING DATA?
         self.recording = False
 
-	# IF FALSE, RECORD BUTTON TO START AND STOP RECORDING
-	# IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
+        # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING
+        # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
         self.use_trigger = False
         self.pre_trigger_delay = 10
         self.post_trigger_delay = 10
 
-	# ALL THE BUTTONS IN THE MAIN WINDOW
+        # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
 
-	# COLLECTED DATA.
-	# WILL CONTAIN 5 LISTS (ACCEL1, ACCEL2, GYRO1, GYRO2, TIME)
+        # COLLECTED DATA.
+        # WILL CONTAIN 5 LISTS (ACCEL1, ACCEL2, GYRO1, GYRO2, TIME)
         #self.data = {}
 
-	# TIMESTAMPS OF COLLECTED DATA.
-	# am_rx.py WILL PUT THE SAME DATA IN HERE AND IN receiver.data['time']
+        # TIMESTAMPS OF COLLECTED DATA.
+        # am_rx.py WILL PUT THE SAME DATA IN HERE AND IN receiver.data['time']
         # KIND OF REDUNDANT, BUT THIS IS REALLY FOR THE PROGRAM TO KEEP TRACK OF
-	# TIME, E.G. FOR TRIGGERS, receiver.data IS STORING IMU DATA FOR SAVING.
+        # TIME, E.G. FOR TRIGGERS, receiver.data IS STORING IMU DATA FOR SAVING.
         self.timestamps   = []
 
-	# NUMBER OF SAMPLES COLLECTED
+        # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
-	# HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
+        # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
 
 
 
-	##################################################
+        ##################################################
         #   CREATE GUI ELEMENTS AND ADD TO MAIN WINDOW   #
-	##################################################
+        ##################################################
         
 
-	# CREATE BUTTONS AND ADD TO BUTTON LAYOUT
+        # CREATE BUTTONS AND ADD TO BUTTON LAYOUT
 
         button_layout = QVBoxLayout()
         self.button_container = QWidget()
@@ -110,16 +110,14 @@ class Am_ui(QWidget):
         self.plot_a2 = Am_plot()
         self.plot_g1 = Am_plot()
         self.plot_g2 = Am_plot()
-
-        #self.plot_a1 = Am_mpl()
-        #self.plot_a2 = Am_mpl()
-        #self.plot_g1 = Am_mpl()
-        #self.plot_g2 = Am_mpl()
+        self.plot_m1 = Am_plot()
+        self.plot_m2 = Am_plot()
 
 
-	# SETTINGS
 
-	self.settings = Am_settings(self)
+        # SETTINGS
+
+        self.settings = Am_settings(self)
 
 
         # STATUS INFO
@@ -138,9 +136,11 @@ class Am_ui(QWidget):
         top_layout.addWidget(self.plot_a2, 1, 2)
         top_layout.addWidget(self.plot_g1, 2, 1)
         top_layout.addWidget(self.plot_g2, 2, 2)
+        top_layout.addWidget(self.plot_m1, 3, 1)
+        top_layout.addWidget(self.plot_m2, 3, 2)
 
-        top_layout.addWidget(self.text_window, 3, 1, 1, 2)
-        top_layout.addLayout(stats_layout, 4, 1, 1, 2)
+        top_layout.addWidget(self.text_window, 4, 1, 1, 2)
+        top_layout.addLayout(stats_layout, 5, 1, 1, 2)
 
         top_layout.addWidget(self.button_container, 1, 3, 2, 1)
         top_layout.addWidget(self.settings, 3, 3)
@@ -163,6 +163,10 @@ class Am_ui(QWidget):
         label = QtGui.QLabel("Gyro.")
         label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
         top_layout.addWidget(label, 2, 0)
+
+        label = QtGui.QLabel("Mag.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        top_layout.addWidget(label, 3, 0)
 
 
         # ADD TOP LEVEL LAYOUT
@@ -192,6 +196,8 @@ class Am_ui(QWidget):
         self.clear_plots_signal.connect(self.plot_a2.clear_slot)
         self.clear_plots_signal.connect(self.plot_g1.clear_slot)
         self.clear_plots_signal.connect(self.plot_g2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_m1.clear_slot)
+        self.clear_plots_signal.connect(self.plot_m2.clear_slot)
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
@@ -208,6 +214,8 @@ class Am_ui(QWidget):
         self.receiver.plot_a2_signal.connect(self.plot_a2.data_slot)
         self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
         self.receiver.plot_g2_signal.connect(self.plot_g2.data_slot)
+        self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
+        self.receiver.plot_m2_signal.connect(self.plot_m2.data_slot)
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
@@ -279,6 +287,8 @@ class Am_ui(QWidget):
             save_data.create_dataset('Accel2', data=[x['accel2'] for x in self.receiver.data])
             save_data.create_dataset('Gyro',   data=[x['gyro1']  for x in self.receiver.data])
             save_data.create_dataset('Gyro2',  data=[x['gyro2']  for x in self.receiver.data])
+            save_data.create_dataset('Gyro',   data=[x['mag1']  for x in self.receiver.data])
+            save_data.create_dataset('Gyro2',  data=[x['mag2']  for x in self.receiver.data])
             datafile.close()
 
             self.message_slot("data saved to  " + filename + "\n")
