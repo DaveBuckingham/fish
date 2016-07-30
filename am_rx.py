@@ -11,38 +11,38 @@ from PyQt4.QtCore import *
 
 class Am_rx(QObject):
 
-    COM_FLAG                   = 0x7E
-    COM_ESCAPE                 = 0X7D
-    COM_XOR                    = 0X20
-    COM_MAX_PACKET_LENGTH      = 500
+    COM_FLAG                     = 0x7E
+    COM_ESCAPE                   = 0X7D
+    COM_XOR                      = 0X20
+    COM_MAX_PACKET_LENGTH        = 500
 
 
-    GYRO_SENSITIVITY           = 131     # if range is +- 250
-    ACCEL_SENSITIVITY          = 16384   # if range is +- 2
+    GYRO_SENSITIVITY             = 131     # if range is +- 250
+    ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
-    #PLOT_REFRESH_RATE         = 5
-    #PLOT_REFRESH_RATE          = 40      # dividable by 4
-    PLOT_REFRESH_RATE          = 30      # dividable by 3
+    PLOT_REFRESH_RATE            = 30      # dividable by 3
 
-    DATA_LENGTH = 42
+    DATA_LENGTH                  = 42
 
-    MAGNETOMETER_SCALE_FACTOR  =   0.15
-    WHO_AM_I                   =   0x71
+    MAGNETOMETER_SCALE_FACTOR    = 0.15
+    WHO_AM_I                     = 0x71
+
 
     mag_0_asa = [1, 1, 1]
     mag_1_asa = [1, 1, 1]
+
 
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
 
     timestamp_signal = pyqtSignal(float)
+    plot_a0_signal = pyqtSignal(float, list, bool)
     plot_a1_signal = pyqtSignal(float, list, bool)
-    plot_a2_signal = pyqtSignal(float, list, bool)
+    plot_g0_signal = pyqtSignal(float, list, bool)
     plot_g1_signal = pyqtSignal(float, list, bool)
-    plot_g2_signal = pyqtSignal(float, list, bool)
+    plot_m0_signal = pyqtSignal(float, list, bool)
     plot_m1_signal = pyqtSignal(float, list, bool)
-    plot_m2_signal = pyqtSignal(float, list, bool)
 
 
     def __init__(self, parent = None):
@@ -98,44 +98,44 @@ class Am_rx(QObject):
         else:
             return ord(val)
 
-    # READ A PACKAGE FROM SERIAL AND RETURN ITS CONTENTS
+
+    # READ A PACKET FROM SERIAL AND RETURN ITS CONTENTS
     # IF TIMEOUT, RETURN AN EMPTY LIST
     def rx_packet(self):
         message = []
         val = None
 
+        # WAIT FOR START OF FRAME
         while (val != Am_rx.COM_FLAG):
             val = self.rx_byte()
             if (val == None):
-                print "rx packet failed A"
                 return []
 
-        val = self.rx_byte()
-        if (val == None):
-            print "rx packet failed B"
-            return []
-
-        if (val == Am_rx.COM_FLAG):
+        # CHECK FOR CONTIGUOUS COM FLAGS, E.G. CAUGHT END OF FRAME
+        while (val == Am_rx.COM_FLAG):
             val = self.rx_byte()
             if (val == None):
-                print "rx packet failed E"
                 return []
 
+        # READ, UNSTUFF, AND STORE PAYLOAD
         while (val != Am_rx.COM_FLAG):
+            # UNSTUFF
             if (val == Am_rx.COM_ESCAPE):
                 val = self.rx_byte()
                 if (val == None):
-                    print "rx packet failed C"
                     return []
                 val = val ^ Am_rx.COM_XOR
             message.append(val)
             val = self.rx_byte()
             if (val == None):
-                print "rx packet failed D"
                 return []
 
         return message
 
+
+
+
+        
 
 
 
@@ -174,21 +174,28 @@ class Am_rx(QObject):
 
         time.sleep(3)
 
-        received = []
-        while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
-            self.message_signal.emit("reading imu whoamis... ")
-            self.tx_byte('w')
-            received = self.rx_packet()
-            if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-                self.message_signal.emit("OK\n")
-            elif (len(received) == 0):
-                self.error_signal.emit("FAILED (timeout)\n")
-            elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-                self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
+
+        ##################################
+        #          WHO AM I ?????        #
+        ##################################
+#       received = []
+#       while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
+#           self.message_signal.emit("reading imu whoamis... ")
+#           self.tx_byte('w')
+#           received = self.rx_packet()
+#           if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+#               self.message_signal.emit("OK\n")
+#           elif (len(received) == 0):
+#               self.error_signal.emit("FAILED (timeout)\n")
+#           elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+#               self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
 
 
 
 
+        ##################################
+        #        MAG ADJUSTMENT          #
+        ##################################
 
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte('m')
@@ -205,6 +212,8 @@ class Am_rx(QObject):
         else:
             self.error_signal.emit("FAILED\n")
             self.error_signal.emit("using 1 adjustment\n")
+
+
 
 
         self.tx_byte('r')
@@ -226,32 +235,34 @@ class Am_rx(QObject):
             if (len(received) == Am_rx.DATA_LENGTH):
                 received = array.array('B', received).tostring()
                 # print map(ord, received)
-                (id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
+                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
                 timestamp = (time.time() * 1000) - start_time
 
                 # CONVERT
-                (ax1, ay1, az1, ax2, ay2, az2) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax1, ay1, az1, ax2, ay2, az2))
-                (gx1, gy1, gz1, gx2, gy2, gz2) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx1, gy1, gz1, gx2, gy2, gz2))
-                (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
-                (mx2, my2, mz2) = [(mx2, my2, mz2)[i] * Am_rx.mag_1_asa[i] for i in range(3)]
+                (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
+                (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
+                (mx0, my0, mz0) = [(mx0, my0, mz0)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
+                (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * Am_rx.mag_1_asa[i] for i in range(3)]
                 enc *= 0.3515625  # 360/1024
+
+
 
                 # TO PIPE TO FILE
                 #print enc
 
-                #print(' '.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ax2, ay2, az2, gx2, gy2, gz2, mx2, my2, mz2])));
-                #print('\t'.join(map(str, [id, enc, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1])));
-                #print('\t'.join(map(str, [mx1, my1, mz1, mx2, my2, mz2])));
+                #print(' '.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1])));
+                #print('\t'.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0])));
+                #print('\t'.join(map(str, [mx0, my0, mz0, mx1, my1, mz1])));
 
                 entry = {}
                 entry['time']    = timestamp
                 entry['encoder'] = enc
+                entry['accel0']  = [ax0, ay0, az0]
+                entry['gyro0']   = [gx0, gy0, gz0]
+                entry['mag0']    = [mx0, my0, mz0]
                 entry['accel1']  = [ax1, ay1, az1]
                 entry['gyro1']   = [gx1, gy1, gz1]
                 entry['mag1']    = [mx1, my1, mz1]
-                entry['accel2']  = [ax2, ay2, az2]
-                entry['gyro2']   = [gx2, gy2, gz2]
-                entry['mag2']    = [mx2, my2, mz2]
 
                 self.data.append(entry)
                 sample_index += 1
@@ -261,14 +272,14 @@ class Am_rx(QObject):
                 #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
+                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0],  count == 0)
                 self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
-                self.plot_a2_signal.emit(timestamp, [ax2, ay2, az2],  count == 0)
 
+                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0],  count == Am_rx.PLOT_REFRESH_RATE / 3)
                 self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE / 3)
-                self.plot_g2_signal.emit(timestamp, [gx2, gy2, gz2],  count == Am_rx.PLOT_REFRESH_RATE / 3)
 
+                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
-                self.plot_m2_signal.emit(timestamp, [mx2, my2, mz2],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
 
 
 

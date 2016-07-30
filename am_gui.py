@@ -106,12 +106,12 @@ class Am_ui(QWidget):
 
         # GRAPHS
 
+        self.plot_a0 = Am_plot()
         self.plot_a1 = Am_plot()
-        self.plot_a2 = Am_plot()
+        self.plot_g0 = Am_plot()
         self.plot_g1 = Am_plot()
-        self.plot_g2 = Am_plot()
+        self.plot_m0 = Am_plot()
         self.plot_m1 = Am_plot()
-        self.plot_m2 = Am_plot()
 
 
 
@@ -132,12 +132,12 @@ class Am_ui(QWidget):
 
         # ADD WIDGETS TO LAYOUT
 
-        top_layout.addWidget(self.plot_a1, 1, 1)
-        top_layout.addWidget(self.plot_a2, 1, 2)
-        top_layout.addWidget(self.plot_g1, 2, 1)
-        top_layout.addWidget(self.plot_g2, 2, 2)
-        top_layout.addWidget(self.plot_m1, 3, 1)
-        top_layout.addWidget(self.plot_m2, 3, 2)
+        top_layout.addWidget(self.plot_a0, 1, 1)
+        top_layout.addWidget(self.plot_a1, 1, 2)
+        top_layout.addWidget(self.plot_g0, 2, 1)
+        top_layout.addWidget(self.plot_g1, 2, 2)
+        top_layout.addWidget(self.plot_m0, 3, 1)
+        top_layout.addWidget(self.plot_m1, 3, 2)
 
         top_layout.addWidget(self.text_window, 4, 1, 1, 2)
         top_layout.addLayout(stats_layout, 5, 1, 1, 2)
@@ -192,12 +192,12 @@ class Am_ui(QWidget):
         #    QT CONNECTIONS    #
         ########################
 
+        self.clear_plots_signal.connect(self.plot_a0.clear_slot)
         self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_a2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_g0.clear_slot)
         self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g2.clear_slot)
+        self.clear_plots_signal.connect(self.plot_m0.clear_slot)
         self.clear_plots_signal.connect(self.plot_m1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_m2.clear_slot)
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
@@ -210,12 +210,12 @@ class Am_ui(QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.timestamp_signal.connect(self.timestamp_slot)
+        self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
         self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
-        self.receiver.plot_a2_signal.connect(self.plot_a2.data_slot)
+        self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
         self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
-        self.receiver.plot_g2_signal.connect(self.plot_g2.data_slot)
+        self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
         self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
-        self.receiver.plot_m2_signal.connect(self.plot_m2.data_slot)
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
@@ -283,12 +283,12 @@ class Am_ui(QWidget):
             datafile = h5py.File(str(filename), 'w')
             save_data = datafile.create_group("data")
             save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
-            save_data.create_dataset('Accel',  data=[x['accel1'] for x in self.receiver.data])
-            save_data.create_dataset('Accel2', data=[x['accel2'] for x in self.receiver.data])
-            save_data.create_dataset('Gyro',   data=[x['gyro1']  for x in self.receiver.data])
-            save_data.create_dataset('Gyro2',  data=[x['gyro2']  for x in self.receiver.data])
-            save_data.create_dataset('Gyro',   data=[x['mag1']  for x in self.receiver.data])
-            save_data.create_dataset('Gyro2',  data=[x['mag2']  for x in self.receiver.data])
+            save_data.create_dataset('Accel',  data=[x['accel0'] for x in self.receiver.data])
+            save_data.create_dataset('Accel2', data=[x['accel1'] for x in self.receiver.data])
+            save_data.create_dataset('Gyro',   data=[x['gyro0']  for x in self.receiver.data])
+            save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
+            save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
+            save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
             datafile.close()
 
             self.message_slot("data saved to  " + filename + "\n")

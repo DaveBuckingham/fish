@@ -1,13 +1,13 @@
 #include <SPI.h>
 #include "TimerOne.h"
 
-#define SPI_CLOCK               8000000  // 8MHz clock
+#define SPI_CLOCK               8000000        // 8MHz clock
 
 #define PIN_IMU_CS0             9
 #define PIN_IMU_CS1             10
 
 // IMU REGISTERS
-#define REG_WHO_AM_I            0x75         // 117
+#define REG_WHO_AM_I            0x75           // 117
 #define REG_CONFIG              0x1A
 #define REG_I2C_MST_CTRL        0x24
 #define REG_I2C_SLV0_ADDR       0x25
@@ -18,11 +18,10 @@
 #define REG_USER_CTRL           0x6A
 #define REG_PWR_MGMT_1          0x6B
 #define REG_PWR_MGMT_2          0x6C
-#define REG_ACCEL_FIRST          0x3B
-#define REG_GYRO_FIRST           0x43
+#define REG_ACCEL_FIRST         0x3B
+#define REG_GYRO_FIRST          0x43
 
-
-#define I2C_ADDRESS_MAG         0x0c
+#define I2C_ADDRESS_MAG         0x0C
 
 // MAG REGISTERS
 #define MAG_HXL                 0x03
@@ -30,12 +29,12 @@
 #define MAG_CNTL2               0x0B
 #define MAG_ASAX                0x10
 
-#define ENABLE_SLAVE_FLAG       0x80  // use when specifying data length to SLV0_CTRL
+#define ENABLE_SLAVE_FLAG       0x80           // use when specifying data length to SLV0_CTRL
 #define READ_FLAG               0x80
  
 #define MAG_SENSITIVITY_SCALE   0.15
 
-#define SAMPLE_FREQ_HZ          100          // 250 seems ok. starts to break around 300.
+#define SAMPLE_FREQ_HZ          100            // 250 seems ok. starts to break around 300.
 
 
 // COMMUNICATION
@@ -45,23 +44,29 @@
 
 
 // EMS PINS
-#define PIN_EMS_CLK          5
-#define PIN_EMS_DATA         6
-#define PIN_EMS_CS           7
+#define PIN_EMS_CLK             5
+#define PIN_EMS_DATA            6
+#define PIN_EMS_CS              7
 
 
+#define MAG_MEMORY_LIMIT        3
+
+
+#define SERIAL_BUFF_LENGTH      80             // leave room for byte stuffing
+byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
  
 
 int encoder_angle;
 unsigned long next_sample_id;            // count sample ids
-float magnetometer_asa[3];
-float mag_data[3];
-int16_t mag_data_raw[3];    
 int whoami;
 
+uint8_t mag_memory_count_0;
+uint8_t mag_memory_count_1;
 
-#define SERIAL_BUFF_LENGTH             80     // leave room for byte stuffing
-byte serial_buffer[SERIAL_BUFF_LENGTH];  // for framing and byte stuffing for tx
+uint8_t mag_memory_0[6];
+uint8_t mag_memory_1[6];
+
+
 
 
 void tx_packet(byte *in_buffer, unsigned int num_bytes) {
@@ -152,6 +157,9 @@ inline void read_encoder() {
 
 void initialize(){
     next_sample_id = 0;
+    mag_memory_count_0 = 0;
+    mag_memory_count_1 = 0;
+
 	SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
@@ -171,18 +179,23 @@ void initialize(){
     write_register_2(REG_USER_CTRL, 0x20);
     write_register_2(REG_I2C_MST_CTRL, 0x0D);
 
+    // reset_mag(PIN_IMU_CS0);
+    reset_mag(PIN_IMU_CS1);
+}
+
+void reset_mag(byte chip) {
     // SET MAGNETOMETER I2C ADDRESS
-    write_register_2( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(1); // DELAYS FOR SLOW I2C
+    write_register(chip, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);              delay(1); // DELAYS FOR SLOW I2C
 
     // SOFT RESET MAGNETOMETER
-    write_register_2(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
-    write_register_2(REG_I2C_SLV0_DO, 0x01);                           delay(1);
-    write_register_2(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register(chip, REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
+    write_register(chip, REG_I2C_SLV0_DO, 0x01);                           delay(1);
+    write_register(chip, REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
 
     // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2 AND 100HZ
-    write_register_2(REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(1);
-    write_register_2(REG_I2C_SLV0_DO, 0x16);                           delay(1);
-    write_register_2(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register(chip, REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(1);
+    write_register(chip, REG_I2C_SLV0_DO, 0x16);                           delay(1);
+    write_register(chip, REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
 
     delay(100);;
 }
@@ -210,8 +223,12 @@ void tx_asa(){
 }
 
 void read_sample(){
-    uint8_t response[43];
-    int i;
+    uint8_t response[43];   // MOVE THESE TO GLOBAL
+    uint8_t mag_0[7];
+    uint8_t mag_1[7];
+    uint8_t i;
+    uint8_t j;
+    uint8_t repeat;
 
     for (i=0; i < 43; i++) {
         response[i] = 0;
@@ -232,34 +249,71 @@ void read_sample(){
     response[i++] = encoder_angle >> 8;
     response[i++] = encoder_angle;
 
-    // IMU 0 ACCELEROMETER VALUES
+    i += 18;  // SKIP IMU0
+
+    // IMU 1 ACCELEROMETER VALUES
     read_multiple_registers(PIN_IMU_CS1, REG_ACCEL_FIRST, response + i, 6);
     i += 6;
 
-    // IMU 0 GYROSCOPE VALUES
+    // IMU 1 GYROSCOPE VALUES
     read_multiple_registers(PIN_IMU_CS1, REG_GYRO_FIRST, response + i, 6);
     i += 6;
 
 
+    // IMU 1 MAGNETOMETER
     // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
     write_register_2(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
     write_register_2(REG_I2C_SLV0_REG, MAG_HXL);
     write_register_2(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
 
-    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, response + i, 7);
-    i += 6;
-    response[i] = 0;
+    read_multiple_registers(PIN_IMU_CS1, REG_EXT_SENS_DATA_00, mag_1, 7);
+
+
+    // CHECK OF MAGS ARE STUCK AND RESET IF NECESSARY
+//    repeat = 1;
+//    for (j=0; j<6; j++) {
+//        if (mag_1[j] != mag_memory_1[j]) {
+//            repeat = 0;
+//            break;
+//        }
+//    }
+//    if (repeat) {
+//        mag_memory_count_1++;
+//        if (mag_memory_count_1 > MAG_MEMORY_LIMIT) {
+//
+//            reset_mag(PIN_IMU_CS1);
+//            for (j=0; j<6; j++) {
+//                mag_1[j] = 0x00;
+//            }
+//            mag_memory_count_1 = 0;
+//
+//        }
+//    }
+//    else {
+//        for (j=0; j<6; j++) {
+//            mag_memory_1[j] = mag_1[j];
+//        }
+//    }
+
+
+    for (j=0; j<6; j++) {
+        response[i++] = mag_1[j];
+    }
+
 
     tx_packet(response, 42);
 
+    
 }
 
 void imu_whoami() {
     uint8_t response[2];
+    delay(100);
     response[0] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
-    delay(1);
+    delay(100);
     response[1] = read_register(PIN_IMU_CS1, REG_WHO_AM_I);
     tx_packet(response, 2);
+    delay(100);
 }
 
 void setup() {
