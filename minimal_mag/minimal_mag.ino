@@ -2,7 +2,7 @@
 
 #define SPI_CLOCK               8000000  // 8MHz clock
 
-#define SS_PIN                  10
+#define SS_PIN                  10 
 
 // IMU REGISTERS
 #define REG_WHO_AM_I            0x75         // 117
@@ -33,6 +33,8 @@
 float magnetometer_asa[3];
 float mag_data[3];
 int16_t mag_data_raw[3];    
+uint8_t mag_id;
+uint8_t status_2;
 int whoami;
 
 
@@ -58,6 +60,17 @@ void read_registers( uint8_t ReadAddr, uint8_t *ReadBuf, unsigned int Bytes ) {
 
 }
 
+byte read_register(byte address) {
+    digitalWrite(SS_PIN, LOW);
+    SPI.transfer(address | READ_FLAG);
+    byte data = SPI.transfer(0x00);
+    delay(1);
+    digitalWrite(SS_PIN, HIGH);
+    return data;
+}
+
+
+
 
 void initialize(){
     pinMode(SS_PIN, OUTPUT);
@@ -68,26 +81,25 @@ void initialize(){
     delay(200);                                    
   
     write_register(REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
-    delay(1);
+    delay(10);
 
-    // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
-    // MAG DOESN'T WORK WITHOUT THIS, NOT SURE WHY...
-    write_register(REG_CONFIG, 0x01);
-    write_register(REG_USER_CTRL, 0x20);
-    write_register(REG_I2C_MST_CTRL, 0x0D);
+    write_register(REG_CONFIG, 0x01);                           delay(10);               // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
+    write_register(REG_USER_CTRL, 0x20);                        delay(10);               // RESERVED BIT...WTF
+    write_register(REG_I2C_MST_CTRL, 0x0D);                     delay(10);               // SET I2C MASTER CLOCK SPEED TO 400 KHZ
 
     // SET MAGNETOMETER I2C ADDRESS
-    write_register( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(1); // DELAYS FOR SLOW I2C
+    write_register( REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);           delay(10); // DELAYS FOR SLOW I2C
 
     // SOFT RESET MAGNETOMETER
-    write_register(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(1);
-    write_register(REG_I2C_SLV0_DO, 0x01);                           delay(1);
-    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register(REG_I2C_SLV0_REG, MAG_CNTL2);                     delay(10);
+    write_register(REG_I2C_SLV0_DO, 0x01);                           delay(10);
+    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(10);
 
     // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2 AND 100HZ
-    write_register(REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(1);
-    write_register(REG_I2C_SLV0_DO, 0x16);                           delay(1);
-    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(1);
+    write_register(REG_I2C_SLV0_REG, MAG_CNTL1);                     delay(10);
+    write_register(REG_I2C_SLV0_DO, 0x16);                           delay(10);
+    //write_register(REG_I2C_SLV0_DO, 0x06);                           delay(10);
+    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);     delay(10);
 }
 
 
@@ -97,11 +109,11 @@ void calib_mag(){
     int i;
 
     // READ 3 BYTES FROM MAGNETOMETERS
-    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(REG_I2C_SLV0_REG, MAG_ASAX);
-    write_register(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);
+    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG); delay(10);
+    write_register(REG_I2C_SLV0_REG, MAG_ASAX);                     delay(10);
+    write_register(REG_I2C_SLV0_CTRL, 0x03 | ENABLE_SLAVE_FLAG);    delay(10);
 
-    read_registers(REG_EXT_SENS_DATA_00,response,3);
+    read_registers(REG_EXT_SENS_DATA_00,response,3);                delay(10);
     
     for(i = 0; i < 3; i++) {
         data=response[i];
@@ -114,23 +126,28 @@ void read_mag(){
     float data;
     int i;
 
-    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
-    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(REG_I2C_SLV0_REG, MAG_HXL);
-    write_register(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);
+    // MAG DEVICE ID
+    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG); delay(10);
+    write_register(REG_I2C_SLV0_REG, 0x00);                         delay(10);
+    write_register(REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);    delay(10);
+    mag_id = read_register(REG_EXT_SENS_DATA_00);                   delay(10);
 
-    read_registers(REG_EXT_SENS_DATA_00, response, 7);
+
+    // NEED TO GET 7 BYTES TO ALSO READ ST2 REGISTER
+    write_register(REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG); delay(10);
+    write_register(REG_I2C_SLV0_REG, MAG_HXL);                      delay(10);
+    write_register(REG_I2C_SLV0_CTRL, 0x07 | ENABLE_SLAVE_FLAG);    delay(10);
+
+    read_registers(REG_EXT_SENS_DATA_00, response, 7);              delay(10);
     for(i = 0; i < 3; i++) {
-        //mag_data_raw[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
-        //data = (float)mag_data_raw[i];
-        //mag_data[i] = data * magnetometer_asa[i];
         mag_data[i] = ((int16_t)response[i*2+1]<<8) | response[i*2];
     }
+    status_2 = response[6];
 }
 
 void get_whoami() {
     uint8_t response[1];
-    read_registers(REG_WHO_AM_I, response, 1);
+    read_registers(REG_WHO_AM_I, response, 1);    delay(10);
     whoami = (int)response[0];
 }
 
@@ -141,12 +158,16 @@ void setup() {
     initialize();
     get_whoami();
 	calib_mag();
-    delay(100);;
+    delay(10);;
 }
 
 void loop() {
 	read_mag();
     Serial.print(whoami);
+    Serial.print('\t');
+    Serial.print(mag_id);
+    Serial.print('\t');
+    Serial.print(status_2);
     Serial.print('\t');
     Serial.print(magnetometer_asa[0]);
     Serial.print('\t');

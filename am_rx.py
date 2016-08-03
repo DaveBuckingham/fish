@@ -22,7 +22,7 @@ class Am_rx(QObject):
 
     PLOT_REFRESH_RATE            = 30      # dividable by 3
 
-    DATA_LENGTH                  = 42
+    DATA_LENGTH                  = 52
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     WHO_AM_I                     = 0x71
@@ -197,21 +197,21 @@ class Am_rx(QObject):
         #        MAG ADJUSTMENT          #
         ##################################
 
-        self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
-        self.tx_byte('m')
-        received = self.rx_packet()
+#       self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
+#       self.tx_byte('m')
+#       received = self.rx_packet()
 
-        if (len(received) == 6):
-            for i in (range(0, 3)):
-                Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-                Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-            self.message_signal.emit("OK\n")
-            self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
-            self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
+#       if (len(received) == 6):
+#           for i in (range(0, 3)):
+#               Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
+#               Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
+#           self.message_signal.emit("OK\n")
+#           self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
+#           self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
 
-        else:
-            self.error_signal.emit("FAILED\n")
-            self.error_signal.emit("using 1 adjustment\n")
+#       else:
+#           self.error_signal.emit("FAILED\n")
+#           self.error_signal.emit("using 1 adjustment\n")
 
 
 
@@ -235,19 +235,31 @@ class Am_rx(QObject):
             if (len(received) == Am_rx.DATA_LENGTH):
                 received = array.array('B', received).tostring()
                 # print map(ord, received)
-                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1) = struct.unpack('!Lhhhhhhhhhhhhhhhhhhh', received)
+                (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
+                          temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
+                    struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
                 timestamp = (time.time() * 1000) - start_time
+
 
                 # CONVERT
                 (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
                 (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
                 (mx0, my0, mz0) = [(mx0, my0, mz0)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
                 (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * Am_rx.mag_1_asa[i] for i in range(3)]
+
+                # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 36.53, (temp0, temp1))
+                # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 21.0, (temp0, temp1))
+                (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
+
                 enc *= 0.3515625  # 360/1024
 
 
 
-                # TO PIPE TO FILE
+                #print ax1
+                #print status2_0
+                #print status2_1
+                print("id %d   temp %.2f   status1 %d   status2 %d   id %d   temp %.2f   status1 %d   status2 %d" % (magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+
                 #print enc
 
                 #print(' '.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1])));
@@ -280,6 +292,10 @@ class Am_rx(QObject):
 
                 self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
+
+            else:
+                print "bad packet length:"
+                print len(received)
 
 
 
