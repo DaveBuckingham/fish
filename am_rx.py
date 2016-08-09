@@ -150,6 +150,7 @@ class Am_rx(QObject):
             self.connection = serial.Serial(
                 port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
                 baudrate = 115200,
+#               baudrate = 9600,
                 parity   = serial.PARITY_NONE,
                 stopbits = serial.STOPBITS_ONE,
                 bytesize = serial.EIGHTBITS,
@@ -254,7 +255,7 @@ class Am_rx(QObject):
 
 
 
-                print("id {:08b}   temp {:.2f}   status1 {:08b}   status2 {:08b}             id {:08b} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
 
 
                 #print enc
@@ -290,13 +291,19 @@ class Am_rx(QObject):
                 # self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
                 # self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
 
-                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
-                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
-                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
-                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
-                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
-                self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
+                # self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
+                # self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
+                # self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
+                # self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
+                # self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
+                # self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
+                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], True) 
+                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], True) 
+                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], True) 
+                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], True) 
+                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], True) 
+                self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], True) 
 
             else:
                 print "bad packet length:"
