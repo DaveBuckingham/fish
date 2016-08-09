@@ -20,7 +20,7 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
-    PLOT_REFRESH_RATE            = 30      # dividable by 3
+    PLOT_REFRESH_RATE            = 4      # dividable by 3
 
     DATA_LENGTH                  = 52
 
@@ -234,7 +234,6 @@ class Am_rx(QObject):
             received = self.rx_packet()
             if (len(received) == Am_rx.DATA_LENGTH):
                 received = array.array('B', received).tostring()
-                # print map(ord, received)
                 (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
                           temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
                     struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
@@ -255,12 +254,11 @@ class Am_rx(QObject):
 
 
 
-                #print ax1
-                #print status2_0
-                #print status2_1
-                print("id %d   temp %.2f   status1 %d   status2 %d   id %d   temp %.2f   status1 %d   status2 %d" % (magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+                print("id {:08b}   temp {:.2f}   status1 {:08b}   status2 {:08b}             id {:08b} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+
 
                 #print enc
+
 
                 #print(' '.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1])));
                 #print('\t'.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0])));
@@ -284,14 +282,21 @@ class Am_rx(QObject):
                 #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
-                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0],  count == 0)
-                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
 
-                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0],  count == Am_rx.PLOT_REFRESH_RATE / 3)
-                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE / 3)
+                # self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0],  count == 0)
+                # self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
+                # self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0],  count == Am_rx.PLOT_REFRESH_RATE / 3)
+                # self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE / 3)
+                # self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
+                # self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
 
-                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
-                self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
+                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
+                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
+                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
+                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
+                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
+                self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
+
 
             else:
                 print "bad packet length:"

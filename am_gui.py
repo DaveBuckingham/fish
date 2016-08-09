@@ -6,8 +6,6 @@ import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from am_rx import *
-#from am_plot import *
-#from am_mpl import *
 from am_pyqtgraph import *
 from am_settings import *
 from collections import namedtuple
