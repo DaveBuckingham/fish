@@ -238,6 +238,8 @@ class Am_rx(QObject):
                 (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
                           temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
                     struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
+
+
                 timestamp = (time.time() * 1000) - start_time
 
 
@@ -255,7 +257,7 @@ class Am_rx(QObject):
 
 
 
-                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+                # print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
 
 
                 #print enc
