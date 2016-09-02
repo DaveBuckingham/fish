@@ -1,8 +1,8 @@
 #include <SPI.h>
 
-#define SPI_CLOCK               8000000  // 8MHz clock
+#define SPI_CLOCK               1000000  // 8MHz clock
 
-#define SS_PIN                  10 
+#define SS_PIN                  4
 
 // IMU REGISTERS
 #define REG_WHO_AM_I            0x75         // 117
