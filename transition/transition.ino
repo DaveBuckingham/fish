@@ -1,5 +1,10 @@
 #include <SPI.h>
 
+
+
+// TODO
+// PUT ENCODER CODE IN IFDEFS
+
 #define SPI_CLOCK               1000000        // 1MHz clock
 
 // const uint8_t IMU_SELECT[]    = {9, 10};
@@ -43,7 +48,8 @@ const uint8_t NUM_IMUS        = 1;
  
 #define MAG_SENSITIVITY_SCALE   0.15
 
-#define SAMPLE_FREQ_HZ          100           // 250 seems ok. starts to break around 300.
+#define SAMPLE_FREQ_HZ          200           // 250 seems ok. starts to break around 300.
+// #define MAG_FREQ_HZ             
 
 
 // COMMUNICATION
@@ -58,8 +64,9 @@ const uint8_t NUM_IMUS        = 1;
 #define PIN_EMS_CS              7
 
 
+#define RESPONSE_LEN            42
 
-#define I2C_DELAY               1200           // us between i2c txrx
+#define I2C_DELAY               1000           // us between i2c txrx
 
 
 #define SERIAL_BUFF_LENGTH      80             // leave room for byte stuffing
@@ -69,7 +76,6 @@ byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing 
 int encoder_angle;
 unsigned long next_sample_id;            // count sample ids
 int whoami;
-
 
 uint8_t data_ready;
 
@@ -287,54 +293,30 @@ void tx_asa(){
 
 
 
-byte read_mag_register(byte chip, byte mag_register) {
-    write_register(chip, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    write_register(chip, REG_I2C_SLV0_REG, mag_register);
-    delayMicroseconds(I2C_DELAY);
-    write_register(chip, REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
-    delayMicroseconds(I2C_DELAY);
-    return read_register(chip, REG_EXT_SENS_DATA_00);
-}
 
 void read_multiple_mag_registers(byte chip, byte mag_register, byte *buff, unsigned int num_bytes ) {
     if (num_bytes < 2) {
         return;
     }
-
     write_register(chip, REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
     write_register(chip, REG_I2C_SLV0_REG, mag_register); 
     delayMicroseconds(I2C_DELAY);
     write_register(chip, REG_I2C_SLV0_CTRL, num_bytes | ENABLE_SLAVE_FLAG); 
-    delayMicroseconds(I2C_DELAY);
-    // delayMicroseconds(I2C_DELAY);
-    // read_multiple_registers_slow(chip, REG_EXT_SENS_DATA_00, buff, num_bytes);
-
-    // CANT USE read_multiple_registers() BECAUSE NEED DELAY BETWEEN TXS
-    unsigned int  i = 0;
-    digitalWrite(chip, LOW);
-    SPI.transfer(REG_EXT_SENS_DATA_00 | READ_FLAG);
-    for(i = 0; i < num_bytes; i++)
-        buff[i] = SPI.transfer(0x00);
-        delayMicroseconds(I2C_DELAY);
-    digitalWrite(chip, HIGH);
-
+    read_multiple_registers(chip, REG_EXT_SENS_DATA_00, buff, num_bytes);
 }
 
 
 
 
-
-
 void read_sample(){
-    uint8_t response_len = 52;
-    uint8_t response[response_len];
+    uint8_t response[RESPONSE_LEN + 2];
     uint8_t i;
     uint8_t j;
+    // uint8_t status_1;
 
-    for (j=0; j < response_len; j++) {
+    for (j=0; j < RESPONSE_LEN; j++) {
         response[j] = 0;
     }
-
 
     j = 0;
     
@@ -354,31 +336,18 @@ void read_sample(){
     for (i=0; i < NUM_IMUS; i++) {
 
         // TEMP, ACCEL, GYRO
-        read_multiple_registers(IMU_SELECT[i], REG_TEMP_OUT_H, response + j, 2);
-        j += 2;
+        // read_multiple_registers(IMU_SELECT[i], REG_TEMP_OUT_H, response + j, 2);
         read_multiple_registers(IMU_SELECT[i], REG_ACCEL_FIRST, response + j, 6);
         j += 6;
         read_multiple_registers(IMU_SELECT[i], REG_GYRO_FIRST, response + j, 6);
         j += 6;
 
-
-        // MAG DEVICE ID
-        response[j++] = read_mag_register(IMU_SELECT[i], 0x00);
-
-        // DATA READY?
-        response[j++] = read_mag_register(IMU_SELECT[i], 0x02);
-
         // MAG DATA
         read_multiple_mag_registers(IMU_SELECT[i], 0x03, response + j, 7);
-
-
-        j += 7;
-
+        j += 6;
 
     }
-
-    tx_packet(response, response_len);
-
+    tx_packet(response, RESPONSE_LEN);
 }
 
 

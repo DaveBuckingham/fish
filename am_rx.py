@@ -20,9 +20,9 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
-    PLOT_REFRESH_RATE            = 20
+    PLOT_REFRESH_RATE            = 50
 
-    DATA_LENGTH                  = 52
+    DATA_LENGTH                  = 42
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     WHO_AM_I                     = 0x71
@@ -235,9 +235,14 @@ class Am_rx(QObject):
             received = self.rx_packet()
             if (len(received) == Am_rx.DATA_LENGTH):
                 received = array.array('B', received).tostring()
-                (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
-                          temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
-                    struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
+
+#                 (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
+#                           temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
+#                     struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
+
+                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0,  \
+                          ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = \
+                     struct.unpack('>Lhhhhhhhhhhhhhhhhhhh', received)
 
 
                 timestamp = (time.time() * 1000) - start_time
@@ -251,13 +256,13 @@ class Am_rx(QObject):
 
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 36.53, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 21.0, (temp0, temp1))
-                (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
+                # (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
 
                 enc *= 0.3515625  # 360/1024
 
 
 
-                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
+#                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
 
 
                 #print enc

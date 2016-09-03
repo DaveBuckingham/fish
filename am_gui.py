@@ -59,6 +59,9 @@ class Am_ui(QWidget):
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
+        # measured frequency of data collected
+        self.true_frequency = 0.0
+
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
 
@@ -122,8 +125,10 @@ class Am_ui(QWidget):
 
         stats_layout = QGridLayout()
         self.stats_num_samples = QLabel("Samples:")
+        self.stats_true_frequency = QLabel("Frequency:")
         self.stats_time = QLabel("Time:")
         stats_layout.addWidget(self.stats_num_samples, 1, 2)
+        stats_layout.addWidget(self.stats_true_frequency, 1, 3)
         stats_layout.addWidget(self.stats_time, 1, 4)
         stats_layout.setColumnMinimumWidth(2, 120)
 
@@ -319,6 +324,10 @@ class Am_ui(QWidget):
 
         self.num_samples += 1
         self.stats_num_samples.setText('Samples: %d' % self.num_samples)
+
+        #self.true_frequency = float(self.num_samples) / timestamp
+        self.true_frequency = float(self.num_samples) / (timestamp / 1000)
+        self.stats_true_frequency.setText('Frequency: %f' % self.true_frequency)
 
         #if (timestamp >= self.stop_recording_time):
             #self.stop_recording()
