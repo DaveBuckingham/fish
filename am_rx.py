@@ -9,6 +9,8 @@ import random
 import array
 from PyQt4.QtCore import *
 
+USE_ENCODER = False
+
 class Am_rx(QObject):
 
     COM_FLAG                     = 0x7E
@@ -22,7 +24,10 @@ class Am_rx(QObject):
 
     PLOT_REFRESH_RATE            = 50
 
-    DATA_LENGTH                  = 42
+    if (USE_ENCODER):
+        DATA_LENGTH                  = 42
+    else:
+        DATA_LENGTH                  = 40
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     WHO_AM_I                     = 0x71
@@ -135,11 +140,6 @@ class Am_rx(QObject):
 
 
 
-        
-
-
-
-
 
     @pyqtSlot()
     def run(self):
@@ -150,7 +150,6 @@ class Am_rx(QObject):
             self.connection = serial.Serial(
                 port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
                 baudrate = 115200,
-#               baudrate = 9600,
                 parity   = serial.PARITY_NONE,
                 stopbits = serial.STOPBITS_ONE,
                 bytesize = serial.EIGHTBITS,
@@ -179,17 +178,18 @@ class Am_rx(QObject):
         ##################################
         #          WHO AM I ?????        #
         ##################################
-#       received = []
-#       while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
-#           self.message_signal.emit("reading imu whoamis... ")
-#           self.tx_byte('w')
-#           received = self.rx_packet()
-#           if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-#               self.message_signal.emit("OK\n")
-#           elif (len(received) == 0):
-#               self.error_signal.emit("FAILED (timeout)\n")
-#           elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
-#               self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
+        received = []
+        # while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
+
+        self.message_signal.emit("reading imu whoamis... ")
+        self.tx_byte('w')
+        received = self.rx_packet()
+        if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+            self.message_signal.emit("OK\n")
+        elif (len(received) == 0):
+            self.error_signal.emit("FAILED (timeout)\n")
+        elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
+            self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
 
 
 
@@ -198,29 +198,29 @@ class Am_rx(QObject):
         #        MAG ADJUSTMENT          #
         ##################################
 
-#       self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
-#       self.tx_byte('m')
-#       received = self.rx_packet()
+        self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
+        self.tx_byte('m')
+        received = self.rx_packet()
 
-#       if (len(received) == 6):
-#           for i in (range(0, 3)):
-#               Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-#               Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-#           self.message_signal.emit("OK\n")
-#           self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
-#           self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
+        if (len(received) == 6):
+            for i in (range(0, 3)):
+                Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
+                Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
+            self.message_signal.emit("OK\n")
+            self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
+            self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
 
-#       else:
-#           self.error_signal.emit("FAILED\n")
-#           self.error_signal.emit("using 1 adjustment\n")
+        else:
+            self.error_signal.emit("FAILED\n")
+            self.error_signal.emit("using 1 adjustment\n")
 
 
 
 
         self.tx_byte('r')
-        #self.message_signal.emit("waiting to stabilize\n")
-        #for i in range(0, 100):
-        #    self.rx_packet()
+        self.message_signal.emit("waiting to stabilize\n")
+        for i in range(0, 50):
+            self.rx_packet()
 
         self.message_signal.emit("recording data\n")
 
@@ -240,9 +240,11 @@ class Am_rx(QObject):
 #                           temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
 #                     struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
 
-                (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0,  \
-                          ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = \
-                     struct.unpack('>Lhhhhhhhhhhhhhhhhhhh', received)
+                if (USE_ENCODER):
+                    (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh', received)
+                    enc *= 0.3515625  # 360/1024
+                else:
+                    (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh', received)
 
 
                 timestamp = (time.time() * 1000) - start_time
@@ -258,29 +260,25 @@ class Am_rx(QObject):
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 21.0, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
 
-                enc *= 0.3515625  # 360/1024
 
 
 
 #                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
 
 
-                #print enc
-
-
-                #print(' '.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1])));
-                #print('\t'.join(map(str, [id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0])));
-                #print('\t'.join(map(str, [mx0, my0, mz0, mx1, my1, mz1])));
 
                 entry = {}
                 entry['time']    = timestamp
-                entry['encoder'] = enc
                 entry['accel0']  = [ax0, ay0, az0]
                 entry['gyro0']   = [gx0, gy0, gz0]
                 entry['mag0']    = [mx0, my0, mz0]
                 entry['accel1']  = [ax1, ay1, az1]
                 entry['gyro1']   = [gx1, gy1, gz1]
                 entry['mag1']    = [mx1, my1, mz1]
+
+                if (USE_ENCODER):
+                    entry['encoder'] = enc
+
 
                 self.data.append(entry)
                 sample_index += 1
@@ -291,13 +289,6 @@ class Am_rx(QObject):
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
 
-                # self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0],  count == 0)
-                # self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1],  count == 0)
-                # self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0],  count == Am_rx.PLOT_REFRESH_RATE / 3)
-                # self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1],  count == Am_rx.PLOT_REFRESH_RATE / 3)
-                # self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
-                # self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1],  count == (Am_rx.PLOT_REFRESH_RATE * 2) / 3)
-
                 self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
                 self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
                 self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
@@ -305,16 +296,8 @@ class Am_rx(QObject):
                 self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
-                # self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], True) 
-                # self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], True) 
-                # self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], True) 
-                # self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], True) 
-                # self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], True) 
-                # self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], True) 
-
             else:
-                print "bad packet length:"
-                print len(received)
+                print("bad packet length: " + str(len(received)))
 
 
 
@@ -324,6 +307,9 @@ class Am_rx(QObject):
         #self.data = self.data[sample_index:] + self.data[:sample_index]
 
         self.finished_signal.emit()
+
+        self.connection.flushInput()
+        self.connection.flushOutput()
 
 
 

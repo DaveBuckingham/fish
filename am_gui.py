@@ -11,7 +11,7 @@ from am_settings import *
 from collections import namedtuple
 import time
 import h5py
-
+import signal
 
 class Am_ui(QWidget):
 
@@ -234,17 +234,20 @@ class Am_ui(QWidget):
 
 
     def test_button_slot(self):
-        self.message_slot("arduino communication test:")
-        self.message_slot("test not implemented")
-        self.message_slot("imu1 communication test:")
-        self.message_slot("test not implemented")
-        self.message_slot("imu2 communication test:")
-        self.message_slot("test not implemented")
-        self.message_slot("imu1 self test:")
-        self.message_slot("test not implemented")
-        self.message_slot("imu2 self test:")
-        self.message_slot("test not implemented")
-        self.test_signal.emit("awesome")
+        self.message_slot("arduino communication test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("imu1 communication test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("imu2 communication test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("imu1 self test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("imu2 self test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("mag1 self test: ")
+        self.message_slot("test not implemented\n")
+        self.message_slot("mag2 self test: ")
+        self.message_slot("test not implemented\n")
 
     def quit_button_slot(self):
         result = (QMessageBox.question(self,
@@ -393,6 +396,7 @@ class Am_ui(QWidget):
 
                                           
 def main():
+    signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt
     app = QApplication(sys.argv)
     ex = Am_ui()
     ex.show()
