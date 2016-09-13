@@ -36,7 +36,7 @@
 
 // #define USE_ENCODER
 
-#define USE_TRIGGER
+// #define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
@@ -401,6 +401,7 @@ void start_recording() {
 void stop_recording() {
     TIMSK1 &= ~(1 << OCIE1A);                            // disable timer compare interrupt
     // SET MAGS TO POWER-DOWN MODE
+    byte i;
     for (i=0; i < NUM_IMUS; i++) {
         write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL1);
         write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x10);

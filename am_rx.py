@@ -37,6 +37,7 @@ class Am_rx(QObject):
     mag_1_asa = [1, 1, 1]
 
 
+
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
@@ -311,7 +312,6 @@ class Am_rx(QObject):
 
         self.connection.flushInput()
         self.connection.flushOutput()
-
 
 
 

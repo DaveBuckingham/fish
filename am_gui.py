@@ -46,9 +46,6 @@ class Am_ui(QWidget):
         # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
 
-        # COLLECTED DATA.
-        # WILL CONTAIN 5 LISTS (ACCEL1, ACCEL2, GYRO1, GYRO2, TIME)
-        #self.data = {}
 
         # TIMESTAMPS OF COLLECTED DATA.
         # am_rx.py WILL PUT THE SAME DATA IN HERE AND IN receiver.data['time']
@@ -314,8 +311,20 @@ class Am_ui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-	self.settings.setEnabled(True)
+        # self.settings.setEnabled(True)
         self.buttons['test'].setEnabled(True)
+
+        # CROP DATA IF PRE-TRIGGER
+        if (len(self.timestamps) > 0):
+            if (self.use_trigger):
+                data_start_time = self.receiver.data[-1]['time'] - (self.pre_trigger_delay * 1000);
+                data_start_index = 0
+                for i in range(0, len(self.receiver.data)):
+                    if (self.receiver.data[i]['time'] > data_start_time):
+                        self.receiver.data = self.receiver.data[i:]
+                        break
+
+
 
 
     # CALLED BY am_rx.py FOR EVERY SAMPLE
@@ -332,8 +341,6 @@ class Am_ui(QWidget):
         self.true_frequency = float(self.num_samples) / (timestamp / 1000)
         self.stats_true_frequency.setText('Frequency: %f' % self.true_frequency)
 
-        #if (timestamp >= self.stop_recording_time):
-            #self.stop_recording()
 
 
     # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT
@@ -367,22 +374,21 @@ class Am_ui(QWidget):
         self.receiver.recording = True
         self.data_saved = False
 
-        if (self.use_trigger):
-            self.buttons['record'].setText('Trigger')
-        else:
-            self.buttons['record'].setText('Stop')
+        # if (self.use_trigger):
+        #     self.buttons['record'].setText('Trigger')
+        # else:
+        #     self.buttons['record'].setText('Stop')
+
+        self.buttons['record'].setText('Stop')
 
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        self.settings.setEnabled(False)
+        # self.settings.setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
         self.clear_plots_signal.emit()
 
-        #receiver.use_trigger = self.use_trigger
-        #receiver.post_trigger = self.post_trigger_delay * 1000
-        #receiver.pre_trigger = self.pre_trigger_delay * 1000
         self.receiver_thread.start()
 
 

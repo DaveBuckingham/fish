@@ -16,7 +16,7 @@ class Am_settings(QWidget):
     def __init__(self, parent=None):
         
 	self.PRE_TRIGGER_MIN = 1
-	self.PRE_TRIGGER_MAX = 60
+	self.PRE_TRIGGER_MAX = 180
 	self.POST_TRIGGER_MIN = 1
 	self.POST_TRIGGER_MAX = 60
 
@@ -75,14 +75,14 @@ class Am_settings(QWidget):
 
 
     def toggle_trigger(self, state):
-	if (state == Qt.Checked):
-	    self.slider_pre_trigger.setEnabled(True)
-	    self.slider_post_trigger.setEnabled(True)
-	    self.parent.use_trigger = True
-	else:
-	    self.slider_pre_trigger.setEnabled(False)
-	    self.slider_post_trigger.setEnabled(False)
-	    self.parent.use_trigger = False
+        if (state == Qt.Checked):
+            self.slider_pre_trigger.setEnabled(True)
+            self.slider_post_trigger.setEnabled(True)
+            self.parent.use_trigger = True
+        else:
+            self.slider_pre_trigger.setEnabled(False)
+            self.slider_post_trigger.setEnabled(False)
+            self.parent.use_trigger = False
 
           
 
