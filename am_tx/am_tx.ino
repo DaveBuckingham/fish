@@ -36,6 +36,7 @@
 
 // #define USE_ENCODER
 
+#define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
@@ -317,8 +318,6 @@ void read_sample(){
     uint8_t j;
 
 
-    trigger_val = digitalRead(TRIGGER_PIN);
-    tx_packet((byte*)&trigger_val, 2);
 
     for (j=0; j < RESPONSE_LEN; j++) {
         response[j] = 0;
@@ -365,6 +364,14 @@ void read_sample(){
 
     }
     tx_packet(response, RESPONSE_LEN);
+
+#ifdef USE_TRIGGER
+    trigger_val = digitalRead(TRIGGER_PIN);
+    tx_packet((byte*)&trigger_val, 1);
+    if (!trigger_val) {
+        stop_recording();
+    }
+#endif
 }
 
 
@@ -379,9 +386,35 @@ void imu_whoami() {
     tx_packet(response, 2);
 }
 
+void start_recording() {
+    noInterrupts();                                      // disable all interrupts
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1  = 0;
+    OCR1A = int((16000000 / 256) / SAMPLE_FREQ_HZ);      // compare match register = clock speed / prescaler / sample freq
+    TCCR1B |= (1 << WGM12);                              // CTC mode
+    TCCR1B |= (1 << CS12);                               // 256 prescaler 
+    TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
+    interrupts();                                        // enable all interrupts
+}
+
+void stop_recording() {
+    TIMSK1 &= ~(1 << OCIE1A);                            // disable timer compare interrupt
+    // SET MAGS TO POWER-DOWN MODE
+    for (i=0; i < NUM_IMUS; i++) {
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL1);
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x10);
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+    }
+    SPI.endTransaction();
+    SPI.end();
+    Serial.flush();
+}
+
 void setup() {
 	Serial.begin(115200);
 }
+
 
 ISR(TIMER1_COMPA_vect) {
     read_sample();
@@ -402,32 +435,17 @@ void loop() {
                 tx_asa();
                 break;
             case 'r':
-
-                noInterrupts();                                      // disable all interrupts
-                TCCR1A = 0;
-                TCCR1B = 0;
-                TCNT1  = 0;
-                OCR1A = int((16000000 / 256) / SAMPLE_FREQ_HZ);      // compare match register = clock speed / prescaler / sample freq
-                TCCR1B |= (1 << WGM12);                              // CTC mode
-                TCCR1B |= (1 << CS12);                               // 256 prescaler 
-                TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
-                interrupts();                                        // enable all interrupts
-
+#ifdef USE_TRIGGER
+                trigger_val = digitalRead(TRIGGER_PIN);
+                if (trigger_val) {
+                    start_recording();
+                }
+#else
+                start_recording();
+#endif
                 break;
             case 's':
-
-                TIMSK1 &= ~(1 << OCIE1A);                            // disable timer compare interrupt
-                // SET MAGS TO POWER-DOWN MODE
-                for (i=0; i < NUM_IMUS; i++) {
-                    write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-                    write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x10);
-                    write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
-                }
-
-                SPI.endTransaction();
-                SPI.end();
-                Serial.flush();
-
+                stop_recording();
                 break;
             case 't':
                 for (i=0; i < NUM_IMUS; i++) {
