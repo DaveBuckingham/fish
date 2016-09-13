@@ -297,7 +297,8 @@ class Am_rx(QObject):
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
             else:
-                print("bad packet length: " + str(len(received)))
+                print("packet received (length=" + str(len(received)) + "):"),
+                print received
 
 
 

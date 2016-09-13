@@ -18,6 +18,7 @@
 //     MOSI       11       SDA
 //     MISO       12       AD0
 //     SCK        13       SCL
+//     TRIGGER    7
 //
 // MOSI, MISO, and SCK pins are specified by the arduino spi library.
 // Chip selects CS1 and CS2 are specified by in code (IMU_SELECT[]).
@@ -39,6 +40,7 @@
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
 const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select pins for imus (len == NUM_IMUS)
+#define TRIGGER_PIN                               7
 
 #ifdef USE_ENCODER
 #define RESPONSE_LEN                              42             // how many bytes tx per sample
@@ -94,6 +96,7 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
 unsigned long next_sample_id;                  // counter for sample ids
+int trigger_val;
 
 
 
@@ -255,6 +258,7 @@ void initialize(){
 	SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
+    pinMode(TRIGGER_PIN, INPUT);
 
     uint8_t i;
     for (i=0; i < NUM_IMUS; i++) {
@@ -311,6 +315,10 @@ void read_sample(){
     uint8_t response[RESPONSE_LEN + 1];     // extra byte for reading STATUS2 from mag
     uint8_t i;
     uint8_t j;
+
+
+    trigger_val = digitalRead(TRIGGER_PIN);
+    tx_packet((byte*)&trigger_val, 2);
 
     for (j=0; j < RESPONSE_LEN; j++) {
         response[j] = 0;
