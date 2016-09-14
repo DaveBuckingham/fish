@@ -15,10 +15,10 @@ class Am_settings(QWidget):
 
     def __init__(self, parent=None):
         
-	self.PRE_TRIGGER_MIN = 1
-	self.PRE_TRIGGER_MAX = 180
-	self.POST_TRIGGER_MIN = 1
-	self.POST_TRIGGER_MAX = 60
+        self.PRE_TRIGGER_MIN = 1
+        self.PRE_TRIGGER_MAX = 180
+        self.POST_TRIGGER_MIN = 1
+        self.POST_TRIGGER_MAX = 60
 
         super(Am_settings, self).__init__(parent)
 

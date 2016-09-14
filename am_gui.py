@@ -173,7 +173,7 @@ class Am_ui(QWidget):
         self.setLayout(top_layout)
 
 
-	# SET WINDOW TITLE
+        # SET WINDOW TITLE
         self.setWindowTitle(Am_ui.APPLICATION_NAME) 
 
 

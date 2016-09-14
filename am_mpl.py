@@ -49,7 +49,7 @@ class Am_mpl(FigureCanvas):
 
 
     def clear_slot(self):
-	# DEQUE ALLOWS FAST ADD OR REMOVE FROM EITHER END
+        # DEQUE ALLOWS FAST ADD OR REMOVE FROM EITHER END
         #self.data = deque([[],[],[]]) 
         self.data = [ deque([]), deque([]), deque([]) ]
         self.timestamps = deque([])

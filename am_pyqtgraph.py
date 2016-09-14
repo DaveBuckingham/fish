@@ -43,7 +43,7 @@ class Am_plot(pg.PlotWidget):
 
 
     def clear_slot(self):
-	# DEQUE ALLOWS FAST ADD OR REMOVE FROM EITHER END
+        # DEQUE ALLOWS FAST ADD OR REMOVE FROM EITHER END
         self.data = [ deque([]), deque([]), deque([]) ]
         #self.data = deque([]) 
         self.timestamps = deque([])

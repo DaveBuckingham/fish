@@ -189,7 +189,7 @@ int read_encoder() {
 void self_test(byte chip) {
     int i;
 
-	SPI.begin();
+    SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
     ///// STEP 1 /////
@@ -256,7 +256,7 @@ void self_test(byte chip) {
 void initialize(){
     next_sample_id = 0;
 
-	SPI.begin();
+    SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
     pinMode(TRIGGER_PIN, INPUT);
@@ -413,7 +413,7 @@ void stop_recording() {
 }
 
 void setup() {
-	Serial.begin(115200);
+    Serial.begin(115200);
 }
 
 
