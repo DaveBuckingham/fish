@@ -297,6 +297,10 @@ class Am_rx(QObject):
                 self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
+
+            elif ((len(received) == 1) and (received[0] == 1)):
+                self.recording = False
+                print "done"
             else:
                 print("packet received (length=" + str(len(received)) + "):"),
                 print received

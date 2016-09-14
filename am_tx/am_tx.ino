@@ -36,7 +36,7 @@
 
 // #define USE_ENCODER
 
-// #define USE_TRIGGER
+#define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
@@ -368,8 +368,8 @@ void read_sample(){
 #ifdef USE_TRIGGER
     trigger_val = digitalRead(TRIGGER_PIN);
     tx_packet((byte*)&trigger_val, 1);
-    if (!trigger_val) {
-        stop_recording();
+    if (trigger_val) {
+        //stop_recording();
     }
 #endif
 }
@@ -438,7 +438,7 @@ void loop() {
             case 'r':
 #ifdef USE_TRIGGER
                 trigger_val = digitalRead(TRIGGER_PIN);
-                if (trigger_val) {
+                if (!trigger_val) {
                     start_recording();
                 }
 #else

@@ -307,12 +307,14 @@ class Am_ui(QWidget):
 
     # CALLED WHEN REVEIVER THREAD FINISHES
     def receiver_done(self):
+        self.receiver.recording = False
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.timestamps) > 0)
         # self.settings.setEnabled(True)
         self.buttons['test'].setEnabled(True)
+
 
         # CROP DATA IF PRE-TRIGGER
         if (len(self.timestamps) > 0):
