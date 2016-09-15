@@ -6,7 +6,7 @@ import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from am_rx import *
-from am_pyqtgraph import *
+from am_plot import *
 from am_settings import *
 from collections import namedtuple
 import time
@@ -56,7 +56,7 @@ class Am_ui(QWidget):
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
-        # measured frequency of data collected
+        # MEASURED FREQUENCY OF DATA COLLECTED
         self.true_frequency = 0.0
 
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
@@ -75,15 +75,19 @@ class Am_ui(QWidget):
         self.button_container = QWidget()
         self.button_container.setLayout(button_layout)
 
-        self.buttons['test'] = QPushButton('Test')
-        self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
-        self.buttons['test'].clicked.connect(self.test_button_slot)
-        button_layout.addWidget(self.buttons['test'])
-
         self.buttons['record'] = QPushButton('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
+        self.buttons['record'].setStyleSheet("background-color: red")
+
+
+
+
+        self.buttons['test'] = QPushButton('Test')
+        self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
+        self.buttons['test'].clicked.connect(self.test_button_slot)
+        button_layout.addWidget(self.buttons['test'])
 
         self.buttons['save'] = QPushButton('Save')
         self.buttons['save'].setToolTip('Save recorded data')
@@ -100,6 +104,8 @@ class Am_ui(QWidget):
 
         self.text_window = QTextEdit()
         self.text_window.setReadOnly(True)
+        #print self.text_window.minimumHeight()
+        #self.text_window.setMinimumHeight(50)
 
 
         # GRAPHS
@@ -142,8 +148,8 @@ class Am_ui(QWidget):
         top_layout.addWidget(self.text_window, 4, 1, 1, 2)
         top_layout.addLayout(stats_layout, 5, 1, 1, 2)
 
-        top_layout.addWidget(self.button_container, 1, 3, 2, 1)
-        top_layout.addWidget(self.settings, 3, 3)
+        top_layout.addWidget(self.button_container, 1, 3, 3, 1)
+        top_layout.addWidget(self.settings, 4, 3)
 
 
         # GRAPH LABELS

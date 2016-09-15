@@ -1,4 +1,4 @@
-TODO2:
+TODO:
 message when stop recording.
 read "trigger" state instead of define.
 behave well when trigger already on.
@@ -7,48 +7,9 @@ bigger record button, on top.
 implement tests.
 realtime frequency report (e.g over 50 samples)
 smoother plots? update frequently with translation
-
-
-
-BUGS:
 text window breaks when it gets too full
-seems like data collection warmup delay only works on first collection
-
-
-TODO:
-communication hand shake at connect
-implement pre-trigger delay
 tests: arduino com, imus com, imus self-test, magnetometer
-replace sentinels (longer?), or generally better system for com with arduino?
-move all plots and their labels to a separate widget
-    what else can we move out of am_gui?
-READ -> REG 39 GROUPING
 
-mag whoami
-load up data in fifo, then average it when we read?
-
-
-
-FILES:
-
-am_gui.py
-main program.
-includes am_plot.py, am_rx.py, am_settings.py
-
-am_plot.py
-module for plotting data.
-i.e. one of the 4 plot windows.
-
-am_rx.py
-module for com with arduino.
-
-am_settings.py
-module for program settings.
-
-am_tx
-directory containing my arduino code and the timer library it uses.
-
-fish_rx.py
-this was the first program i wrote for reading data from the arduino.
-writes plain text to stdout.
-not used by gui.
+MAYBE:
+seems like data collection warmup delay only works on first collection
+auto-detect mag
