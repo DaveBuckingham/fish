@@ -40,7 +40,7 @@ class Am_ui(QWidget):
         # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING
         # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
         self.use_trigger = False
-        self.pre_trigger_delay = 10
+        self.pre_trigger_delay = 3
         self.post_trigger_delay = 10
 
         # ALL THE BUTTONS IN THE MAIN WINDOW

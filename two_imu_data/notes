@@ -1,0 +1,11 @@
+data_b_1.hdf5
+hold still
+
+data_b_2.hdf5
+rotate full left, full right, half left, half right
+
+data_b_3.hdf5
+translate left, right, left, right, center
+
+data_b_4.hdf5
+rotate and translate randomly

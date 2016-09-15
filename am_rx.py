@@ -221,7 +221,7 @@ class Am_rx(QObject):
         self.tx_byte('r')
         self.message_signal.emit("waiting to stabilize\n")
         for i in range(0, 50):
-            self.rx_packet()
+            recieved = self.rx_packet()
 
         self.message_signal.emit("recording data\n")
 
