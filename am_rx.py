@@ -13,10 +13,18 @@ USE_ENCODER = False
 
 class Am_rx(QObject):
 
-    COM_FLAG                     = 0x7E
+    COM_START                    = 0x7E
+    COM_END                      = 0x7F
     COM_ESCAPE                   = 0X7D
     COM_XOR                      = 0X20
+    MESSAGE_SAMPLE               = 0x60     // 96
+    MESSAGE_ASA                  = 0x61     // 97
+    MESSAGE_WHOAMI               = 0x62
+    MESSAGE_TRIGGER              = 0x63
+    MESSAGE_STRING               = 0x64
     COM_MAX_PACKET_LENGTH        = 500
+
+
 
 
     GYRO_SENSITIVITY             = 131     # if range is +- 250
@@ -58,10 +66,6 @@ class Am_rx(QObject):
 
         self.data = []
         self.end_timestamp = 'inf'
-
-        #self.use_trigger
-        #self.pre_trigger
-        #self.post_trigger
 
 
 
@@ -112,19 +116,16 @@ class Am_rx(QObject):
         val = None
 
         # WAIT FOR START OF FRAME
-        while (val != Am_rx.COM_FLAG):
+        while (val != Am_rx.COM_START):
             val = self.rx_byte()
             if (val == None):
                 return []
 
-        # CHECK FOR CONTIGUOUS COM FLAGS, E.G. CAUGHT END OF FRAME
-        while (val == Am_rx.COM_FLAG):
-            val = self.rx_byte()
-            if (val == None):
-                return []
+        message_type = self.rx_byte()
+        val = self.rx_byte()
 
         # READ, UNSTUFF, AND STORE PAYLOAD
-        while (val != Am_rx.COM_FLAG):
+        while (val != Am_rx.COM_END):
             # UNSTUFF
             if (val == Am_rx.COM_ESCAPE):
                 val = self.rx_byte()
@@ -136,7 +137,7 @@ class Am_rx(QObject):
             if (val == None):
                 return []
 
-        return message
+        return (message, message_type)
 
 
 
@@ -180,15 +181,12 @@ class Am_rx(QObject):
         #          WHO AM I ?????        #
         ##################################
         received = []
-        # while ((len(received) == 0) or (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I])):
 
         self.message_signal.emit("reading imu whoamis... ")
         self.tx_byte('w')
-        received = self.rx_packet()
+        (received, message_type) = self.rx_packet()
         if (received == [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
             self.message_signal.emit("OK\n")
-        elif (len(received) == 0):
-            self.error_signal.emit("FAILED (timeout)\n")
         elif (received != [Am_rx.WHO_AM_I, Am_rx.WHO_AM_I]):
             self.error_signal.emit("FAILED (values read: " + ', '.join(map(str, received)) + ")\n")
 
@@ -201,9 +199,9 @@ class Am_rx(QObject):
 
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte('m')
-        received = self.rx_packet()
+        (received, message_type) = self.rx_packet()
 
-        if (len(received) == 6):
+        if ((message_type == Am_rx.MESSAGE_ASA) and (len(received) == 6)):
             for i in (range(0, 3)):
                 Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
                 Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
@@ -217,13 +215,20 @@ class Am_rx(QObject):
 
 
 
-
         self.tx_byte('r')
-        self.message_signal.emit("waiting to stabilize\n")
-        for i in range(0, 50):
-            recieved = self.rx_packet()
 
         self.message_signal.emit("recording data\n")
+
+        (received, message_type) = self.rx_packet()
+        if (message_type == Am_rx.MESSAGE_TRIGGER):
+            if (received[0]):
+                self.recording = False
+                self.message("trigger already active, recording halted.\n");
+        else:
+            self.recording = False
+            print message
+            self.message_signal.emit("failed to receive trigger state, recording halted.\n")
+
 
         # RESET TIMER
         start_time = time.time() * 1000
@@ -233,20 +238,22 @@ class Am_rx(QObject):
 
         while (self.recording):
 
-            received = self.rx_packet()
-            if (len(received) == Am_rx.DATA_LENGTH):
+            (received, message_type) = self.rx_packet()
+            if ((message_type == Am_rx.MESSAGE_SAMPLE) and (len(received) == Am_rx.DATA_LENGTH)):
                 received = array.array('B', received).tostring()
 
-#                 (id, enc, temp0, ax0, ay0, az0, gx0, gy0, gz0, magid0, status1_0, mx0, my0, mz0, status2_0,   \
-#                           temp1, ax1, ay1, az1, gx1, gy1, gz1, magid1, status1_1, mx1, my1, mz1, status2_1) = \
-#                     struct.unpack('>LhhhhhhhhBBhhhBhhhhhhhBBhhhB', received)
 
                 if (USE_ENCODER):
-                    (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh', received)
+                    (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh?', received)
                     enc *= 0.3515625  # 360/1024
                 else:
-                    (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh', received)
+                    (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
 
+
+                if (trig):
+                    self.message_signal.emit("received trigger\n")
+                    self.recording = False
+                    break
 
                 timestamp = (time.time() * 1000) - start_time
 
@@ -260,11 +267,6 @@ class Am_rx(QObject):
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 36.53, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 21.0, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
-
-
-
-
-#                print("id {:d}   temp {:.2f}   status1 {:08b}   status2 {:08b} id {:d} temp {:.2f}   status1 {:08b}   status2 {:08b}".format(  magid0, temp0, status1_0, status2_0,  magid1, temp1, status1_1, status2_1))
 
 
 
@@ -298,24 +300,17 @@ class Am_rx(QObject):
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
 
-            elif ((len(received) == 1) and (received[0] == 1)):
-                self.recording = False
-                print "done"
-            else:
-                print("packet received (length=" + str(len(received)) + "):"),
-                print received
-
-
-
+        self.message_signal.emit("stopping recording data\n")
         self.tx_byte('s')
 
         # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
         #self.data = self.data[sample_index:] + self.data[:sample_index]
 
-        self.finished_signal.emit()
 
         self.connection.flushInput()
         self.connection.flushOutput()
+
+        self.finished_signal.emit()
 
 
 

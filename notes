@@ -1,7 +1,4 @@
 TODO:
-message when stop recording.
-read "trigger" state instead of define.
-behave well when trigger already on.
 some easier way to set trigger delay.
 bigger record button, on top.
 implement tests.
@@ -11,5 +8,6 @@ text window breaks when it gets too full
 tests: arduino com, imus com, imus self-test, magnetometer
 
 MAYBE:
+read "trigger" state instead of define.
 seems like data collection warmup delay only works on first collection
 auto-detect mag

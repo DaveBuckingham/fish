@@ -12,6 +12,7 @@ from collections import namedtuple
 import time
 import h5py
 import signal
+from collections import deque
 
 class Am_ui(QWidget):
 
@@ -64,6 +65,7 @@ class Am_ui(QWidget):
 
 
 
+
         ##################################################
         #   CREATE GUI ELEMENTS AND ADD TO MAIN WINDOW   #
         ##################################################
@@ -79,7 +81,7 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
-        self.buttons['record'].setStyleSheet("background-color: red")
+        # self.buttons['record'].setStyleSheet("background-color: red")
 
 
 
@@ -332,6 +334,8 @@ class Am_ui(QWidget):
                         self.receiver.data = self.receiver.data[i:]
                         break
 
+        self.message_slot("done recording\n")
+
 
 
 
@@ -345,8 +349,8 @@ class Am_ui(QWidget):
         self.num_samples += 1
         self.stats_num_samples.setText('Samples: %d' % self.num_samples)
 
-        #self.true_frequency = float(self.num_samples) / timestamp
-        self.true_frequency = float(self.num_samples) / (timestamp / 1000)
+        #self.true_frequency = float(self.num_samples) / (timestamp / 1000)
+        self.true_frequency = ((self.timestamps[-1] - self.timestamps[-11]) / 10) * 1000
         self.stats_true_frequency.setText('Frequency: %f' % self.true_frequency)
 
 

@@ -49,7 +49,7 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define RESPONSE_LEN                              40
 #endif
 
-#define SERIAL_BUFF_LENGTH                        80             // buffer for serial com: RESPONSE_LEN + room for byte stuffing
+#define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: RESPONSE_LEN + room for byte stuffing
 
 // IMU REGISTERS
 #define REG_WHO_AM_I                              0x75           // 117
@@ -85,14 +85,21 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define READ_FLAG                                 0x80           // for spi com
  
 // FOR TXRX PACKETS OVER SERIAL
-#define COM_FLAG                                  0x7E
+#define COM_START                                 0x7E
+#define COM_END                                   0x7F
 #define COM_ESCAPE                                0X7D
 #define COM_XOR                                   0X20
+#define MESSAGE_SAMPLE                            0x60
+#define MESSAGE_ASA                               0x61
+#define MESSAGE_WHOAMI                            0x62
+#define MESSAGE_TRIGGER                           0x63
+#define MESSAGE_STRING                            0x64
 
 // EMS PINS
 #define PIN_EMS_CLK                               5
 #define PIN_EMS_DATA                              6
 #define PIN_EMS_CS                                7
+
 
 
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
@@ -101,17 +108,21 @@ int trigger_val;
 
 
 
-void tx_packet(byte *in_buffer, unsigned int num_bytes) {
+void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
     byte val;
     byte i;
     byte j = 0;
-    serial_buffer[j++] = COM_FLAG;
+    if ((message_type == COM_START) || (message_type == COM_END) || (message_type == COM_ESCAPE)) {
+        return;
+    }
+    serial_buffer[j++] = COM_START;
+    serial_buffer[j++] = message_type;
     for (i = 0; i < num_bytes; i++) {
         if (j >= SERIAL_BUFF_LENGTH - 3) {     // data byte, possible escape, and end flag
             return;
         }
         val = in_buffer[i];
-        if ((val == COM_FLAG) || (val == COM_ESCAPE)) {
+        if ((val == COM_START) || (val == COM_ESCAPE) || (val == COM_END)) {
             serial_buffer[j++] = COM_ESCAPE;
             serial_buffer[j++] = val ^ COM_XOR;
         }
@@ -119,7 +130,7 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes) {
             serial_buffer[j++] = val;
         }
     }
-    serial_buffer[j++] = COM_FLAG;
+    serial_buffer[j++] = COM_END;
     Serial.write(serial_buffer, j);
 }
 
@@ -306,14 +317,14 @@ void tx_asa(){
         read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3);
     }
 
-    tx_packet(response, 6);
+    tx_packet(response, 6, MESSAGE_ASA);
 }
 
 
 
 
 void read_sample(){
-    uint8_t response[RESPONSE_LEN + 1];     // extra byte for reading STATUS2 from mag
+    uint8_t response[RESPONSE_LEN + 2];     // extra byte for reading STATUS2 from mag, another for message_type
     uint8_t i;
     uint8_t j;
 
@@ -359,19 +370,14 @@ void read_sample(){
         write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
         write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);            // set num bytes to read 
         read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + j, 7);
-
         j += 6;
 
     }
-    tx_packet(response, RESPONSE_LEN);
 
-#ifdef USE_TRIGGER
-    trigger_val = digitalRead(TRIGGER_PIN);
-    tx_packet((byte*)&trigger_val, 1);
-    if (trigger_val) {
-        //stop_recording();
-    }
-#endif
+    response[j++] = (digitalRead(TRIGGER_PIN) >> 8) & 0xff;  // just need first byte
+
+    tx_packet(response, RESPONSE_LEN, MESSAGE_SAMPLE);
+
 }
 
 
@@ -383,7 +389,7 @@ void imu_whoami() {
     uint8_t response[2];
     response[0] = NUM_IMUS > 0 ? read_register(IMU_SELECT[0], REG_WHO_AM_I) : 0;
     response[1] = NUM_IMUS > 1 ? read_register(IMU_SELECT[1], REG_WHO_AM_I) : 0;
-    tx_packet(response, 2);
+    tx_packet(response, 2, MESSAGE_WHOAMI);
 }
 
 void start_recording() {
@@ -438,6 +444,7 @@ void loop() {
             case 'r':
 #ifdef USE_TRIGGER
                 trigger_val = digitalRead(TRIGGER_PIN);
+                tx_packet((byte*)&trigger_val, 1, MESSAGE_TRIGGER);
                 if (!trigger_val) {
                     start_recording();
                 }
