@@ -1,10 +1,13 @@
 TODO:
 smoother plots? update frequently with translation
 text window breaks when it gets too full
-tests: arduino com, imus com, imus self-test, magnetometer
+tests:
+    arduino com
+    imus com
+    imus self-test
+    magnetometer
 
 MAYBE:
 read "trigger" state instead of define.
-seems like data collection warmup delay only works on first collection
 auto-detect mag
 bigger record button

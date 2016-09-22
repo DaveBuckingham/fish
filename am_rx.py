@@ -22,6 +22,7 @@ class Am_rx(QObject):
     MESSAGE_WHOAMI               = 0x62
     MESSAGE_TRIGGER              = 0x63
     MESSAGE_STRING               = 0x64
+    MESSAGE_TEST                 = 0x65
     COM_MAX_PACKET_LENGTH        = 500
 
 
@@ -33,9 +34,9 @@ class Am_rx(QObject):
     PLOT_REFRESH_RATE            = 50
 
     if (USE_ENCODER):
-        DATA_LENGTH                  = 43
+        DATA_LENGTH              = 43
     else:
-        DATA_LENGTH                  = 41
+        DATA_LENGTH              = 41
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     WHO_AM_I                     = 0x71
@@ -88,14 +89,11 @@ class Am_rx(QObject):
             return (3275 * (1.046 ** (g_test - 1)))
 
 
-    def self_test(self):
-        # GYRO RANGE SHOULD BE +=8g (MPU6050)
-        # ACCEL RANGE SHOULD BE +=250dps (MPU6050)
-        pass
 
 
-    def cleanup(self):
-        self.message_signal.emit("closing serial connection")
+    def close_connection(self):
+        self.message_signal.emit("closing serial connection\n")
+        self.connection.flushInput()
         self.connection.close()
 
     def tx_byte(self, val):
@@ -142,10 +140,7 @@ class Am_rx(QObject):
 
 
 
-
-    @pyqtSlot()
-    def run(self):
-
+    def open_connection(self):
         self.message_signal.emit("establishing serial connection... ")
 
         try:
@@ -168,6 +163,34 @@ class Am_rx(QObject):
         self.message_signal.emit("OK\n")
 
         self.connection.flushInput()
+
+
+
+
+    # GYRO RANGE SHOULD BE +=8g (MPU6050)
+    # ACCEL RANGE SHOULD BE +=250dps (MPU6050)
+    def test(self, query):
+        self.open_connection()
+
+        self.tx_byte('t')
+        self.tx_byte(query)
+        (received, message_type) = self.rx_packet()
+
+        if ((message_type == Am_rx.MESSAGE_TEST) and (len(received) == 1)):
+
+            return (response == 1)
+        else:
+            return False
+            
+        self.close_connection()
+
+
+
+
+    @pyqtSlot()
+    def run(self):
+
+        self.open_connection()
 
         self.message_signal.emit("waiting for arduino to reset\n")
         time.sleep(3)
@@ -319,7 +342,7 @@ class Am_rx(QObject):
         #self.data = self.data[sample_index:] + self.data[:sample_index]
 
 
-        self.connection.flushInput()
+        self.close_connection()
 
         self.finished_signal.emit()
 

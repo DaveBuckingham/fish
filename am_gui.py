@@ -242,19 +242,30 @@ class Am_ui(QWidget):
 
     def test_button_slot(self):
         self.message_slot("arduino communication test: ")
-        self.message_slot("test not implemented\n")
+        if (self.receiver.test('c')):
+            self.message_slot("PASSED\n")
+        else:
+            self.message_slot("FAILED\n")
+
         self.message_slot("imu1 communication test: ")
         self.message_slot("test not implemented\n")
+
         self.message_slot("imu2 communication test: ")
         self.message_slot("test not implemented\n")
+
         self.message_slot("imu1 self test: ")
         self.message_slot("test not implemented\n")
+
         self.message_slot("imu2 self test: ")
         self.message_slot("test not implemented\n")
+
         self.message_slot("mag1 self test: ")
         self.message_slot("test not implemented\n")
+
         self.message_slot("mag2 self test: ")
         self.message_slot("test not implemented\n")
+
+
 
     def quit_button_slot(self):
         result = (QMessageBox.question(self,

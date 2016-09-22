@@ -94,6 +94,7 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define MESSAGE_WHOAMI                            0x62
 #define MESSAGE_TRIGGER                           0x63
 #define MESSAGE_STRING                            0x64
+#define MESSAGE_TEST                              0x65
 
 // EMS PINS
 #define PIN_EMS_CLK                               5
@@ -104,7 +105,6 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
 unsigned long next_sample_id;                  // counter for sample ids
-int trigger_val;
 
 
 
@@ -428,10 +428,29 @@ ISR(TIMER1_COMPA_vect) {
     read_sample();
 }
 
+// READS FROM A SERIAL A BYTE SPECIFYING TEST TYPE
+// RUNS TEST
+// TX 1 ON SUCCESS, 0 ON FAIL
+byte run_test() {
+    delay(10);                  // ENOUGH TIME FOR NEXT BYTE
+
+    if (Serial.available() < 1) {
+        return 0;
+    }
+
+    switch (Serial.read()) {
+        case 'c':                // COM
+            return 1;
+        default:
+            return 0;
+    }
+    return 0;
+}
+
 
 void loop() {
+    byte val;
     if (Serial.available() > 0) {
-        byte i;
         switch (Serial.read()) {
             case 'i':
                 initialize();
@@ -444,14 +463,14 @@ void loop() {
                 break;
             case 'r':
 #ifdef USE_TRIGGER
-                trigger_val = digitalRead(TRIGGER_PIN);
-                tx_packet((byte*)&trigger_val, 1, MESSAGE_TRIGGER);
-                if (!trigger_val) {
+                val = digitalRead(TRIGGER_PIN);
+                tx_packet((byte*)&val, 1, MESSAGE_TRIGGER);
+                if (!val) {
                     start_recording();
                 }
 #else
-                byte zero = 0;
-                tx_packet((&zero, 1, MESSAGE_TRIGGER);
+                val = 0;
+                tx_packet((&val, 1, MESSAGE_TRIGGER);
                 start_recording();
 #endif
                 break;
@@ -459,9 +478,8 @@ void loop() {
                 stop_recording();
                 break;
             case 't':
-                for (i=0; i < NUM_IMUS; i++) {
-                    self_test(i);
-                }
+                val = run_test();
+                tx_packet((byte*)&val, 1, MESSAGE_TEST);
                 break;
             default:
                 break;
