@@ -44,7 +44,7 @@ class Am_ui(QWidget):
         # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
         self.use_trigger = False
         self.pre_trigger_delay = 3
-        self.post_trigger_delay = 10
+        self.post_trigger_delay = 3
 
         # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
@@ -391,10 +391,6 @@ class Am_ui(QWidget):
         self.receiver.recording = True
         self.data_saved = False
 
-        # if (self.use_trigger):
-        #     self.buttons['record'].setText('Trigger')
-        # else:
-        #     self.buttons['record'].setText('Stop')
 
         self.buttons['record'].setText('Stop')
 
