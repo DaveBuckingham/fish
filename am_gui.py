@@ -19,6 +19,8 @@ class Am_ui(QWidget):
     # DISPLAYED IN WINDOW HEADER AND SUCH
     APPLICATION_NAME = 'IMU Collect 0.01'
 
+    FREQ_AVERAGE_WINDOW = 100
+
     # SIGNAL TO RESETS ALL THE PLOTS
     clear_plots_signal = pyqtSignal()
 
@@ -349,9 +351,12 @@ class Am_ui(QWidget):
         self.num_samples += 1
         self.stats_num_samples.setText('Samples: %d' % self.num_samples)
 
-        #self.true_frequency = float(self.num_samples) / (timestamp / 1000)
-        self.true_frequency = ((self.timestamps[-1] - self.timestamps[-11]) / 10) * 1000
-        self.stats_true_frequency.setText('Frequency: %f' % self.true_frequency)
+        if (self.num_samples > Am_ui.FREQ_AVERAGE_WINDOW):
+            # self.true_frequency = (Am_ui.FREQ_AVERAGE_WINDOW / (self.timestamps[-1] - self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW + 1)])) * 1000
+            window = self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW):]
+            differences = [j-i for i, j in zip(window[:-1], window[1:])]
+            self.true_frequency = 1000 / (sum(differences) / len(differences))
+            self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
 
 
 

@@ -15,10 +15,10 @@ class Am_rx(QObject):
 
     COM_START                    = 0x7E
     COM_END                      = 0x7F
-    COM_ESCAPE                   = 0X7D
-    COM_XOR                      = 0X20
-    MESSAGE_SAMPLE               = 0x60     // 96
-    MESSAGE_ASA                  = 0x61     // 97
+    COM_ESCAPE                   = 0x7D
+    COM_XOR                      = 0x20
+    MESSAGE_SAMPLE               = 0x60     # 96
+    MESSAGE_ASA                  = 0x61     # 97
     MESSAGE_WHOAMI               = 0x62
     MESSAGE_TRIGGER              = 0x63
     MESSAGE_STRING               = 0x64
@@ -33,9 +33,9 @@ class Am_rx(QObject):
     PLOT_REFRESH_RATE            = 50
 
     if (USE_ENCODER):
-        DATA_LENGTH                  = 42
+        DATA_LENGTH                  = 43
     else:
-        DATA_LENGTH                  = 40
+        DATA_LENGTH                  = 41
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     WHO_AM_I                     = 0x71
@@ -167,6 +167,8 @@ class Am_rx(QObject):
 
         self.message_signal.emit("OK\n")
 
+        self.connection.flushInput()
+
         self.message_signal.emit("waiting for arduino to reset\n")
         time.sleep(3)
 
@@ -214,19 +216,26 @@ class Am_rx(QObject):
             self.error_signal.emit("using 1 adjustment\n")
 
 
+        self.message_signal.emit("sent record data command to arduino\n")
+
+
 
         self.tx_byte('r')
 
-        self.message_signal.emit("recording data\n")
+
+        self.message_signal.emit("waiting for trigger state... ")
+        time.sleep(1)
 
         (received, message_type) = self.rx_packet()
         if (message_type == Am_rx.MESSAGE_TRIGGER):
             if (received[0]):
                 self.recording = False
                 self.message("trigger already active, recording halted.\n");
+            else:
+                self.message_signal.emit("trigger not active, recording data\n")
         else:
             self.recording = False
-            print message
+            # print received
             self.message_signal.emit("failed to receive trigger state, recording halted.\n")
 
 
@@ -299,6 +308,9 @@ class Am_rx(QObject):
                 self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
+            else:
+                print "unknown sample received. type: " + str(message_type) + "  len: " + str(len(received))
+
 
         self.message_signal.emit("stopping recording data\n")
         self.tx_byte('s')
@@ -308,7 +320,6 @@ class Am_rx(QObject):
 
 
         self.connection.flushInput()
-        self.connection.flushOutput()
 
         self.finished_signal.emit()
 

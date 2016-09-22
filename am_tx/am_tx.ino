@@ -44,9 +44,9 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define TRIGGER_PIN                               7
 
 #ifdef USE_ENCODER
-#define RESPONSE_LEN                              42             // how many bytes tx per sample
+#define RESPONSE_LEN                              43             // how many bytes tx per sample
 #else
-#define RESPONSE_LEN                              40
+#define RESPONSE_LEN                              41
 #endif
 
 #define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: RESPONSE_LEN + room for byte stuffing
@@ -324,7 +324,7 @@ void tx_asa(){
 
 
 void read_sample(){
-    uint8_t response[RESPONSE_LEN + 2];     // extra byte for reading STATUS2 from mag, another for message_type
+    uint8_t response[RESPONSE_LEN];
     uint8_t i;
     uint8_t j;
 
@@ -374,6 +374,7 @@ void read_sample(){
 
     }
 
+    // will overwrite the extra byte from mag STATUS2
     response[j++] = (digitalRead(TRIGGER_PIN) >> 8) & 0xff;  // just need first byte
 
     tx_packet(response, RESPONSE_LEN, MESSAGE_SAMPLE);
@@ -449,6 +450,8 @@ void loop() {
                     start_recording();
                 }
 #else
+                byte zero = 0;
+                tx_packet((&zero, 1, MESSAGE_TRIGGER);
                 start_recording();
 #endif
                 break;
