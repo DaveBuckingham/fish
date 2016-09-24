@@ -85,16 +85,30 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define READ_FLAG                                 0x80           // for spi com
  
 // FOR TXRX PACKETS OVER SERIAL
-#define COM_START                                 0x7E
-#define COM_END                                   0x7F
-#define COM_ESCAPE                                0X7D
-#define COM_XOR                                   0X20
-#define MESSAGE_SAMPLE                            0x60
-#define MESSAGE_ASA                               0x61
-#define MESSAGE_WHOAMI                            0x62
-#define MESSAGE_TRIGGER                           0x63
-#define MESSAGE_STRING                            0x64
-#define MESSAGE_TEST                              0x65
+
+#define COM_FLAG_START                               0x7E
+#define COM_FLAG_END                                 0x7F
+#define COM_FLAG_ESCAPE                              0X7D
+#define COM_FLAG_XOR                                 0X20
+
+#define COM_PACKET_SAMPLE                            0x60
+#define COM_PACKET_ASA                               0x61
+#define COM_PACKET_TRIGGER                           0x63
+#define COM_PACKET_STRING                            0x64
+#define COM_PACKET_TEST                              0x65
+
+#define COM_SIGNAL_INIT                              0x50
+#define COM_SIGNAL_ASA                               0x52
+#define COM_SIGNAL_RUN                               0x53
+#define COM_SIGNAL_STOP                              0x54
+#define COM_SIGNAL_TEST                              0x55
+
+
+
+#define IMU_WHOAMI_VAL                   0x71
+
+
+
 
 // EMS PINS
 #define PIN_EMS_CLK                               5
@@ -112,25 +126,25 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
     byte val;
     byte i;
     byte j = 0;
-    if ((message_type == COM_START) || (message_type == COM_END) || (message_type == COM_ESCAPE)) {
+    if ((message_type == COM_FLAG_START) || (message_type == COM_FLAG_END) || (message_type == COM_FLAG_ESCAPE)) {
         return;
     }
-    serial_buffer[j++] = COM_START;
+    serial_buffer[j++] = COM_FLAG_START;
     serial_buffer[j++] = message_type;
     for (i = 0; i < num_bytes; i++) {
         if (j >= SERIAL_BUFF_LENGTH - 3) {     // data byte, possible escape, and end flag
             return;
         }
         val = in_buffer[i];
-        if ((val == COM_START) || (val == COM_ESCAPE) || (val == COM_END)) {
-            serial_buffer[j++] = COM_ESCAPE;
-            serial_buffer[j++] = val ^ COM_XOR;
+        if ((val == COM_FLAG_START) || (val == COM_FLAG_ESCAPE) || (val == COM_FLAG_END)) {
+            serial_buffer[j++] = COM_FLAG_ESCAPE;
+            serial_buffer[j++] = val ^ COM_FLAG_XOR;
         }
         else {
             serial_buffer[j++] = val;
         }
     }
-    serial_buffer[j++] = COM_END;
+    serial_buffer[j++] = COM_FLAG_END;
     Serial.write(serial_buffer, j);
 }
 
@@ -197,13 +211,35 @@ int read_encoder() {
 // GYRO SELF-TEST WILL FAIL IF IT ROTATES MORE THAN +-2.5 DEGREES.
 // FOR ACCEL, CHANGES IN LINEAR VELOCITY SHOULD BE < 0.2m/s.
 // CHANGES IN TILT ANGLE SHOULD BE < 6 deg.
-void self_test(byte chip) {
+//
+// MUST BE CALLED FROM test() FUNCTION SO SPI IS SET UP
+bool self_test(byte chip) {
     int i;
+    uint8_t temp_buffer[6];
 
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
+    long GX_OS;
+    long GY_OS;
+    long GZ_OS;
+    long AX_OS;
+    long AY_OS;
+    long AZ_OS;
 
-    ///// STEP 1 /////
+    long GX_ST_OS;
+    long GY_ST_OS;
+    long GZ_ST_OS;
+    long AX_ST_OS;
+    long AY_ST_OS;
+    long AZ_ST_OS;
+
+    long GXST;
+    long GYST;
+    long GZST;
+    long AXST;
+    long AYST;
+    long AZST;
+
+
+    ///// STEP 3.0.1 /////
     write_register(chip, REG_CONFIG, 0x02);
     write_register(chip, ACCEL_CONFIG_2, 0x02);
 
@@ -213,38 +249,87 @@ void self_test(byte chip) {
     uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;
     write_register(chip, ACCEL_CONFIG_1, 0x00);
 
-    ///// STEP 2 /////
-    uint8_t temp_buffer[6];
-    long gyro_x;
-    long gyro_y;
-    long gyro_z;
-    long accel_x;
-    long accel_y;
-    long accel_z;
-
+    ///// STEP 3.0.2 /////
     for (i=0; i<200; i++) {
 
         read_multiple_registers(chip, REG_ACCEL_FIRST, temp_buffer, 6);
-        gyro_x += (temp_buffer[0] << 8) | temp_buffer[1];
-        gyro_y += (temp_buffer[2] << 8) | temp_buffer[3];
-        gyro_z += (temp_buffer[4] << 8) | temp_buffer[5];
+        GX_OS += (temp_buffer[0] << 8) | temp_buffer[1];
+        GY_OS += (temp_buffer[2] << 8) | temp_buffer[3];
+        GZ_OS += (temp_buffer[4] << 8) | temp_buffer[5];
 
         read_multiple_registers(chip, REG_GYRO_FIRST, temp_buffer, 6);
-        accel_x += (temp_buffer[0] << 8) | temp_buffer[1];
-        accel_y += (temp_buffer[2] << 8) | temp_buffer[3];
-        accel_z += (temp_buffer[4] << 8) | temp_buffer[5];
+        AX_OS += (temp_buffer[0] << 8) | temp_buffer[1];
+        AY_OS += (temp_buffer[2] << 8) | temp_buffer[3];
+        AZ_OS += (temp_buffer[4] << 8) | temp_buffer[5];
 
         delay(1);
     }
 
-    gyro_x /= 200;
-    gyro_y /= 200;
-    gyro_z /= 200;
-    accel_x /= 200;
-    accel_y /= 200;
-    accel_z /= 200;
+    GX_OS /= 200;
+    GY_OS /= 200;
+    GZ_OS /= 200;
+    AX_OS /= 200;
+    AY_OS /= 200;
+    AZ_OS /= 200;
 
-    ///// STEP 3 /////
+    ///// STEP 3.0.3 /////
+    write_register(chip, GYRO_CONFIG, B111);
+    write_register(chip, ACCEL_CONFIG_1, B111);
+
+
+    ///// STEP 3.0.4 /////
+    delay(20);                                    
+    
+
+    ///// STEP 3.0.5 /////
+    for (i=0; i<200; i++) {
+
+        read_multiple_registers(chip, REG_ACCEL_FIRST, temp_buffer, 6);
+        GX_ST_OS += (temp_buffer[0] << 8) | temp_buffer[1];
+        GY_ST_OS += (temp_buffer[2] << 8) | temp_buffer[3];
+        GZ_ST_OS += (temp_buffer[4] << 8) | temp_buffer[5];
+
+        read_multiple_registers(chip, REG_GYRO_FIRST, temp_buffer, 6);
+        AX_ST_OS += (temp_buffer[0] << 8) | temp_buffer[1];
+        AY_ST_OS += (temp_buffer[2] << 8) | temp_buffer[3];
+        AZ_ST_OS += (temp_buffer[4] << 8) | temp_buffer[5];
+
+        delay(1);
+    }
+
+    GX_ST_OS /= 200;
+    GY_ST_OS /= 200;
+    GZ_ST_OS /= 200;
+    AX_ST_OS /= 200;
+    AY_ST_OS /= 200;
+    AZ_ST_OS /= 200;
+
+
+    ///// STEP 3.0.6 /////
+    GXST = GX_ST_OS - GX_OS;
+    GYST = GY_ST_OS - GY_OS;
+    GZST = GZ_ST_OS - GZ_OS;
+    AXST = AX_ST_OS - AX_OS;
+    AYST = AY_ST_OS - AY_OS;
+    AZST = AZ_ST_OS - AZ_OS;
+
+
+    ///// STEP 3.1.1 /////
+    write_register(chip, GYRO_CONFIG, B000);
+    write_register(chip, ACCEL_CONFIG_1, B000);
+
+    ///// STEP 3.1.2 /////
+    delay(20);                                    
+
+
+    ///// STEP 3.1.3 /////
+    write_register(chip, GYRO_CONFIG, gyro_old_fs);
+    write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
+
+
+    ///// STEP 3.2.1 /////
+
+
 
 
     // gyro_st_response = gyro_st_enabled - gyro_st_disabled;
@@ -255,11 +340,29 @@ void self_test(byte chip) {
     // accel_change_from_factory = (accel_st_response - accel_factory_trim) / accel_factory_trim;
     // accel_passed = (accel_change_from_factory > accel_lower_limit) && (accel_change_from_factory < accel_upper_limit);
 
-    SPI.endTransaction;
-    SPI.end();
+    return 0;
 
 }
 
+
+void begin_imu_com() {
+
+    SPI.begin();
+    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
+
+    uint8_t i;
+    for (i=0; i < NUM_IMUS; i++) {
+        pinMode(IMU_SELECT[i], OUTPUT);
+        digitalWrite(IMU_SELECT[i], HIGH);
+    }
+    delay(400);                                    
+}
+
+void end_imu_com() {
+    SPI.endTransaction();
+    SPI.end();
+    Serial.flush();
+}
 
 
 
@@ -267,17 +370,13 @@ void self_test(byte chip) {
 void initialize(){
     next_sample_id = 0;
 
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
-
     pinMode(TRIGGER_PIN, INPUT);
+
+    begin_imu_com();
 
     uint8_t i;
     for (i=0; i < NUM_IMUS; i++) {
 
-        pinMode(IMU_SELECT[i], OUTPUT);
-        digitalWrite(IMU_SELECT[i], HIGH);
-        delay(200);                                    
 
         write_register(IMU_SELECT[i], REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
         delay(1);
@@ -317,7 +416,7 @@ void tx_asa(){
         read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3);
     }
 
-    tx_packet(response, 6, MESSAGE_ASA);
+    tx_packet(response, 6, COM_PACKET_ASA);
 }
 
 
@@ -327,7 +426,6 @@ void read_sample(){
     uint8_t response[RESPONSE_LEN];
     uint8_t i;
     uint8_t j;
-
 
 
     for (j=0; j < RESPONSE_LEN; j++) {
@@ -377,21 +475,10 @@ void read_sample(){
     // will overwrite the extra byte from mag STATUS2
     response[j++] = (digitalRead(TRIGGER_PIN) >> 8) & 0xff;  // just need first byte
 
-    tx_packet(response, RESPONSE_LEN, MESSAGE_SAMPLE);
+    tx_packet(response, RESPONSE_LEN, COM_PACKET_SAMPLE);
 
 }
 
-
-
-
-
-// SHOULD ALSO CHECK IMU WHOAMIS
-void imu_whoami() {
-    uint8_t response[2];
-    response[0] = NUM_IMUS > 0 ? read_register(IMU_SELECT[0], REG_WHO_AM_I) : 0;
-    response[1] = NUM_IMUS > 1 ? read_register(IMU_SELECT[1], REG_WHO_AM_I) : 0;
-    tx_packet(response, 2, MESSAGE_WHOAMI);
-}
 
 void start_recording() {
     noInterrupts();                                      // disable all interrupts
@@ -414,9 +501,8 @@ void stop_recording() {
         write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x10);
         write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
-    SPI.endTransaction();
-    SPI.end();
-    Serial.flush();
+    end_imu_com();
+
 }
 
 void setup() {
@@ -428,61 +514,62 @@ ISR(TIMER1_COMPA_vect) {
     read_sample();
 }
 
-// READS FROM A SERIAL A BYTE SPECIFYING TEST TYPE
-// RUNS TEST
-// TX 1 ON SUCCESS, 0 ON FAIL
-byte run_test() {
-    delay(10);                  // ENOUGH TIME FOR NEXT BYTE
 
-    if (Serial.available() < 1) {
-        return 0;
-    }
+void run_test() {
+    uint8_t response[6];
+    uint8_t i = 0;
 
-    switch (Serial.read()) {
-        case 'c':                // COM
-            return 1;
-        default:
-            return 0;
-    }
-    return 0;
+    begin_imu_com();
+
+
+    // COMMUNICATE WITH THE IMUS
+    response[i++] = ((NUM_IMUS > 0) && (read_register(IMU_SELECT[0], REG_WHO_AM_I) == IMU_WHOAMI_VAL)) ? 1 : 0;
+    response[i++] = ((NUM_IMUS > 1) && (read_register(IMU_SELECT[1], REG_WHO_AM_I) == IMU_WHOAMI_VAL)) ? 1 : 0;
+
+
+    // RUN IMU SELF TESTS
+    response[i++] = ((NUM_IMUS > 0) && (self_test(IMU_SELECT[0]))) ? 1 : 0;
+    response[i++] = ((NUM_IMUS > 1) && (self_test(IMU_SELECT[1]))) ? 1 : 0;
+
+    // MAG SELF TESTS NOT IMPLEMENTED YET
+    response[i++] = 0;
+    response[i++] = 0;
+
+    end_imu_com();
+
+    tx_packet(response, i, COM_PACKET_TEST);
 }
 
 
 void loop() {
     byte val;
     if (Serial.available() > 0) {
+
+
         switch (Serial.read()) {
-            case 'i':
+            case COM_SIGNAL_INIT:
                 initialize();
                 break;
-            case 'w':
-                imu_whoami();
-                break;
-            case 'm':
+            case COM_SIGNAL_ASA:
                 tx_asa();
                 break;
-            case 'r':
-#ifdef USE_TRIGGER
+            case COM_SIGNAL_RUN:
                 val = digitalRead(TRIGGER_PIN);
-                tx_packet((byte*)&val, 1, MESSAGE_TRIGGER);
+                tx_packet((byte*)&val, 1, COM_PACKET_TRIGGER);
                 if (!val) {
                     start_recording();
                 }
-#else
-                val = 0;
-                tx_packet((&val, 1, MESSAGE_TRIGGER);
-                start_recording();
-#endif
                 break;
-            case 's':
+            case COM_SIGNAL_STOP:
                 stop_recording();
                 break;
-            case 't':
-                val = run_test();
-                tx_packet((byte*)&val, 1, MESSAGE_TEST);
+            case COM_SIGNAL_TEST:
+                run_test();
                 break;
             default:
                 break;
         }
     }
 }
+
+

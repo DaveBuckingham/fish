@@ -51,9 +51,6 @@ class Am_ui(QWidget):
 
 
         # TIMESTAMPS OF COLLECTED DATA.
-        # am_rx.py WILL PUT THE SAME DATA IN HERE AND IN receiver.data['time']
-        # KIND OF REDUNDANT, BUT THIS IS REALLY FOR THE PROGRAM TO KEEP TRACK OF
-        # TIME, E.G. FOR TRIGGERS, receiver.data IS STORING IMU DATA FOR SAVING.
         self.timestamps   = []
 
         # NUMBER OF SAMPLES COLLECTED
@@ -84,8 +81,6 @@ class Am_ui(QWidget):
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
         # self.buttons['record'].setStyleSheet("background-color: red")
-
-
 
 
         self.buttons['test'] = QPushButton('Test')
@@ -232,6 +227,11 @@ class Am_ui(QWidget):
 
 
 
+    def print_pass_fail(self, val):
+        if (val):
+            self.message_slot("PASS\n")
+        else:
+            self.error_slot("FAIL\n")
 
 
 
@@ -241,29 +241,31 @@ class Am_ui(QWidget):
 
 
     def test_button_slot(self):
-        self.message_slot("arduino communication test: ")
-        if (self.receiver.test('c')):
-            self.message_slot("PASSED\n")
+
+        results = self.receiver.test()
+
+        if (not results):
+            self.error_slot("Arduino com error.\n")
+
         else:
-            self.message_slot("FAILED\n")
 
-        self.message_slot("imu1 communication test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("imu1 communication test...")
+            self.print_pass_fail(results[0])
 
-        self.message_slot("imu2 communication test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("imu2 communication test...")
+            self.print_pass_fail(results[1])
 
-        self.message_slot("imu1 self test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("imu1 self test...")
+            self.print_pass_fail(results[2])
 
-        self.message_slot("imu2 self test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("imu2 self test...")
+            self.print_pass_fail(results[3])
 
-        self.message_slot("mag1 self test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("mag1 self test...")
+            self.message_slot("not implemented\n")
 
-        self.message_slot("mag2 self test: ")
-        self.message_slot("test not implemented\n")
+            self.message_slot("mag2 self test...")
+            self.message_slot("not implemented\n")
 
 
 
