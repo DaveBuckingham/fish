@@ -52,6 +52,13 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: RESPONSE_LEN + room for byte stuffing
 
 // IMU REGISTERS
+#define SELF_TEST_X_GYRO                          0x00
+#define SELF_TEST_Y_GYRO                          0x01
+#define SELF_TEST_Z_GYRO                          0x02
+#define SELF_TEST_X_ACCEL                         0x0D
+#define SELF_TEST_Y_ACCEL                         0x0E
+#define SELF_TEST_Z_ACCEL                         0x0F
+
 #define REG_WHO_AM_I                              0x75           // 117
 #define REG_CONFIG                                0x1A
 #define GYRO_CONFIG                               0X1B           // 27
@@ -70,6 +77,7 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define REG_GYRO_FIRST                            0x43
 #define REG_TEMP_OUT_H                            0x41
 #define REG_TEMP_OUT_L                            0x42
+#define REG_SAMPLE_RATE_DIVIDER                   0x19
 
 // MAGNETOMETER I2C ADDRESS
 #define I2C_ADDRESS_MAG                           0x0C
@@ -205,6 +213,11 @@ int read_encoder() {
 #endif
 
 
+
+
+
+
+// Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
 // IMPLEMENTATION FROM "MPU-6500 ACCELEROMETER AND GYROSCOPE SELF-TEST IMPLEMENTATION.
 // ACCORDING TO INVENSENSE TECH SUPPORT THIS PROCEDURE APPLIES TO MPU-9250.
 // ROTATION SHOULD VARY LESS THAN 5 DEGREES DURING SELF-TEST.
@@ -213,7 +226,15 @@ int read_encoder() {
 // CHANGES IN TILT ANGLE SHOULD BE < 6 deg.
 //
 // MUST BE CALLED FROM test() FUNCTION SO SPI IS SET UP
-bool self_test(byte chip) {
+
+byte self_test(byte chip) {
+    // uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
+    // uint8_t selfTest[6];
+    // int32_t gAvg[3] = {0}, aAvg[3] = {0}, aSTAvg[3] = {0}, gSTAvg[3] = {0};
+    // float factoryTrim[6];
+
+    uint8_t FS = 0;
+
     int i;
     uint8_t temp_buffer[6];
 
@@ -240,14 +261,20 @@ bool self_test(byte chip) {
 
 
     ///// STEP 3.0.1 /////
+
+    write_register(chip, REG_SAMPLE_RATE_DIVIDER, 0x00);           // Set gyro sample rate to 1 kHz
+
     write_register(chip, REG_CONFIG, 0x02);
     write_register(chip, ACCEL_CONFIG_2, 0x02);
 
     uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;
-    write_register(chip, GYRO_CONFIG, 0x00);
+    // write_register(chip, GYRO_CONFIG, 0x00);
+    write_register(chip, GYRO_CONFIG, 1<<FS);
 
     uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;
-    write_register(chip, ACCEL_CONFIG_1, 0x00);
+    // write_register(chip, ACCEL_CONFIG_1, 0x00);
+    write_register(chip, ACCEL_CONFIG_1, 1<<FS);
+
 
     ///// STEP 3.0.2 /////
     for (i=0; i<200; i++) {
@@ -272,14 +299,18 @@ bool self_test(byte chip) {
     AY_OS /= 200;
     AZ_OS /= 200;
 
+
     ///// STEP 3.0.3 /////
-    write_register(chip, GYRO_CONFIG, B111);
-    write_register(chip, ACCEL_CONFIG_1, B111);
+    // write_register(chip, GYRO_CONFIG, B111);
+    // write_register(chip, ACCEL_CONFIG_1, B111);
+    write_register(chip, GYRO_CONFIG, 0xE0);
+    write_register(chip, ACCEL_CONFIG_1, 0xE0);
 
 
     ///// STEP 3.0.4 /////
-    delay(20);                                    
-    
+    // delay(20);
+    delay(25);
+
 
     ///// STEP 3.0.5 /////
     for (i=0; i<200; i++) {
@@ -314,23 +345,56 @@ bool self_test(byte chip) {
     AZST = AZ_ST_OS - AZ_OS;
 
 
+
     ///// STEP 3.1.1 /////
-    write_register(chip, GYRO_CONFIG, B000);
-    write_register(chip, ACCEL_CONFIG_1, B000);
+    // write_register(chip, GYRO_CONFIG, B000);
+    // write_register(chip, ACCEL_CONFIG_1, B000);
+    write_register(chip, GYRO_CONFIG, 0x00);
+    write_register(chip, ACCEL_CONFIG_1, 0x00);
 
     ///// STEP 3.1.2 /////
-    delay(20);                                    
+    delay(25);                                    
+    // delay(20);                                    
 
 
     ///// STEP 3.1.3 /////
-    write_register(chip, GYRO_CONFIG, gyro_old_fs);
-    write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
+    // write_register(chip, GYRO_CONFIG, gyro_old_fs);
+    // write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
 
 
     ///// STEP 3.2.1 /////
+    byte self_test_gyro_x =  read_register(chip, SELF_TEST_X_GYRO);
+    byte self_test_gyro_y =  read_register(chip, SELF_TEST_Y_GYRO);
+    byte self_test_gyro_z =  read_register(chip, SELF_TEST_Z_GYRO);
+    byte self_test_accel_x = read_register(chip, SELF_TEST_X_ACCEL);
+    byte self_test_accel_y = read_register(chip, SELF_TEST_Y_ACCEL);
+    byte self_test_accel_z = read_register(chip, SELF_TEST_Z_ACCEL);
 
+    ///// STEP 3.2.2 /////
+    float GXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
+    float GYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
+    float GZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
+    float AXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
+    float AYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
+    float AZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
 
+    // for (int i = 0; i < 3; i++) {
+    //     destination[i]   = 100.0*((float)(aSTAvg[i] - aAvg[i]))/factoryTrim[i] - 100.;
+    //     destination[i+3] = 100.0*((float)(gSTAvg[i] - gAvg[i]))/factoryTrim[i+3] - 100.;
+    // }
 
+    ///// STEP 3.2.3 (a and b) /////
+    byte result_gyro_x =  (GXST_OTP != 0.0) ? ((GXST / GXST_OTP) > 5) : (abs(GXST) >= 60);
+    byte result_gyro_y =  (GYST_OTP != 0.0) ? ((GYST / GYST_OTP) > 5) : (abs(GYST) >= 60);
+    byte result_gyro_z =  (GZST_OTP != 0.0) ? ((GZST / GZST_OTP) > 5) : (abs(GZST) >= 60);
+    byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 5) : (abs(AXST) >= 60);
+    byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 5) : (abs(AYST) >= 60);
+    byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 5) : (abs(AZST) >= 60);
+
+    // STEP 3.2.3.c SAYS TO CHECK OFFSET VALUES, BUT I DON'T KNOW HOW TO GET THESE
+
+    return (result_gyro_x  && result_gyro_y  && result_gyro_z && result_accel_x && result_accel_y && result_accel_z);
+   
 
     // gyro_st_response = gyro_st_enabled - gyro_st_disabled;
     // gyro_change_from_factory = (gyro_st_response - gyro_factory_trim) / gyro_factory_trim;
@@ -339,8 +403,6 @@ bool self_test(byte chip) {
     // accel_st_response = accel_st_enabled - accel_st_disabled;
     // accel_change_from_factory = (accel_st_response - accel_factory_trim) / accel_factory_trim;
     // accel_passed = (accel_change_from_factory > accel_lower_limit) && (accel_change_from_factory < accel_upper_limit);
-
-    return 0;
 
 }
 
