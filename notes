@@ -11,3 +11,6 @@ MAYBE:
 read "trigger" state instead of define.
 auto-detect mag
 bigger record button
+
+
+white 13, purple 12, grey 11, blue 9

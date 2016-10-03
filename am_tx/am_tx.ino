@@ -11,19 +11,17 @@
 
 // Wiring arduino to imus:
 //
-//    ARDUINO     PIN      IMU
+//    ARDUINO     PIN      IMU        COLOR
 //    
-//     CS1        9        NCS
-//     CS2        10       NCS
-//     MOSI       11       SDA
-//     MISO       12       AD0
-//     SCK        13       SCL
+//     CS1        9        NCS        WHITE/CLEAR
+//     CS2        10       NCS        WHITE/CLEAR
+//     MOSI       11       SDA/MOSI   GREEN
+//     MISO       12       AD0/MISO   BLUE
+//     SCK        13       SCL        YELLOW
 //     TRIGGER    7
 //
 // MOSI, MISO, and SCK pins are specified by the arduino spi library.
 // Chip selects CS1 and CS2 are specified by in code (IMU_SELECT[]).
-
-
 
 
 #include <SPI.h>
@@ -387,9 +385,9 @@ byte self_test(byte chip) {
     byte result_gyro_x =  (GXST_OTP != 0.0) ? ((GXST / GXST_OTP) > 5) : (abs(GXST) >= 60);
     byte result_gyro_y =  (GYST_OTP != 0.0) ? ((GYST / GYST_OTP) > 5) : (abs(GYST) >= 60);
     byte result_gyro_z =  (GZST_OTP != 0.0) ? ((GZST / GZST_OTP) > 5) : (abs(GZST) >= 60);
-    byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 5) : (abs(AXST) >= 60);
-    byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 5) : (abs(AYST) >= 60);
-    byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 5) : (abs(AZST) >= 60);
+    byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 5) && ((AXST / AXST_OTP) < 1.5) : (abs(AXST) >= 60);
+    byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AYST) >= 60);
+    byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AZST) >= 60);
 
     // STEP 3.2.3.c SAYS TO CHECK OFFSET VALUES, BUT I DON'T KNOW HOW TO GET THESE
 

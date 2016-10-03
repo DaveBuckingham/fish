@@ -16,7 +16,7 @@
 
 #define SPI_CLOCK 8000000  // 8MHz clock works.
 
-#define SS_PIN   10 
+#define SS_PIN   9 
 #define INT_PIN  3
 #define LED      13
 
@@ -76,12 +76,12 @@ void loop() {
 
 	mpu.read_all();
 
-	//Serial.print(mpu.gyro_data[0]);   Serial.print('\t');
-	//Serial.print(mpu.gyro_data[1]);   Serial.print('\t');
-	//Serial.print(mpu.gyro_data[2]);   Serial.print('\t');
-	//Serial.print(mpu.accel_data[0]);  Serial.print('\t');
-	//Serial.print(mpu.accel_data[1]);  Serial.print('\t');
-	//Serial.print(mpu.accel_data[2]);  Serial.print('\t');
+	Serial.print(mpu.gyro_data[0]);   Serial.print('\t');
+	Serial.print(mpu.gyro_data[1]);   Serial.print('\t');
+	Serial.print(mpu.gyro_data[2]);   Serial.print('\t');
+	Serial.print(mpu.accel_data[0]);  Serial.print('\t');
+	Serial.print(mpu.accel_data[1]);  Serial.print('\t');
+	Serial.print(mpu.accel_data[2]);  Serial.print('\t');
 	Serial.print(mpu.mag_data[0]);    Serial.print('\t');
 	Serial.print(mpu.mag_data[1]);    Serial.print('\t');
 	Serial.print(mpu.mag_data[2]);    Serial.print('\t');
