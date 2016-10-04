@@ -92,27 +92,24 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
  
 // FOR TXRX PACKETS OVER SERIAL
 
-#define COM_FLAG_START                               0x7E
-#define COM_FLAG_END                                 0x7F
-#define COM_FLAG_ESCAPE                              0X7D
-#define COM_FLAG_XOR                                 0X20
+#define COM_FLAG_START                            0x7E
+#define COM_FLAG_END                              0x7F
+#define COM_FLAG_ESCAPE                           0X7D
+#define COM_FLAG_XOR                              0X20
 
-#define COM_PACKET_SAMPLE                            0x60
-#define COM_PACKET_ASA                               0x61
-#define COM_PACKET_TRIGGER                           0x63
-#define COM_PACKET_STRING                            0x64
-#define COM_PACKET_TEST                              0x65
+#define COM_PACKET_SAMPLE                         0x60
+#define COM_PACKET_ASA                            0x61
+#define COM_PACKET_TRIGGER                        0x63
+#define COM_PACKET_STRING                         0x64
+#define COM_PACKET_TEST                           0x65
 
-#define COM_SIGNAL_INIT                              0x50
-#define COM_SIGNAL_ASA                               0x52
-#define COM_SIGNAL_RUN                               0x53
-#define COM_SIGNAL_STOP                              0x54
-#define COM_SIGNAL_TEST                              0x55
+#define COM_SIGNAL_INIT                           0x50
+#define COM_SIGNAL_ASA                            0x52
+#define COM_SIGNAL_RUN                            0x53
+#define COM_SIGNAL_STOP                           0x54
+#define COM_SIGNAL_TEST                           0x55
 
-
-
-#define IMU_WHOAMI_VAL                   0x71
-
+#define IMU_WHOAMI_VAL                            0x71
 
 
 
@@ -155,7 +152,6 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
 }
 
 
-
 unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
     unsigned int temp_val;
 
@@ -166,6 +162,7 @@ unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
 
     return temp_val;
 }
+
 
 byte read_register(byte chip, byte address) {
     digitalWrite(chip, LOW);
@@ -186,6 +183,7 @@ void read_multiple_registers(byte chip, uint8_t address, uint8_t *buff, unsigned
         buff[i] = SPI.transfer(0x00);
     digitalWrite(chip, HIGH);
 }
+
 
 #ifdef USE_ENCODER
 int read_encoder() {
@@ -213,8 +211,6 @@ int read_encoder() {
 
 
 
-
-
 // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
 // IMPLEMENTATION FROM "MPU-6500 ACCELEROMETER AND GYROSCOPE SELF-TEST IMPLEMENTATION.
 // ACCORDING TO INVENSENSE TECH SUPPORT THIS PROCEDURE APPLIES TO MPU-9250.
@@ -224,6 +220,8 @@ int read_encoder() {
 // CHANGES IN TILT ANGLE SHOULD BE < 6 deg.
 //
 // MUST BE CALLED FROM test() FUNCTION SO SPI IS SET UP
+
+#define NUM_REPS         200
 
 byte self_test(byte chip) {
     // uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
@@ -236,26 +234,19 @@ byte self_test(byte chip) {
     int i;
     uint8_t temp_buffer[6];
 
-    long GX_OS;
-    long GY_OS;
-    long GZ_OS;
-    long AX_OS;
-    long AY_OS;
-    long AZ_OS;
+    int32_t GX_OS = 0;
+    int32_t GY_OS = 0;
+    int32_t GZ_OS = 0;
+    int32_t AX_OS = 0;
+    int32_t AY_OS = 0;
+    int32_t AZ_OS = 0;
 
-    long GX_ST_OS;
-    long GY_ST_OS;
-    long GZ_ST_OS;
-    long AX_ST_OS;
-    long AY_ST_OS;
-    long AZ_ST_OS;
-
-    long GXST;
-    long GYST;
-    long GZST;
-    long AXST;
-    long AYST;
-    long AZST;
+    int32_t GX_ST_OS = 0;
+    int32_t GY_ST_OS = 0;
+    int32_t GZ_ST_OS = 0;
+    int32_t AX_ST_OS = 0;
+    int32_t AY_ST_OS = 0;
+    int32_t AZ_ST_OS = 0;
 
 
     ///// STEP 3.0.1 /////
@@ -266,41 +257,57 @@ byte self_test(byte chip) {
     write_register(chip, ACCEL_CONFIG_2, 0x02);
 
     uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;
-    // write_register(chip, GYRO_CONFIG, 0x00);
-    write_register(chip, GYRO_CONFIG, 1<<FS);
+    write_register(chip, GYRO_CONFIG, 0x00);
+    // write_register(chip, GYRO_CONFIG, 1<<FS);
 
     uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;
-    // write_register(chip, ACCEL_CONFIG_1, 0x00);
-    write_register(chip, ACCEL_CONFIG_1, 1<<FS);
+    write_register(chip, ACCEL_CONFIG_1, 0x00);
+    // write_register(chip, ACCEL_CONFIG_1, 1<<FS);
 
 
     ///// STEP 3.0.2 /////
-    for (i=0; i<200; i++) {
+    for (i=0; i<NUM_REPS; i++) {
 
         read_multiple_registers(chip, REG_ACCEL_FIRST, temp_buffer, 6);
-        GX_OS += (temp_buffer[0] << 8) | temp_buffer[1];
-        GY_OS += (temp_buffer[2] << 8) | temp_buffer[3];
-        GZ_OS += (temp_buffer[4] << 8) | temp_buffer[5];
+        // GX_OS += ((temp_buffer[0] << 8) | temp_buffer[1]);
+        // GY_OS += ((temp_buffer[2] << 8) | temp_buffer[3]);
+        // GZ_OS += ((temp_buffer[4] << 8) | temp_buffer[5]);
+
+        GX_OS +=   (int16_t)(((int16_t)temp_buffer[0] << 8) | temp_buffer[1]);
+        GY_OS +=   (int16_t)(((int16_t)temp_buffer[2] << 8) | temp_buffer[3]);
+        GZ_OS +=   (int16_t)(((int16_t)temp_buffer[4] << 8) | temp_buffer[5]);
 
         read_multiple_registers(chip, REG_GYRO_FIRST, temp_buffer, 6);
-        AX_OS += (temp_buffer[0] << 8) | temp_buffer[1];
-        AY_OS += (temp_buffer[2] << 8) | temp_buffer[3];
-        AZ_OS += (temp_buffer[4] << 8) | temp_buffer[5];
+        // AX_OS += ((temp_buffer[0] << 8) | temp_buffer[1]);
+        // AY_OS += ((temp_buffer[2] << 8) | temp_buffer[3]);
+        // AZ_OS += ((temp_buffer[4] << 8) | temp_buffer[5]);
+
+        AX_OS +=   (int16_t)(((int16_t)temp_buffer[0] << 8) | temp_buffer[1]);
+        AY_OS +=   (int16_t)(((int16_t)temp_buffer[2] << 8) | temp_buffer[3]);
+        AZ_OS +=   (int16_t)(((int16_t)temp_buffer[4] << 8) | temp_buffer[5]);
 
         delay(1);
     }
 
-    GX_OS /= 200;
-    GY_OS /= 200;
-    GZ_OS /= 200;
-    AX_OS /= 200;
-    AY_OS /= 200;
-    AZ_OS /= 200;
+    GX_OS /= NUM_REPS;
+    GY_OS /= NUM_REPS;
+    GZ_OS /= NUM_REPS;
+    AX_OS /= NUM_REPS;
+    AY_OS /= NUM_REPS;
+    AZ_OS /= NUM_REPS;
+
+    Serial.println("---START---");
+    Serial.println(GX_OS);
+    Serial.println(GY_OS);
+    Serial.println(GZ_OS);
+    Serial.println(AX_OS);
+    Serial.println(AY_OS);
+    Serial.println(AZ_OS);
 
 
     ///// STEP 3.0.3 /////
-    // write_register(chip, GYRO_CONFIG, B111);
-    // write_register(chip, ACCEL_CONFIG_1, B111);
+
+    // SET SELF-TEST FLAGS
     write_register(chip, GYRO_CONFIG, 0xE0);
     write_register(chip, ACCEL_CONFIG_1, 0xE0);
 
@@ -311,7 +318,7 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.0.5 /////
-    for (i=0; i<200; i++) {
+    for (i=0; i<NUM_REPS; i++) {
 
         read_multiple_registers(chip, REG_ACCEL_FIRST, temp_buffer, 6);
         GX_ST_OS += (temp_buffer[0] << 8) | temp_buffer[1];
@@ -326,27 +333,40 @@ byte self_test(byte chip) {
         delay(1);
     }
 
-    GX_ST_OS /= 200;
-    GY_ST_OS /= 200;
-    GZ_ST_OS /= 200;
-    AX_ST_OS /= 200;
-    AY_ST_OS /= 200;
-    AZ_ST_OS /= 200;
+    GX_ST_OS /= NUM_REPS;
+    GY_ST_OS /= NUM_REPS;
+    GZ_ST_OS /= NUM_REPS;
+    AX_ST_OS /= NUM_REPS;
+    AY_ST_OS /= NUM_REPS;
+    AZ_ST_OS /= NUM_REPS;
+
+    Serial.println("---OS----");
+    Serial.println(GX_ST_OS);
+    Serial.println(GY_ST_OS);
+    Serial.println(GZ_ST_OS);
+    Serial.println(AX_ST_OS);
+    Serial.println(AY_ST_OS);
+    Serial.println(AZ_ST_OS);
 
 
     ///// STEP 3.0.6 /////
-    GXST = GX_ST_OS - GX_OS;
-    GYST = GY_ST_OS - GY_OS;
-    GZST = GZ_ST_OS - GZ_OS;
-    AXST = AX_ST_OS - AX_OS;
-    AYST = AY_ST_OS - AY_OS;
-    AZST = AZ_ST_OS - AZ_OS;
+    int32_t GXST = GX_ST_OS - GX_OS;
+    int32_t GYST = GY_ST_OS - GY_OS;
+    int32_t GZST = GZ_ST_OS - GZ_OS;
+    int32_t AXST = AX_ST_OS - AX_OS;
+    int32_t AYST = AY_ST_OS - AY_OS;
+    int32_t AZST = AZ_ST_OS - AZ_OS;
 
+    Serial.println("---DIFF----");
+    Serial.println(GXST);
+    Serial.println(GYST);
+    Serial.println(GZST);
+    Serial.println(AXST);
+    Serial.println(AYST);
+    Serial.println(AZST);
 
 
     ///// STEP 3.1.1 /////
-    // write_register(chip, GYRO_CONFIG, B000);
-    // write_register(chip, ACCEL_CONFIG_1, B000);
     write_register(chip, GYRO_CONFIG, 0x00);
     write_register(chip, ACCEL_CONFIG_1, 0x00);
 
@@ -356,8 +376,8 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.1.3 /////
-    // write_register(chip, GYRO_CONFIG, gyro_old_fs);
-    // write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
+    write_register(chip, GYRO_CONFIG, gyro_old_fs);
+    write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
 
 
     ///// STEP 3.2.1 /////
@@ -368,13 +388,38 @@ byte self_test(byte chip) {
     byte self_test_accel_y = read_register(chip, SELF_TEST_Y_ACCEL);
     byte self_test_accel_z = read_register(chip, SELF_TEST_Z_ACCEL);
 
+    Serial.println("---selftest----");
+    Serial.println(self_test_gyro_x);
+    Serial.println(self_test_gyro_y);
+    Serial.println(self_test_gyro_z);
+    Serial.println(self_test_accel_x);
+    Serial.println(self_test_accel_y);
+    Serial.println(self_test_accel_z);
+
     ///// STEP 3.2.2 /////
-    float GXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
-    float GYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
-    float GZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
-    float AXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
-    float AYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
-    float AZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
+    // float GXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
+    // float GYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
+    // float GZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
+    // float AXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
+    // float AYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
+    // float AZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
+
+    float GXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
+    float GYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
+    float GZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
+    float AXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
+    float AYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
+    float AZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
+
+    Serial.println("---OTP----");
+    Serial.println(GXST_OTP);
+    Serial.println(GYST_OTP);
+    Serial.println(GZST_OTP);
+    Serial.println(AXST_OTP);
+    Serial.println(AYST_OTP);
+    Serial.println(AZST_OTP);
+
+
 
     // for (int i = 0; i < 3; i++) {
     //     destination[i]   = 100.0*((float)(aSTAvg[i] - aAvg[i]))/factoryTrim[i] - 100.;
@@ -388,6 +433,32 @@ byte self_test(byte chip) {
     byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 5) && ((AXST / AXST_OTP) < 1.5) : (abs(AXST) >= 60);
     byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AYST) >= 60);
     byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AZST) >= 60);
+
+    // GXST = GXST & 0x0F;
+    // GYST = GYST & 0x0F;
+    // GZST = GZST & 0x0F;
+    // AXST = AXST & 0x0F;
+    // AYST = AYST & 0x0F;
+    // AZST = AZST & 0x0F;
+    // GXST_OTP = GXST_OTP & 0x0F;
+    // GYST_OTP = GYST_OTP & 0x0F;
+    // GZST_OTP = GZST_OTP & 0x0F;
+    // AXST_OTP = AXST_OTP & 0x0F;
+    // AYST_OTP = AYST_OTP & 0x0F;
+    // AZST_OTP = AZST_OTP & 0x0F;
+
+
+
+    Serial.println("---result----");
+    Serial.println(GXST / GXST_OTP);
+    Serial.println(GYST / GYST_OTP);
+    Serial.println(GZST / GZST_OTP);
+    Serial.println(AXST / AXST_OTP);
+    Serial.println(AYST / AYST_OTP);
+    Serial.println(AZST / AZST_OTP);
+
+
+    Serial.println("---END---");
 
     // STEP 3.2.3.c SAYS TO CHECK OFFSET VALUES, BUT I DON'T KNOW HOW TO GET THESE
 
@@ -403,6 +474,7 @@ byte self_test(byte chip) {
     // accel_passed = (accel_change_from_factory > accel_lower_limit) && (accel_change_from_factory < accel_upper_limit);
 
 }
+
 
 
 void begin_imu_com() {
@@ -423,7 +495,6 @@ void end_imu_com() {
     SPI.end();
     Serial.flush();
 }
-
 
 
 
@@ -478,7 +549,6 @@ void tx_asa(){
 
     tx_packet(response, 6, COM_PACKET_ASA);
 }
-
 
 
 
@@ -605,7 +675,6 @@ void loop() {
     byte val;
     if (Serial.available() > 0) {
 
-
         switch (Serial.read()) {
             case COM_SIGNAL_INIT:
                 initialize();
@@ -631,5 +700,4 @@ void loop() {
         }
     }
 }
-
 

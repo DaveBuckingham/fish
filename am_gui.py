@@ -256,10 +256,10 @@ class Am_ui(QWidget):
             self.print_pass_fail(results[1])
 
             self.message_slot("imu1 self test...")
-            self.print_pass_fail(results[2])
+            self.message_slot("not implemented\n")
 
             self.message_slot("imu2 self test...")
-            self.print_pass_fail(results[3])
+            self.message_slot("not implemented\n")
 
             self.message_slot("mag1 self test...")
             self.message_slot("not implemented\n")

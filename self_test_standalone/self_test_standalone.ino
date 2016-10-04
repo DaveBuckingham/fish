@@ -77,7 +77,6 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
  
 #define IMU_WHOAMI_VAL                   0x71
 
-#define NUM_REPS         200
 
 
 
