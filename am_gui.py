@@ -118,6 +118,7 @@ class Am_ui(QWidget):
 
 
 
+
         # SETTINGS
 
         self.settings = Am_settings(self)

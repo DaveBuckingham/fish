@@ -6,7 +6,6 @@ from collections import deque
 import pyqtgraph as pg
 
 
-
 class Am_plot(pg.PlotWidget):
 
     def __init__(self, parent=None):
@@ -28,14 +27,21 @@ class Am_plot(pg.PlotWidget):
                       QtGui.QColor(30, 30, 255)]
 
 
-
-
         #self.setDownsampling(ds=2, auto=False, mode='peak')
 
         left_axis   = self.getAxis('left')
         right_axis  = self.getAxis('right')
         top_axis    = self.getAxis('top')
         bottom_axis = self.getAxis('bottom')
+
+
+        self.showGrid(True, True, 0.5)
+
+        # self.showLabel('left')
+        # self.showLabel('right')
+        # self.showLabel('top')
+        # self.showLabel('bottom')
+
 
 
 
@@ -58,11 +64,7 @@ class Am_plot(pg.PlotWidget):
             self.timestamps.popleft()
 
         if (refresh):
-            self.clear()
-            self.plot(self.timestamps, self.data[0], pen=(255, 0, 0, 155))
+            self.plot(self.timestamps, self.data[0], pen=(255, 0, 0, 155), clear=True)
             self.plot(self.timestamps, self.data[1], pen=(0, 255, 0, 155))
             self.plot(self.timestamps, self.data[2], pen=(0, 0, 255, 155))
-            ## setting pen=(i,3) automaticaly creates three different-colored pens
-            #self.plot(self.timestamps, self.data, pen=(i,3))  ## setting pen=(i,3) automaticaly creates three different-colored pens
-
 

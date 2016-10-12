@@ -19,21 +19,16 @@ class Am_rx(QObject):
     COM_FLAG_XOR                    = 0x20
     COM_PACKET_SAMPLE               = 0x60     # 96
     COM_PACKET_ASA                  = 0x61     # 97
-    # COM_PACKET_WHOAMI               = 0x62
     COM_PACKET_TRIGGER              = 0x63
     COM_PACKET_STRING               = 0x64
     COM_PACKET_TEST                 = 0x65
 
 
     COM_SIGNAL_INIT                 = 0x50
-    # COM_SIGNAL_WHOAMI               = 0x51
     COM_SIGNAL_ASA                  = 0x52
     COM_SIGNAL_RUN                  = 0x53
     COM_SIGNAL_STOP                 = 0x54
     COM_SIGNAL_TEST                 = 0x55
-
-
-
 
 
 
@@ -339,8 +334,6 @@ class Am_rx(QObject):
         self.message_signal.emit("stopping recording data\n")
         self.tx_byte(Am_rx.COM_SIGNAL_STOP)
 
-        # UNWRAP DATA SO IT CAN BE PROCESSED OR SAVED
-        #self.data = self.data[sample_index:] + self.data[:sample_index]
 
 
         self.close_connection()

@@ -87,6 +87,9 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
 #define PIN_EMS_CS                                7
 
 
+#define NUM_REPS             200
+
+
 
 unsigned int write_register(byte chip, uint8_t WriteAddr, uint8_t WriteData ) {
     unsigned int temp_val;
@@ -226,8 +229,8 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.0.4 /////
-    // delay(20);
-    delay(25);
+    delay(20);
+    // delay(25);
 
 
     ///// STEP 3.0.5 /////
@@ -286,8 +289,8 @@ byte self_test(byte chip) {
     write_register(chip, ACCEL_CONFIG_1, 0x00);
 
     ///// STEP 3.1.2 /////
-    delay(25);                                    
-    // delay(20);                                    
+    // delay(25);                                    
+    delay(20);                                    
 
 
     ///// STEP 3.1.3 /////
@@ -312,19 +315,21 @@ byte self_test(byte chip) {
     Serial.println(self_test_accel_z);
 
     ///// STEP 3.2.2 /////
-    // float GXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
-    // float GYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
-    // float GZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
-    // float AXST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
-    // float AYST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
-    // float AZST_OTP =  (float)(2620/1<<FS)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
+    double GXST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    double GYST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    double GZST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    double AXST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    double AYST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    double AZST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
-    float GXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) ));
-    float GYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) ));
-    float GZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) ));
-    float AXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) ));
-    float AYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) ));
-    float AZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) ));
+
+
+    // float GXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) )) * ;
+    // float GYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) )) * ;
+    // float GZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) )) * ;
+    // float AXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) )) * ;
+    // float AYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) )) * ;
+    // float AZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) )) * ;
 
     Serial.println("---OTP----");
     Serial.println(GXST_OTP);
@@ -344,12 +349,12 @@ byte self_test(byte chip) {
     // }
 
     ///// STEP 3.2.3 (a and b) /////
-    byte result_gyro_x =  (GXST_OTP != 0.0) ? ((GXST / GXST_OTP) > 5) : (abs(GXST) >= 60);
-    byte result_gyro_y =  (GYST_OTP != 0.0) ? ((GYST / GYST_OTP) > 5) : (abs(GYST) >= 60);
-    byte result_gyro_z =  (GZST_OTP != 0.0) ? ((GZST / GZST_OTP) > 5) : (abs(GZST) >= 60);
-    byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 5) && ((AXST / AXST_OTP) < 1.5) : (abs(AXST) >= 60);
-    byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AYST) >= 60);
-    byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 5) && ((AYST / AYST_OTP) < 1.5) : (abs(AZST) >= 60);
+    byte result_gyro_x =  (GXST_OTP != 0.0) ? ((GXST / GXST_OTP) > 0.5) : (abs(GXST) >= 60);
+    byte result_gyro_y =  (GYST_OTP != 0.0) ? ((GYST / GYST_OTP) > 0.5) : (abs(GYST) >= 60);
+    byte result_gyro_z =  (GZST_OTP != 0.0) ? ((GZST / GZST_OTP) > 0.5) : (abs(GZST) >= 60);
+    byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 0.5) && ((AXST / AXST_OTP) < 1.5) : (abs(AXST) >= 60);
+    byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 0.5) && ((AYST / AYST_OTP) < 1.5) : (abs(AYST) >= 60);
+    byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 0.5) && ((AYST / AYST_OTP) < 1.5) : (abs(AZST) >= 60);
 
     // GXST = GXST & 0x0F;
     // GYST = GYST & 0x0F;
