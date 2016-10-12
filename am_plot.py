@@ -37,12 +37,24 @@ class Am_plot(pg.PlotWidget):
 
         self.showGrid(True, True, 0.5)
 
-        # self.showLabel('left')
-        # self.showLabel('right')
-        # self.showLabel('top')
-        # self.showLabel('bottom')
+        self.setMenuEnabled(enableMenu=False)
+
+        # self.hideAxis('bottom')
+        self.setMouseEnabled(x=False, y=False)
+        #self.enableAutoRange(True)
+
+        self.setXRange(300, 0)
 
 
+        self.hideButtons()
+
+        #self.getViewBox().setMouseMode(self.getViewBox().RectMode)
+        self.getViewBox().invertX(b=True)
+
+
+        self.line1 = self.plot([], [], pen=(255, 0, 0, 155))
+        self.line2 = self.plot([], [], pen=(0, 255, 0, 155))
+        self.line3 = self.plot([], [], pen=(0, 0, 255, 155))
 
 
     def clear_slot(self):
@@ -63,8 +75,11 @@ class Am_plot(pg.PlotWidget):
             self.data[2].popleft()
             self.timestamps.popleft()
 
+
         if (refresh):
-            self.plot(self.timestamps, self.data[0], pen=(255, 0, 0, 155), clear=True)
-            self.plot(self.timestamps, self.data[1], pen=(0, 255, 0, 155))
-            self.plot(self.timestamps, self.data[2], pen=(0, 0, 255, 155))
+            x = range(len(self.data[0]), 0, -1)
+            self.line1.setData(x, self.data[0])
+            self.line2.setData(x, self.data[1])
+            self.line3.setData(x, self.data[2])
+            self.autoRange()
 

@@ -38,7 +38,7 @@ class Am_rx(QObject):
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
-    PLOT_REFRESH_RATE            = 50
+    PLOT_REFRESH_RATE            = 20
 
     if (USE_ENCODER):
         DATA_LENGTH              = 43
