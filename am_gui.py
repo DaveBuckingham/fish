@@ -12,6 +12,7 @@ from collections import namedtuple
 import time
 import h5py
 import signal
+import atexit
 from collections import deque
 
 class Am_ui(QWidget):
@@ -104,7 +105,8 @@ class Am_ui(QWidget):
         self.text_window = QTextEdit()
         self.text_window.setReadOnly(True)
         #print self.text_window.minimumHeight()
-        #self.text_window.setMinimumHeight(50)
+        self.text_window.setMinimumHeight(150)
+
 
 
         # GRAPHS
@@ -115,8 +117,6 @@ class Am_ui(QWidget):
         self.plot_g1 = Am_plot()
         self.plot_m0 = Am_plot()
         self.plot_m1 = Am_plot()
-
-
 
 
         # SETTINGS
@@ -177,6 +177,9 @@ class Am_ui(QWidget):
 
         # ADD TOP LEVEL LAYOUT
         self.setLayout(top_layout)
+
+
+        self.buttons['record'].setFocus()
 
 
         # SET WINDOW TITLE
@@ -243,6 +246,12 @@ class Am_ui(QWidget):
 
     def test_button_slot(self):
 
+        # self.buttons['record'].setEnabled(False)
+        # self.buttons['test'].setEnabled(False)
+        # self.buttons['record'].update()
+        # self.buttons['test'].update()
+
+
         results = self.receiver.test()
 
         if (not results):
@@ -268,6 +277,8 @@ class Am_ui(QWidget):
             self.message_slot("mag2 self test...")
             self.message_slot("not implemented\n")
 
+        # self.buttons['record'].setEnabled(True)
+        # self.buttons['test'].setEnabled(True)
 
 
     def quit_button_slot(self):
@@ -320,7 +331,6 @@ class Am_ui(QWidget):
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
-            #self.buttons['save'].setEnabled(False)
 
 
 
@@ -336,7 +346,6 @@ class Am_ui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-        # self.settings.setEnabled(True)
         self.buttons['test'].setEnabled(True)
 
 
@@ -405,13 +414,11 @@ class Am_ui(QWidget):
         self.receiver.recording = True
         self.data_saved = False
 
-
         self.buttons['record'].setText('Stop')
 
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        # self.settings.setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
         self.clear_plots_signal.emit()
@@ -424,14 +431,16 @@ class Am_ui(QWidget):
     # THIS FUNCTION SETS A FLAG, CAUSING THE am_rx.py PROCESS TO HALT
     # THAT WILL CAUSE THE receiver_done SLOT TO EXECUTE,
     # WHICH WILL FINISH UP STOP RECORDING DUTIES.
+    # THIS FUNCTION SHOULD BE OK WITH BEING CALLED REPEATEDLY
     def stop_recording(self):
         self.receiver.recording = False
 
                                           
 def main():
-    signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt
+    signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt, will leave child process running!
     app = QApplication(sys.argv)
     ex = Am_ui()
+    atexit.register(ex.stop_recording)
     ex.show()
     sys.exit(app.exec_())
           

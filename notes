@@ -1,16 +1,12 @@
 TODO:
-smoother plots? update frequently with translation
-make text window bigger
-disable record button during test
+
+disable record button during test   ( DIFFICULT )
 text window breaks when it gets too full
 tests:
     imus self-test
     magnetometer
 
 MAYBE:
-read "trigger" state instead of define.
 auto-detect mag
 bigger record button
 
-
-white 13, purple 12, grey 11, blue 9

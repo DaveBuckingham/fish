@@ -316,8 +316,6 @@ class Am_rx(QObject):
 
                 self.timestamp_signal.emit(timestamp)
 
-                #refresh = (sample_index % Am_rx.PLOT_REFRESH_RATE) == 0
-
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
 
                 self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 

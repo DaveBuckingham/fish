@@ -10,6 +10,7 @@ class Am_plot(pg.PlotWidget):
 
     def __init__(self, parent=None):
 
+
         super(Am_plot, self).__init__()
 
 
@@ -34,6 +35,8 @@ class Am_plot(pg.PlotWidget):
         top_axis    = self.getAxis('top')
         bottom_axis = self.getAxis('bottom')
 
+        self.setClipToView(False)
+
 
         self.showGrid(True, True, 0.5)
 
@@ -41,15 +44,18 @@ class Am_plot(pg.PlotWidget):
 
         # self.hideAxis('bottom')
         self.setMouseEnabled(x=False, y=False)
-        #self.enableAutoRange(True)
 
-        self.setXRange(300, 0)
+        self.enableAutoRange(True)
+
+        self.setXRange(0, 300, padding=0.00)
 
 
         self.hideButtons()
 
         #self.getViewBox().setMouseMode(self.getViewBox().RectMode)
         self.getViewBox().invertX(b=True)
+        
+        #self.setLimits(maxYRange=10000)
 
 
         self.line1 = self.plot([], [], pen=(255, 0, 0, 155))
@@ -81,5 +87,6 @@ class Am_plot(pg.PlotWidget):
             self.line1.setData(x, self.data[0])
             self.line2.setData(x, self.data[1])
             self.line3.setData(x, self.data[2])
-            self.autoRange()
+            # self.autoRange(padding=0.2)
+            # self.setXRange(0, 300, padding=0.0)
 
