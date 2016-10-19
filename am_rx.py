@@ -17,18 +17,22 @@ class Am_rx(QObject):
     COM_FLAG_END                    = 0x7F
     COM_FLAG_ESCAPE                 = 0x7D
     COM_FLAG_XOR                    = 0x20
+
+    # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
     COM_PACKET_SAMPLE               = 0x60     # 96
     COM_PACKET_ASA                  = 0x61     # 97
     COM_PACKET_TRIGGER              = 0x63
     COM_PACKET_STRING               = 0x64
     COM_PACKET_TEST                 = 0x65
+    COM_PACKET_HELLO                = 0x66
 
-
+    # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
     COM_SIGNAL_INIT                 = 0x50
     COM_SIGNAL_ASA                  = 0x52
     COM_SIGNAL_RUN                  = 0x53
     COM_SIGNAL_STOP                 = 0x54
     COM_SIGNAL_TEST                 = 0x55
+    COM_SIGNAL_HELLO                = 0x56
 
 
 
@@ -127,7 +131,7 @@ class Am_rx(QObject):
         while (val != Am_rx.COM_FLAG_START):
             val = self.rx_byte()
             if (val == None):
-                self.error_signal.emit("No data read from serial\n")
+                self.error_signal.emit("rx failed, no data read from serial\n")
                 return (None, None)
 
         message_type = self.rx_byte()
@@ -149,10 +153,8 @@ class Am_rx(QObject):
         return (message, message_type)
 
 
-
-
     def open_connection(self):
-        self.message_signal.emit("establishing serial connection... ")
+        self.message_signal.emit("establishing serial connection...\n")
 
         try:
             self.connection = serial.Serial(
@@ -167,15 +169,24 @@ class Am_rx(QObject):
             )
 
         except serial.serialutil.SerialException:
-            self.error_signal.emit("FAILED\n")
-            self.finished_signal.emit()
-            return
-
-        self.message_signal.emit("OK\n")
+            self.error_signal.emit("failed to create connection\n")
+            # self.finished_signal.emit()
+            return False
 
         self.connection.flushInput()
-
         time.sleep(3)
+        self.tx_byte(Am_rx.COM_SIGNAL_HELLO)
+        time.sleep(1)
+        (message, message_type) = self.rx_packet()
+        if ((message_type is not None) and (message_type == Am_rx.COM_PACKET_HELLO)):
+            self.message_signal.emit("serial connection established, handshake succesfull\n")
+            return True
+        else:
+            self.error_signal.emit("serial connection established but handshake failed\n")
+            self.close_connection()
+            return False
+
+
 
 
 
@@ -205,7 +216,9 @@ class Am_rx(QObject):
     @pyqtSlot()
     def run(self):
 
-        self.open_connection()
+        if (not self.open_connection()):
+            self.finished_signal.emit()
+            return
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
@@ -235,7 +248,7 @@ class Am_rx(QObject):
             self.error_signal.emit("using 1 adjustment\n")
 
 
-        self.message_signal.emit("sent record data command to arduino\n")
+        self.message_signal.emit("sent record command to arduino\n")
 
 
 
@@ -243,7 +256,7 @@ class Am_rx(QObject):
 
 
         self.message_signal.emit("waiting for trigger state... ")
-        time.sleep(1)
+        time.sleep(2)
 
         (received, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_TRIGGER):

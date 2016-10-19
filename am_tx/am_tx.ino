@@ -18,10 +18,28 @@
 //     MOSI       11       SDA/MOSI   GREEN
 //     MISO       12       AD0/MISO   BLUE
 //     SCK        13       SCL        YELLOW
-//     TRIGGER    7
+//     TRIGGER    4
 //
 // MOSI, MISO, and SCK pins are specified by the arduino spi library.
 // Chip selects CS1 and CS2 are specified by in code (IMU_SELECT[]).
+
+// encoder (optional)
+//
+// EMS22A30
+// C28-MS6
+// 1309M MEX
+//
+//    ENCODER                ARDUINO
+//   
+//    PIN1(red)   INPUT
+//    PIN2        CLOCK        5
+//    PIN3        GROUND
+//    PIN4        OUTPUT       6
+//    PIN5        VCC
+//    PIN6        CS           7
+
+
+
 
 
 #include <SPI.h>
@@ -39,7 +57,7 @@
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
 const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select pins for imus (len == NUM_IMUS)
-#define TRIGGER_PIN                               7
+#define TRIGGER_PIN                               4
 
 #ifdef USE_ENCODER
 #define RESPONSE_LEN                              43             // how many bytes tx per sample
@@ -97,17 +115,21 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 #define COM_FLAG_ESCAPE                           0X7D
 #define COM_FLAG_XOR                              0X20
 
+// TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
 #define COM_PACKET_SAMPLE                         0x60
 #define COM_PACKET_ASA                            0x61
 #define COM_PACKET_TRIGGER                        0x63
 #define COM_PACKET_STRING                         0x64
 #define COM_PACKET_TEST                           0x65
+#define COM_PACKET_HELLO                          0x66
 
+// SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
 #define COM_SIGNAL_INIT                           0x50
 #define COM_SIGNAL_ASA                            0x52
 #define COM_SIGNAL_RUN                            0x53
 #define COM_SIGNAL_STOP                           0x54
 #define COM_SIGNAL_TEST                           0x55
+#define COM_SIGNAL_HELLO                          0x56
 
 #define IMU_WHOAMI_VAL                            0x71
 
@@ -537,15 +559,13 @@ void tx_asa(){
     for (i=0; i < 6; i++) {
         response[i] = 0;
     }
-    float data;
 
-
-    for (i=0; i < NUM_IMUS; i++) {
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_ASAX); 
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG); 
-        read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3);
-    }
+    // for (i=0; i < NUM_IMUS; i++) {
+    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_ASAX); 
+    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG); 
+    //     read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3);
+    // }
 
     tx_packet(response, 6, COM_PACKET_ASA);
 }
@@ -674,8 +694,9 @@ void run_test() {
 void loop() {
     byte val;
     if (Serial.available() > 0) {
-
         switch (Serial.read()) {
+            case COM_SIGNAL_HELLO:
+                tx_packet(0, 0, COM_PACKET_HELLO);
             case COM_SIGNAL_INIT:
                 initialize();
                 break;
