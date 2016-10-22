@@ -50,7 +50,7 @@
 //            CONSTANTS                //
 /////////////////////////////////////////
 
-// #define USE_ENCODER
+#define USE_ENCODER
 
 #define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
@@ -623,7 +623,7 @@ void read_sample(){
     }
 
     // will overwrite the extra byte from mag STATUS2
-    response[j++] = (digitalRead(TRIGGER_PIN) >> 8) & 0xff;  // just need first byte
+    response[j++] = digitalRead(TRIGGER_PIN) == HIGH ? 0x01 : 0x00;
 
     tx_packet(response, RESPONSE_LEN, COM_PACKET_SAMPLE);
 
@@ -704,11 +704,7 @@ void loop() {
                 tx_asa();
                 break;
             case COM_SIGNAL_RUN:
-                val = digitalRead(TRIGGER_PIN);
-                tx_packet((byte*)&val, 1, COM_PACKET_TRIGGER);
-                if (!val) {
-                    start_recording();
-                }
+                start_recording();
                 break;
             case COM_SIGNAL_STOP:
                 stop_recording();

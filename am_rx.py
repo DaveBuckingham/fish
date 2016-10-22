@@ -9,7 +9,7 @@ import random
 import array
 from PyQt4.QtCore import *
 
-USE_ENCODER = False
+USE_ENCODER = True
 
 class Am_rx(QObject):
 
@@ -21,7 +21,6 @@ class Am_rx(QObject):
     # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
     COM_PACKET_SAMPLE               = 0x60     # 96
     COM_PACKET_ASA                  = 0x61     # 97
-    COM_PACKET_TRIGGER              = 0x63
     COM_PACKET_STRING               = 0x64
     COM_PACKET_TEST                 = 0x65
     COM_PACKET_HELLO                = 0x66
@@ -62,6 +61,7 @@ class Am_rx(QObject):
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
 
+
     timestamp_signal = pyqtSignal(float)
     plot_a0_signal = pyqtSignal(float, list, bool)
     plot_a1_signal = pyqtSignal(float, list, bool)
@@ -79,6 +79,7 @@ class Am_rx(QObject):
         self.data = []
         self.end_timestamp = 'inf'
 
+        self.use_trigger = False
 
 
     def calculate_accel_ft(self, a_test):
@@ -255,21 +256,7 @@ class Am_rx(QObject):
         self.tx_byte(Am_rx.COM_SIGNAL_RUN)
 
 
-        self.message_signal.emit("waiting for trigger state... ")
-        time.sleep(2)
-
-        (received, message_type) = self.rx_packet()
-        if (message_type == Am_rx.COM_PACKET_TRIGGER):
-            if (received[0]):
-                self.recording = False
-                self.message("trigger already active, recording halted.\n");
-            else:
-                self.message_signal.emit("trigger not active, recording data\n")
-        else:
-            self.recording = False
-            # print received
-            self.message_signal.emit("failed to receive trigger state, recording halted.\n")
-
+        self.message_signal.emit("recording data\n")
 
         # RESET TIMER
         start_time = time.time() * 1000
@@ -291,7 +278,7 @@ class Am_rx(QObject):
                     (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
 
 
-                if (trig):
+                if (trig and self.use_trigger):
                     self.message_signal.emit("received trigger\n")
                     self.recording = False
                     break
@@ -339,7 +326,7 @@ class Am_rx(QObject):
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
             else:
-                print "unknown sample received. type: " + str(message_type) + "  len: " + str(len(received))
+                print "unknown sample received. type: " + str(message_type)
 
 
         self.message_signal.emit("stopping recording data\n")

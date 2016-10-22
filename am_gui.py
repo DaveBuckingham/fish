@@ -41,9 +41,8 @@ class Am_ui(QWidget):
         # CURRENTLY RECORDING DATA?
         self.recording = False
 
-        # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING
-        # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY.
-        self.use_trigger = False
+        # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING, IGNORE PIN
+        # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY, HALT ON PIN
         self.pre_trigger_delay = 3
         self.post_trigger_delay = 3
 
@@ -62,6 +61,21 @@ class Am_ui(QWidget):
 
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
+
+
+        ##################################################
+        #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
+        ##################################################
+
+        self.receiver_thread = QThread()
+        self.receiver = Am_rx()
+        self.receiver.moveToThread(self.receiver_thread)
+
+
+
+
+
+
 
 
 
@@ -119,7 +133,7 @@ class Am_ui(QWidget):
         self.plot_m1 = Am_plot()
 
 
-        # SETTINGS
+        # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
 
         self.settings = Am_settings(self)
 
@@ -185,15 +199,6 @@ class Am_ui(QWidget):
         # SET WINDOW TITLE
         self.setWindowTitle(Am_ui.APPLICATION_NAME) 
 
-
-
-        ##################################################
-        #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
-        ##################################################
-
-        self.receiver_thread = QThread()
-        self.receiver = Am_rx()
-        self.receiver.moveToThread(self.receiver_thread)
 
 
 
@@ -327,6 +332,8 @@ class Am_ui(QWidget):
             save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
             save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
             save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
+            if (self.receiver.USE_ENCODER):
+                save_data.create_dataset('Encoder',   data=[x['encoder']   for x in self.receiver.data])
             datafile.close()
 
             self.message_slot("data saved to  " + filename + "\n")
@@ -351,7 +358,7 @@ class Am_ui(QWidget):
 
         # CROP DATA IF PRE-TRIGGER
         if (len(self.timestamps) > 0):
-            if (self.use_trigger):
+            if (self.receiver.use_trigger):
                 data_start_time = self.receiver.data[-1]['time'] - (self.pre_trigger_delay * 1000);
                 data_start_index = 0
                 for i in range(0, len(self.receiver.data)):
@@ -427,7 +434,7 @@ class Am_ui(QWidget):
 
 
     # STOP RECORDING DATA
-    # THE QUIT BUTTON SLOT CALLS THIS FUNCTION
+    # THE QUIT BUTTON SLOT, STOP BUTTON SLOT, PROCESS INTERRUPT, AND TRIGGER CALL THIS FUNCTION
     # THIS FUNCTION SETS A FLAG, CAUSING THE am_rx.py PROCESS TO HALT
     # THAT WILL CAUSE THE receiver_done SLOT TO EXECUTE,
     # WHICH WILL FINISH UP STOP RECORDING DUTIES.

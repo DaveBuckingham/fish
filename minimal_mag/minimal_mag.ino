@@ -2,7 +2,7 @@
 
 #define SPI_CLOCK               1000000  // 8MHz clock
 
-#define SS_PIN                  4
+#define SS_PIN                  9
 
 // IMU REGISTERS
 #define REG_WHO_AM_I            0x75         // 117

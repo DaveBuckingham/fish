@@ -34,7 +34,7 @@ class Am_settings(QWidget):
         #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
         ########################################
         self.checkbox_trigger = QCheckBox('use trigger', self)
-        self.checkbox_trigger.setChecked(self.parent.use_trigger)
+        self.checkbox_trigger.setChecked(self.parent.receiver.use_trigger)
         self.checkbox_trigger.stateChanged.connect(self.toggle_trigger)
 
 
@@ -42,7 +42,7 @@ class Am_settings(QWidget):
         #       LABEL FOR TRIGGER DELAY        #
         ########################################
         self.pre_trigger_label = QLabel("pre-trigger delay (sec.)")
-        self.pre_trigger_label.setEnabled(self.parent.use_trigger)
+        self.pre_trigger_label.setEnabled(self.parent.receiver.use_trigger)
 
 
         ########################################
@@ -50,7 +50,7 @@ class Am_settings(QWidget):
         ########################################
         self.slider_pre_trigger = QSlider(Qt.Horizontal, self)
         self.slider_pre_trigger.setValue(self.parent.pre_trigger_delay)
-        self.slider_pre_trigger.setEnabled(self.parent.use_trigger)
+        self.slider_pre_trigger.setEnabled(self.parent.receiver.use_trigger)
         self.slider_pre_trigger.setFocusPolicy(Qt.NoFocus)
         self.slider_pre_trigger.valueChanged[int].connect(self.read_pre_trigger_slider_slot)
         self.slider_pre_trigger.setMinimum(self.PRE_TRIGGER_MIN)
@@ -63,7 +63,7 @@ class Am_settings(QWidget):
         self.textbox_pre_trigger = QLineEdit(str(self.parent.post_trigger_delay), self)
         validator = QIntValidator(self.PRE_TRIGGER_MIN, self.PRE_TRIGGER_MAX)
         self.textbox_pre_trigger.setValidator(validator)
-        self.textbox_pre_trigger.setEnabled(self.parent.use_trigger)
+        self.textbox_pre_trigger.setEnabled(self.parent.receiver.use_trigger)
         self.textbox_pre_trigger.editingFinished.connect(self.read_pre_trigger_text_slot)
 
 
@@ -85,12 +85,12 @@ class Am_settings(QWidget):
             self.slider_pre_trigger.setEnabled(True)
             self.textbox_pre_trigger.setEnabled(True)
             self.pre_trigger_label.setEnabled(True)
-            self.parent.use_trigger = True
+            self.parent.receiver.use_trigger = True
         else:
             self.slider_pre_trigger.setEnabled(False)
             self.textbox_pre_trigger.setEnabled(False)
             self.pre_trigger_label.setEnabled(False)
-            self.parent.use_trigger = False
+            self.parent.receiver.use_trigger = False
 
           
     ########################################
