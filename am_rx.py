@@ -9,9 +9,10 @@ import random
 import array
 from PyQt4.QtCore import *
 
-USE_ENCODER = True
 
 class Am_rx(QObject):
+
+    USE_ENCODER = True
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -271,7 +272,7 @@ class Am_rx(QObject):
                 received = array.array('B', received).tostring()
 
 
-                if (USE_ENCODER):
+                if (Am_rx.USE_ENCODER):
                     (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh?', received)
                     enc *= 0.3515625  # 360/1024
                 else:
@@ -307,7 +308,7 @@ class Am_rx(QObject):
                 entry['gyro1']   = [gx1, gy1, gz1]
                 entry['mag1']    = [mx1, my1, mz1]
 
-                if (USE_ENCODER):
+                if (Am_rx.USE_ENCODER):
                     entry['encoder'] = enc
 
 
