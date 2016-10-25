@@ -524,6 +524,7 @@ void initialize(){
     next_sample_id = 0;
 
     pinMode(TRIGGER_PIN, INPUT);
+#ifdef USE_ENCODER
 
     begin_imu_com();
 
@@ -550,6 +551,17 @@ void initialize(){
         write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 
     }
+
+#ifdef USE_ENCODER
+    pinMode(PIN_EMS_CLK, OUTPUT);
+    pinMode(PIN_EMS_CS, OUTPUT);
+    pinMode(PIN_EMS_DATA, INPUT);
+
+    digitalWrite(PIN_EMS_CLK, HIGH);
+    digitalWrite(PIN_EMS_CS, LOW);
+#endif
+
+
 }
 
 

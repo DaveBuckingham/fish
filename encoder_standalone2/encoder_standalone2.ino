@@ -8,9 +8,9 @@
 // Pin 5 = VCC = 3.3V (for EMS22A-30, otherwise 5V for EMS22A-50)
 // Pin 6 = CS => PIN_CS
 
-const int PIN_CLOCK = 8; // pin 2
-const int PIN_DATA = 9;  // pin 4
-const int PIN_CS = 10;    //   pin 6
+const int PIN_CLOCK = 5; // pin 2
+const int PIN_DATA = 6;  // pin 4
+const int PIN_CS = 7;    //   pin 6
 
 void setup() {
   Serial.begin(9600);

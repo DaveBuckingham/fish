@@ -275,6 +275,7 @@ class Am_rx(QObject):
                 if (Am_rx.USE_ENCODER):
                     (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh?', received)
                     enc *= 0.3515625  # 360/1024
+                    print enc
                 else:
                     (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
 
