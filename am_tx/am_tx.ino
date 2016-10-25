@@ -50,6 +50,8 @@
 //            CONSTANTS                //
 /////////////////////////////////////////
 
+#define DEL                          1 
+
 #define USE_ENCODER
 
 #define USE_TRIGGER
@@ -524,7 +526,6 @@ void initialize(){
     next_sample_id = 0;
 
     pinMode(TRIGGER_PIN, INPUT);
-#ifdef USE_ENCODER
 
     begin_imu_com();
 
@@ -572,12 +573,12 @@ void tx_asa(){
         response[i] = 0;
     }
 
-    // for (i=0; i < NUM_IMUS; i++) {
-    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_ASAX); 
-    //     write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG); 
-    //     read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3);
-    // }
+    for (i=0; i < NUM_IMUS; i++) {
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_ASAX);
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG); delay(DEL);
+        read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3); delay(DEL);
+    }
 
     tx_packet(response, 6, COM_PACKET_ASA);
 }
@@ -626,9 +627,9 @@ void read_sample(){
 
         // READ MAG
         // WE READ 7 BYTES SO READING STATUS2 TRIGGERS DATA RESET
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);      // specify mag i2c address
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
         write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);            // set num bytes to read 
+        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
         read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + j, 7);
         j += 6;
 
