@@ -280,7 +280,7 @@ class Am_rx(QObject):
                     (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
 
                 # SWAP MAG BYTES SO VALUES ARE BIG-ENDIAN
-                (mx0, my0, mz0, mx1, my1, mz1) = struct.unpack('<hhhhhh', struct.pack('>hhhhhh', (mx0, my0, mz0, mx1, my1, mz1))
+                (mx0, my0, mz0, mx1, my1, mz1) = struct.unpack('<hhhhhh', struct.pack('>hhhhhh', mx0, my0, mz0, mx1, my1, mz1))
 
 
 
