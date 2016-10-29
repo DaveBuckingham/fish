@@ -627,6 +627,7 @@ void read_sample(){
 
         // READ MAG
         // WE READ 7 BYTES SO READING STATUS2 TRIGGERS DATA RESET
+        // N.B., MAG REGISTERS ARE LAID OUT IN LITTLE-ENDIAN ORDER, UNLIKE ACCEL AND GYRO
         write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
         write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
         write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
