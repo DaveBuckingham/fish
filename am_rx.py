@@ -7,7 +7,13 @@ import serial
 import struct
 import random
 import array
-from PyQt4.QtCore import *
+
+from PyQt4.QtCore import pyqtSignal, QObject, pyqtSlot
+
+try:
+    from PyQt4.QtCore import QString
+except ImportError:
+    QString = str
 
 
 class Am_rx(QObject):
@@ -236,7 +242,7 @@ class Am_rx(QObject):
         self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
         self.tx_byte(Am_rx.COM_SIGNAL_ASA)
         (received, message_type) = self.rx_packet()
-        print received;
+        print(received)
 
         if ((message_type == Am_rx.COM_PACKET_ASA) and (len(received) == 6)):
             for i in (range(0, 3)):
@@ -332,7 +338,7 @@ class Am_rx(QObject):
                 self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
             else:
-                print "unknown sample received. type: " + str(message_type)
+                print("unknown sample received. type: " + str(message_type))
 
 
         self.message_signal.emit("stopping recording data\n")
