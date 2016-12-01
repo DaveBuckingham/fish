@@ -1,5 +1,5 @@
 import sys
-import am_gui
+from fish import am_gui
 
 def main(args=None):
     if args is None:

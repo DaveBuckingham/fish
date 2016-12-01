@@ -167,11 +167,10 @@ class Am_rx(QObject):
     def open_connection(self):
         self.message_signal.emit("establishing serial connection...\n")
 
-        arduino_ports = [
-            p.device
-            for p in serial.tools.list_ports.comports()
-            if 'Arduino' in p.description
-        ]
+
+
+        
+        arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
             self.error_signal.emit('No arduino found')
             return False

@@ -5,9 +5,9 @@
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from am_rx import *
-from am_plot import *
-from am_settings import *
+from fish.am_rx import *
+from fish.am_plot import *
+from fish.am_settings import *
 from collections import namedtuple
 import time
 import h5py

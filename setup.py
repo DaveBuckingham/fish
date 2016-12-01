@@ -9,12 +9,15 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+import sys
 
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
+
+#sys.path.append("./fish")
 
 setup(
     name='fish',
@@ -106,12 +109,12 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     # entry_points={
-    #     'gui_scripts': [
+    #     'console_scripts': [
     #         'app=fish.__main__:main',
     #     ],
     # },
     entry_points={
-        'console_scripts': [
+        'gui_scripts': [
             'fish=fish.__main__:main',
         ],
     },
