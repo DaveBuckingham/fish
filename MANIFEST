@@ -4,8 +4,8 @@ am_rx.py
 am_settings.py
 am_tx/am_tx.ino
 __init__.py
-LICENSE.txt
 __main__.py
 MANIFEST
+LICENSE.txt
 README.rst
 setup.py

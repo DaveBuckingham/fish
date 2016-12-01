@@ -112,7 +112,7 @@ setup(
     # },
     entry_points={
         'console_scripts': [
-            'app=fish.__main__:main',
+            'fish=fish.__main__:main',
         ],
     },
 
