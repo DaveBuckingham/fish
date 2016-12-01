@@ -1,5 +1,0 @@
-h5py==2.6.0
-numpy==1.11.2
-pyqtgraph==0.10.0
-pyserial==3.2.1
-six==1.10.0

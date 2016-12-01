@@ -2,7 +2,6 @@
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from am_gui import Am_ui
 
 class Am_settings(QWidget):
 
@@ -15,7 +14,6 @@ class Am_settings(QWidget):
         self.parent = parent
 
         self.setWindowModality(Qt.ApplicationModal)
-        self.setWindowTitle(Am_ui.APPLICATION_NAME) 
 
         top_layout = QGridLayout()
         top_layout.setColumnMinimumWidth(2, 50)

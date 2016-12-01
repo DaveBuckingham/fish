@@ -4,9 +4,12 @@ import os
 import sys
 import time
 import serial
+import warnings
 import struct
 import random
 import array
+
+import serial.tools.list_ports
 
 from PyQt4.QtCore import pyqtSignal, QObject, pyqtSlot
 
@@ -164,9 +167,23 @@ class Am_rx(QObject):
     def open_connection(self):
         self.message_signal.emit("establishing serial connection...\n")
 
+        arduino_ports = [
+            p.device
+            for p in serial.tools.list_ports.comports()
+            if 'Arduino' in p.description
+        ]
+        if not arduino_ports:
+            self.error_signal.emit('No arduino found')
+            return False
+        if len(arduino_ports) > 1:
+            self.error_signal.emit('Multiple Arduinos found, using' . serial_port)
+        serial_port = serial.Serial(arduino_ports[0])
+
+
         try:
             self.connection = serial.Serial(
-                port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
+                #port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
+                port     = serial_port,
                 baudrate = 115200,
                 parity   = serial.PARITY_NONE,
                 stopbits = serial.STOPBITS_ONE,
