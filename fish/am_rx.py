@@ -174,10 +174,9 @@ class Am_rx(QObject):
         if not arduino_ports:
             self.error_signal.emit('No arduino found')
             return False
-        if len(arduino_ports) > 1:
-            self.error_signal.emit('Multiple Arduinos found, using' . serial_port)
-        serial_port = serial.Serial(arduino_ports[0])
-
+        else:
+            serial_port = arduino_ports[0]
+            self.message_signal.emit('Using Arduino found on ' + serial_port + "\n")
 
         try:
             self.connection = serial.Serial(
