@@ -48,7 +48,7 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
 #define SELF_TEST_Z_ACCEL                         0x0F
 
 #define REG_WHO_AM_I                              0x75           // 117
-#define REG_CONFIG                                0x1A
+#define REG_CONFIG                                0x1A           // 26
 #define GYRO_CONFIG                               0X1B           // 27
 #define ACCEL_CONFIG_1                            0x1C           // 28
 #define ACCEL_CONFIG_2                            0x1D           // 29
@@ -136,10 +136,6 @@ void read_multiple_registers(byte chip, uint8_t address, uint8_t *buff, unsigned
 // MUST BE CALLED FROM test() FUNCTION SO SPI IS SET UP
 
 byte self_test(byte chip) {
-    // uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
-    // uint8_t selfTest[6];
-    // int32_t gAvg[3] = {0}, aAvg[3] = {0}, aSTAvg[3] = {0}, gSTAvg[3] = {0};
-    // float factoryTrim[6];
 
     uint8_t FS = 0;
 
@@ -163,21 +159,22 @@ byte self_test(byte chip) {
 
     ///// STEP 3.0.1 /////
 
-    write_register(chip, REG_SAMPLE_RATE_DIVIDER, 0x00);           // Set gyro sample rate to 1 kHz
+    write_register(chip, REG_CONFIG, 0x02);       // set gyro dlpf code to 2
 
-    write_register(chip, REG_CONFIG, 0x02);
-    write_register(chip, ACCEL_CONFIG_2, 0x02);
+    write_register(chip, ACCEL_CONFIG_2, 0x02);   // set accel dlpf code to 2
 
-    uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;
-    write_register(chip, GYRO_CONFIG, 0x00);
+    uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;     // store existing full scale range
+    write_register(chip, GYRO_CONFIG, 0x00);                           // set full scale range to 250dps
     // write_register(chip, GYRO_CONFIG, 1<<FS);
 
-    uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;
-    write_register(chip, ACCEL_CONFIG_1, 0x00);
+    uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;  // store existing full scale range code
+    write_register(chip, ACCEL_CONFIG_1, 0x00);                         // select full scale range 20 +-2g
     // write_register(chip, ACCEL_CONFIG_1, 1<<FS);
 
 
     ///// STEP 3.0.2 /////
+
+    write_register(chip, REG_SAMPLE_RATE_DIVIDER, 0x00);           // Set gyro sample rate to 1 kHz
     for (i=0; i<NUM_REPS; i++) {
 
         read_multiple_registers(chip, REG_ACCEL_FIRST, temp_buffer, 6);
@@ -201,6 +198,7 @@ byte self_test(byte chip) {
         delay(1);
     }
 
+    // THESE ARE THE "LSB OF GX_OS, GY_OS..." (page 5)
     GX_OS /= NUM_REPS;
     GY_OS /= NUM_REPS;
     GZ_OS /= NUM_REPS;
@@ -224,14 +222,15 @@ byte self_test(byte chip) {
     // write_register(chip, GYRO_CONFIG, B111);
     // write_register(chip, ACCEL_CONFIG_1, B111);
 
+    // ENABLE SELF TEST  (0xE0 == 0xb11100000)
     write_register(chip, GYRO_CONFIG, 0xE0);
     write_register(chip, ACCEL_CONFIG_1, 0xE0);
 
 
     ///// STEP 3.0.4 /////
-    delay(20);
-    // delay(25);
+    delay(20);              // "wait 20ms for oscillations to stabilize"
 
+// CHECKED THROUGH HERE!!
 
     ///// STEP 3.0.5 /////
     for (i=0; i<NUM_REPS; i++) {
@@ -266,6 +265,7 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.0.6 /////
+    // GET THE "SELF-TEST VALUES"
     int32_t GXST = GX_ST_OS - GX_OS;
     int32_t GYST = GY_ST_OS - GY_OS;
     int32_t GZST = GZ_ST_OS - GZ_OS;
