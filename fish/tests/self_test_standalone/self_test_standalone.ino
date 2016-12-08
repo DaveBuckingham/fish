@@ -230,7 +230,6 @@ byte self_test(byte chip) {
     ///// STEP 3.0.4 /////
     delay(20);              // "wait 20ms for oscillations to stabilize"
 
-// CHECKED THROUGH HERE!!
 
     ///// STEP 3.0.5 /////
     for (i=0; i<NUM_REPS; i++) {
@@ -245,9 +244,10 @@ byte self_test(byte chip) {
         AY_ST_OS += (temp_buffer[2] << 8) | temp_buffer[3];
         AZ_ST_OS += (temp_buffer[4] << 8) | temp_buffer[5];
 
-        delay(1);
+        // delay(1);  // documentation says to read at a 1kHz rate, but other implemenations have no delay
     }
 
+    // "THE AVERAGE VALUES WILL BE THE LSB OF GX_ST_OS, GY_ST_OS..." (page 5)
     GX_ST_OS /= NUM_REPS;
     GY_ST_OS /= NUM_REPS;
     GZ_ST_OS /= NUM_REPS;
@@ -265,7 +265,7 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.0.6 /////
-    // GET THE "SELF-TEST VALUES"
+    // GET THE "SELF-TEST VALUES" OR THE "SELF-TEST RESPONSE" (page 5)
     int32_t GXST = GX_ST_OS - GX_OS;
     int32_t GYST = GY_ST_OS - GY_OS;
     int32_t GZST = GZ_ST_OS - GZ_OS;
@@ -282,6 +282,7 @@ byte self_test(byte chip) {
     Serial.println(AZST);
 
 
+// GOT THROUGH UP TO HERE. ONLY CHANGE SO FAR IS COMMENTING OUT DELAY IN READ
 
 
     ///// STEP 3.1.1 /////
