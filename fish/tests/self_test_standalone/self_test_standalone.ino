@@ -163,11 +163,11 @@ byte self_test(byte chip) {
 
     write_register(chip, ACCEL_CONFIG_2, 0x02);   // set accel dlpf code to 2
 
-    uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;     // store existing full scale range
+    uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) & 0x18;     // store existing full scale range
     write_register(chip, GYRO_CONFIG, 0x00);                           // set full scale range to 250dps
     // write_register(chip, GYRO_CONFIG, 1<<FS);
 
-    uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;  // store existing full scale range code
+    uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) & 0x18;  // store existing full scale range code
     write_register(chip, ACCEL_CONFIG_1, 0x00);                         // select full scale range 20 +-2g
     // write_register(chip, ACCEL_CONFIG_1, 1<<FS);
 
@@ -290,7 +290,6 @@ byte self_test(byte chip) {
     write_register(chip, ACCEL_CONFIG_1, 0x00);
 
     ///// STEP 3.1.2 /////
-    // delay(25);                                    
     delay(20);                                    
 
 
@@ -316,21 +315,21 @@ byte self_test(byte chip) {
     Serial.println(self_test_accel_z);
 
     ///// STEP 3.2.2 /////
-    double GXST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
-    double GYST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
-    double GZST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
-    double AXST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
-    double AYST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
-    double AZST_OTP =  (double)(2620/1<<FS)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+    // double GXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    // double GYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    // double GZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    // double AXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    // double AYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    // double AZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+
+    double GXST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    double GYST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    double GZST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    double AXST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    double AYST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    double AZST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
 
-
-    // float GXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_x  - 1.0) )) * ;
-    // float GYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_y  - 1.0) )) * ;
-    // float GZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_gyro_z  - 1.0) )) * ;
-    // float AXST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_x - 1.0) )) * ;
-    // float AYST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_y - 1.0) )) * ;
-    // float AZST_OTP =  (2620)*(pow( 1.01 , ((float)self_test_accel_z - 1.0) )) * ;
 
     Serial.println("---OTP----");
     Serial.println(GXST_OTP);
@@ -438,7 +437,6 @@ void initialize(){
         write_register(IMU_SELECT[i], REG_USER_CTRL, 0x20);          // RESERVED??
         write_register(IMU_SELECT[i], REG_I2C_MST_CTRL, 0x0D);       // SET I2C MASTER CLOCK SPEED TO 400 KHZ
 
-
     }
 }
 
@@ -456,3 +454,7 @@ void loop() {
 }
 
 
+
+//
+// REMOVED DELAY FOR 1KHZ WHEN READING
+// FIXED gyro_old_fs and accel_old_fs SAVE TO USE 'AND' INSTEAD OF 'OR'
