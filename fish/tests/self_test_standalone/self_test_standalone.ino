@@ -33,11 +33,7 @@
 const uint8_t IMU_SELECT[]                      = {9};       // chip select pins for imus (len == NUM_IMUS)
 #define TRIGGER_PIN                               7
 
-#ifdef USE_ENCODER
-#define RESPONSE_LEN                              43             // how many bytes tx per sample
-#else
 #define RESPONSE_LEN                              41
-#endif
 
 // IMU REGISTERS
 #define SELF_TEST_X_GYRO                          0x00
@@ -87,7 +83,7 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
 #define PIN_EMS_CS                                7
 
 
-#define NUM_REPS             200
+#define NUM_REPS             50
 
 
 
@@ -125,14 +121,6 @@ void read_multiple_registers(byte chip, uint8_t address, uint8_t *buff, unsigned
 
 
 
-// Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
-// IMPLEMENTATION FROM "MPU-6500 ACCELEROMETER AND GYROSCOPE SELF-TEST IMPLEMENTATION.
-// ACCORDING TO INVENSENSE TECH SUPPORT THIS PROCEDURE APPLIES TO MPU-9250.
-// ROTATION SHOULD VARY LESS THAN 5 DEGREES DURING SELF-TEST.
-// GYRO SELF-TEST WILL FAIL IF IT ROTATES MORE THAN +-2.5 DEGREES.
-// FOR ACCEL, CHANGES IN LINEAR VELOCITY SHOULD BE < 0.2m/s.
-// CHANGES IN TILT ANGLE SHOULD BE < 6 deg.
-//
 // MUST BE CALLED FROM test() FUNCTION SO SPI IS SET UP
 
 byte self_test(byte chip) {
@@ -195,7 +183,7 @@ byte self_test(byte chip) {
         AY_OS +=   (int16_t)(((int16_t)temp_buffer[2] << 8) | temp_buffer[3]);
         AZ_OS +=   (int16_t)(((int16_t)temp_buffer[4] << 8) | temp_buffer[5]);
 
-        delay(1);
+        //delay(1);
     }
 
     // THESE ARE THE "LSB OF GX_OS, GY_OS..." (page 5)
@@ -344,6 +332,7 @@ byte self_test(byte chip) {
     uint8_t AYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
     uint8_t AZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
+
     // double GXST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
     // double GYST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
     // double GZST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
@@ -467,7 +456,7 @@ void setup() {
     Serial.begin(115200);
 
     begin_imu_com();
-    delay(100);
+    delay(1000);
     self_test(9);
     end_imu_com();
 }
