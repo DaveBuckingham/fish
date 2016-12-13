@@ -71,7 +71,7 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
 #define ENABLE_SLAVE_FLAG                         0x80           // use when specifying data length for i2c
 #define READ_FLAG                                 0x80           // for spi com
  
-#define IMU_WHOAMI_VAL                   0x71
+#define IMU_WHOAMI_VAL                            0x71
 
 
 
@@ -83,7 +83,7 @@ const uint8_t IMU_SELECT[]                      = {9};       // chip select pins
 #define PIN_EMS_CS                                7
 
 
-#define NUM_REPS             50
+#define NUM_REPS                                  200
 
 
 
@@ -183,7 +183,7 @@ byte self_test(byte chip) {
         AY_OS +=   (int16_t)(((int16_t)temp_buffer[2] << 8) | temp_buffer[3]);
         AZ_OS +=   (int16_t)(((int16_t)temp_buffer[4] << 8) | temp_buffer[5]);
 
-        //delay(1);
+        delay(1);
     }
 
     // THESE ARE THE "LSB OF GX_OS, GY_OS..." (page 5)
@@ -194,12 +194,12 @@ byte self_test(byte chip) {
     AY_OS /= NUM_REPS;
     AZ_OS /= NUM_REPS;
 
-    GX_OS &= 0xff;
-    GY_OS &= 0xff;
-    GZ_OS &= 0xff;
-    AX_OS &= 0xff;
-    AY_OS &= 0xff;
-    AZ_OS &= 0xff;
+    // GX_OS &= 0xff;
+    // GY_OS &= 0xff;
+    // GZ_OS &= 0xff;
+    // AX_OS &= 0xff;
+    // AY_OS &= 0xff;
+    // AZ_OS &= 0xff;
 
     Serial.println("---START---");
     Serial.println(GX_OS);
@@ -217,7 +217,7 @@ byte self_test(byte chip) {
     // write_register(chip, GYRO_CONFIG, B111);
     // write_register(chip, ACCEL_CONFIG_1, B111);
 
-    // ENABLE SELF TEST  (0xE0 == 0xb11100000)
+    // ENABLE SELF TEST  (0xE0 == 0b11100000)
     write_register(chip, GYRO_CONFIG, 0xE0);
     write_register(chip, ACCEL_CONFIG_1, 0xE0);
 
@@ -239,7 +239,7 @@ byte self_test(byte chip) {
         AY_ST_OS += (temp_buffer[2] << 8) | temp_buffer[3];
         AZ_ST_OS += (temp_buffer[4] << 8) | temp_buffer[5];
 
-        // delay(1);  // documentation says to read at a 1kHz rate, but other implemenations have no delay
+        delay(1);  // documentation says to read at a 1kHz rate, but other implemenations have no delay
     }
 
     // "THE AVERAGE VALUES WILL BE THE LSB OF GX_ST_OS, GY_ST_OS..." (page 5)
@@ -250,14 +250,14 @@ byte self_test(byte chip) {
     AY_ST_OS /= NUM_REPS;
     AZ_ST_OS /= NUM_REPS;
 
-    GX_ST_OS &= 0xff;
-    GY_ST_OS &= 0xff;
-    GZ_ST_OS &= 0xff;
-    AX_ST_OS &= 0xff;
-    AY_ST_OS &= 0xff;
-    AZ_ST_OS &= 0xff;
+    // GX_ST_OS &= 0xff;
+    // GY_ST_OS &= 0xff;
+    // GZ_ST_OS &= 0xff;
+    // AX_ST_OS &= 0xff;
+    // AY_ST_OS &= 0xff;
+    // AZ_ST_OS &= 0xff;
 
-    Serial.println("---OS----");
+    Serial.println("---ST_OS---");
     Serial.println(GX_ST_OS);
     Serial.println(GY_ST_OS);
     Serial.println(GZ_ST_OS);
@@ -282,9 +282,6 @@ byte self_test(byte chip) {
     Serial.println(AXST);
     Serial.println(AYST);
     Serial.println(AZST);
-
-
-// GOT THROUGH UP TO HERE. ONLY CHANGE SO FAR IS COMMENTING OUT DELAY IN READ
 
 
     ///// STEP 3.1.1 /////
@@ -318,19 +315,19 @@ byte self_test(byte chip) {
 
     ///// STEP 3.2.2 /////
 
-    // double GXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
-    // double GYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
-    // double GZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
-    // double AXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
-    // double AYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
-    // double AZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+    double GXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    double GYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    double GZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    double AXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    double AYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    double AZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
-    uint8_t GXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
-    uint8_t GYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
-    uint8_t GZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
-    uint8_t AXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
-    uint8_t AYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
-    uint8_t AZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+    // uint8_t GXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    // uint8_t GYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    // uint8_t GZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    // uint8_t AXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    // uint8_t AYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    // uint8_t AZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
 
     // double GXST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
@@ -352,13 +349,6 @@ byte self_test(byte chip) {
 
 
 
-
-
-    // for (int i = 0; i < 3; i++) {
-    //     destination[i]   = 100.0*((float)(aSTAvg[i] - aAvg[i]))/factoryTrim[i] - 100.;
-    //     destination[i+3] = 100.0*((float)(gSTAvg[i] - gAvg[i]))/factoryTrim[i+3] - 100.;
-    // }
-
     ///// STEP 3.2.3 (a and b) /////
     byte result_gyro_x =  (GXST_OTP != 0.0) ? ((GXST / GXST_OTP) > 0.5) : (abs(GXST) >= 60);
     byte result_gyro_y =  (GYST_OTP != 0.0) ? ((GYST / GYST_OTP) > 0.5) : (abs(GYST) >= 60);
@@ -366,20 +356,6 @@ byte self_test(byte chip) {
     byte result_accel_x = (AXST_OTP != 0.0) ? ((AXST / AXST_OTP) > 0.5) && ((AXST / AXST_OTP) < 1.5) : (abs(AXST) >= 60);
     byte result_accel_y = (AYST_OTP != 0.0) ? ((AYST / AYST_OTP) > 0.5) && ((AYST / AYST_OTP) < 1.5) : (abs(AYST) >= 60);
     byte result_accel_z = (AZST_OTP != 0.0) ? ((AZST / AZST_OTP) > 0.5) && ((AYST / AYST_OTP) < 1.5) : (abs(AZST) >= 60);
-
-    // GXST = GXST & 0x0F;
-    // GYST = GYST & 0x0F;
-    // GZST = GZST & 0x0F;
-    // AXST = AXST & 0x0F;
-    // AYST = AYST & 0x0F;
-    // AZST = AZST & 0x0F;
-    // GXST_OTP = GXST_OTP & 0x0F;
-    // GYST_OTP = GYST_OTP & 0x0F;
-    // GZST_OTP = GZST_OTP & 0x0F;
-    // AXST_OTP = AXST_OTP & 0x0F;
-    // AYST_OTP = AYST_OTP & 0x0F;
-    // AZST_OTP = AZST_OTP & 0x0F;
-
 
 
     Serial.println("---result----");
@@ -466,6 +442,3 @@ void loop() {
 
 
 
-//
-// REMOVED DELAY FOR 1KHZ WHEN READING
-// FIXED gyro_old_fs and accel_old_fs SAVE TO USE 'AND' INSTEAD OF 'OR'
