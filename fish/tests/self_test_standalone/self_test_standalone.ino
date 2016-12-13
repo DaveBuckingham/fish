@@ -206,6 +206,13 @@ byte self_test(byte chip) {
     AY_OS /= NUM_REPS;
     AZ_OS /= NUM_REPS;
 
+    GX_OS &= 0xff;
+    GY_OS &= 0xff;
+    GZ_OS &= 0xff;
+    AX_OS &= 0xff;
+    AY_OS &= 0xff;
+    AZ_OS &= 0xff;
+
     Serial.println("---START---");
     Serial.println(GX_OS);
     Serial.println(GY_OS);
@@ -254,6 +261,13 @@ byte self_test(byte chip) {
     AX_ST_OS /= NUM_REPS;
     AY_ST_OS /= NUM_REPS;
     AZ_ST_OS /= NUM_REPS;
+
+    GX_ST_OS &= 0xff;
+    GY_ST_OS &= 0xff;
+    GZ_ST_OS &= 0xff;
+    AX_ST_OS &= 0xff;
+    AY_ST_OS &= 0xff;
+    AZ_ST_OS &= 0xff;
 
     Serial.println("---OS----");
     Serial.println(GX_ST_OS);
@@ -315,6 +329,7 @@ byte self_test(byte chip) {
     Serial.println(self_test_accel_z);
 
     ///// STEP 3.2.2 /////
+
     // double GXST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
     // double GYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
     // double GZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
@@ -322,12 +337,19 @@ byte self_test(byte chip) {
     // double AYST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
     // double AZST_OTP =  (double)(2620)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
-    double GXST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
-    double GYST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
-    double GZST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
-    double AXST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
-    double AYST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
-    double AZST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+    uint8_t GXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    uint8_t GYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    uint8_t GZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    uint8_t AXST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    uint8_t AYST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    uint8_t AZST_OTP =  2620 * (pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
+
+    // double GXST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_x  - 1.0) ));
+    // double GYST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_y  - 1.0) ));
+    // double GZST_OTP =  (double)(2620/1<<gyro_old_fs)*(pow( 1.01 , ((double)self_test_gyro_z  - 1.0) ));
+    // double AXST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_x - 1.0) ));
+    // double AYST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_y - 1.0) ));
+    // double AZST_OTP =  (double)(2620/1<<accel_old_fs)*(pow( 1.01 , ((double)self_test_accel_z - 1.0) ));
 
 
 
