@@ -21,6 +21,7 @@ class IMU(object):
         self.gN = np.array([0, 0, 1])
 
     def set_gyro(self, t, gyro, resamplefreq=None):
+        """Sets just the gyro field, potentially resampling. Just for testing"""
         if resamplefreq is not None:
             t, gyro = self._resample_gyro(t, gyro, resamplefreq)
             sampfreq = resamplefreq
@@ -34,6 +35,18 @@ class IMU(object):
 
     def load(self, filename, t_dataset='/data/t', gyro_dataset='/data/Gyro', accel_dataset='/data/Accel',
              resamplefreq=None, t_units='ms'):
+        """Loads IMU data from an HDF5 file, potentially resampling.
+
+        Arguments:
+            filename - File to load data from
+            t_dataset - Name of the dataset that has the time (default '/data/t')
+            gyro_dataset - Name of the dataset with gyro data (default '/data/Gyro')
+            accel_dataset - Name of the dataset with accelerometer data (default '/data/Accel')
+            resamplefreq - If not None, resample data at a constant sampling frequency. Could be a number in Hz or
+                'mean' to resample at the mean rate. (default None)
+            t_units - Units of the time dataset. Will convert to seconds. (default 'ms')
+        """
+
         with h5py.File(filename, 'r') as h5file:
             acc = np.array(h5file[accel_dataset])
             gyro = np.array(h5file[gyro_dataset])
@@ -75,6 +88,24 @@ class IMU(object):
             self.sampfreq = sampfreq
 
     def filter(self, order=None, gyro_cutoff=None, acc_cutoff=None, nsamp=None, method='butter'):
+        """Filter IMU data using either a butterworth filter or a running mean.
+
+        Cutoffs are given as real frequencies in Hz, not normalized frequencies.
+
+        For the Butterworth filter, cutoffs can be specified as a single frequency, in which case the filter uses a low
+        pass filter, or as two frequencies, in which case the filter is (essentially) a bandpass filter.
+
+        Because IIR filters tend to perform poorly at really low frequencies, the bandpass first uses a running mean
+        at the lowest frequency to get the low baseline, then subtracts that the from data, then runs a low pass filter
+        at the higher frequency.
+
+        Arguments:
+            order - Order of the butterworth filter
+            gyro_cutoff - Cutoff frequency for the gyro data
+            acc_cutoff - Cutoff frequency for the accelerometer data
+            nsamp - Number of samples to average for the running mean
+        """
+
         if method == 'butter':
             if gyro_cutoff is not None:
                 if len(gyro_cutoff) == 1:
@@ -88,6 +119,7 @@ class IMU(object):
                 else:
                     raise ValueError('Unrecognized frequency range {}'.format(acc_cutoff))
 
+                # use the SOS form, because it tends to avoid numerical problems for low frequencies
                 gyro_sos = signal.butter(order, gyro_hi/(self.sampfreq/2.0), "lowpass", output='sos')
 
                 self.gyro = signal.sosfiltfilt(gyro_sos, gyro, axis=0)
@@ -121,6 +153,23 @@ class IMU(object):
                 self.accel[:, i] = np.convolve(self.acc0[:, i], np.ones((nsamp,))/nsamp, mode='same')
 
     def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None):
+        """Get orientation and dynamic acceleration from IMU data.
+
+        Estimates the orientation as roll, pitch, yaw and the dynamic acceleration.
+
+        Three algorithms are implemented: 'madgwick', 'integrate_gyro', and 'ekf'.
+
+        Arguments:
+            method - Algorithm ('madgwick', 'integrate_gyro', or 'ekf')
+            initwindow - Initial time window to average to get the initial orientation.
+            beta - Madgwick beta parameter. beta=0 is equivalent to integrating the gyros
+            lCa - log10 of the Ca parameter.  Makes it easier to give values for Ca that are close to but not
+                equal to zero.  lCa overrides Ca if you give both.
+            Ca - Dynamic acceleration drift parameter. Roughly related to the frequency range of dynamic acceleartion.
+                Small values (close to zero) mean that dynamic acceleration will be relatively smooth, while larger
+                 values (> 1) mean that dynamic acceleration will track the overall acceleration more closely
+        """
+
         if method.lower() == 'ekf':
             dt = np.mean(np.diff(self.t))
             if Ca is None:
@@ -144,13 +193,17 @@ class IMU(object):
 
             self._get_orientation_madgwick(initwindow=initwindow, beta=beta)
 
+        # attempt to convert from chip coordinates to world
+        # self.qorient is the quaternion that specifies the current orientation of the chip, relative to its initial
+        # orientation, and self.qchip2world is the quaternion that rotates from the initial chip orientation to the
+        # world frame
         qorient_world = self.qchip2world.conj() * self.qorient * self.qchip2world
         self.qorient_world = qorient_world
 
         self.orient_world = np.array([quaternion.as_euler_angles(q1) for q1 in qorient_world])
         self.orient = self.orient_world
 
-        # make accdyn into a quaternion with zero real part
+        # make accdyn into a quaternion with zero real part.  That will allow us to rotate it into world coordinates
         qacc = np.zeros((self.accdyn_sensor.shape[0], 4))
         qacc[:, 1:] = self.accdyn_sensor
 
@@ -163,6 +216,7 @@ class IMU(object):
         return self.orient_world
 
     def calibrate(self, filename):
+        """Get initial noise covariances, based on a static recording"""
         with h5py.File(filename, 'r') as h5calib:
             gyro = np.array(h5calib['/data/Gyro'])
             # convert file data from deg/sec to rad/sec
@@ -180,6 +234,7 @@ class IMU(object):
             self.Qbias = 1e-10 * self.Qacc
 
     def get_inertial_coords(self, filename, method='mean accel', g=None):
+        """Get the initial gravity vector"""
         with h5py.File(filename, 'r') as h5inertial:
             accel = 9.81 * np.array(h5inertial['/data/Accel'])
 
@@ -189,6 +244,12 @@ class IMU(object):
                 self.gN = np.mean(accel, axis=0)
 
     def get_world_coordinates(self, filename, axes=['z'], times=None, averagedur=0.1):
+        """Get the world coordinates.
+
+        Uses a file where the chip is oriented so that gravity points along what we want as the world axes,
+        one at a time.  axes specifies the order.  If we only have one axis (say we only recorded the static g vector),
+        we attempt to align the other axes as close to the original chip axes as possible
+        """
         axinddict = {'x': 0, 'y': 1, 'z': 2}
 
         with h5py.File(filename, 'r') as h5calib:
@@ -563,6 +624,8 @@ class IMU(object):
 
 
 def main():
+    # run tests to see if the algorithms behave nicely
+
     filename = 'two_imu_data/data_b_2.hdf5'
     calibfilename = 'two_imu_data/data_b_1.hdf5'
     # encoderfilename = '/Users/etytel01/Documents/Acceleration/AlgoComparisons/Planar Experiment/encoder_8.dat'
