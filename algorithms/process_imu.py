@@ -178,14 +178,22 @@ class IMU(object):
                 Ca = np.array(Ca) / dt
             self._get_orientation_ekf(Ca=Ca)
 
-            # this seems like it should work, but gives weird values
-            qorient = []
-            for rpy in self.orient_sensor:
-                QT = self._getQT(rpy)
-                qrpy = quaternion.from_rotation_matrix(QT)
-                qorient.append(qrpy.conj() * np.quaternion(0, 0, 0, -1) * qrpy)
+            orient_world = []
+            for chiprpy in self.orient_sensor:
+                QT = self._eul2rotm(chiprpy)
+                worldrotm = self.chip2world_rot.dot(QT)
+                worldrotm = worldrotm[:, self.axord_world]
 
-            self.qorient = np.array(qorient)
+                r, p, y = self._rotm2eul(worldrotm)
+                orient_world.append([r, p, y])
+
+            accdyn_world = []
+            for acc1 in self.accdyn_sensor:
+                accdyn_world.append(self.chip2world_rot.dot(acc1))
+
+            self.orient_world = np.array(orient_world)
+            self.accdyn_world = np.array(accdyn_world)
+            self.accdyn = self.accdyn_world
 
         elif method.lower() in ['madgwick', 'integrate_gyro']:
             if method.lower() == 'integrate_gyro':
@@ -193,25 +201,24 @@ class IMU(object):
 
             self._get_orientation_madgwick(initwindow=initwindow, beta=beta)
 
-        # attempt to convert from chip coordinates to world
-        # self.qorient is the quaternion that specifies the current orientation of the chip, relative to its initial
-        # orientation, and self.qchip2world is the quaternion that rotates from the initial chip orientation to the
-        # world frame
-        qorient_world = self.qchip2world.conj() * self.qorient * self.qchip2world
-        self.qorient_world = qorient_world
+            # attempt to convert from chip coordinates to world
+            # self.qorient is the quaternion that specifies the current orientation of the chip, relative to its initial
+            # orientation, and self.qchip2world is the quaternion that rotates from the initial chip orientation to the
+            # world frame
+            qorient_world = self.qchip2world.conj() * self.qorient * self.qchip2world
+            self.qorient_world = qorient_world
 
-        self.orient_world = np.array([quaternion.as_euler_angles(q1) for q1 in qorient_world])
-        self.orient = self.orient_world
+            self.orient_world = np.array([quaternion.as_euler_angles(q1) for q1 in qorient_world])
+            self.orient = self.orient_world
 
-        # make accdyn into a quaternion with zero real part.  That will allow us to rotate it into world coordinates
-        qacc = np.zeros((self.accdyn_sensor.shape[0], 4))
-        qacc[:, 1:] = self.accdyn_sensor
+            # make accdyn into a quaternion with zero real part.  That will allow us to rotate it into world coordinates
+            qacc = np.zeros((self.accdyn_sensor.shape[0], 4))
+            qacc[:, 1:] = self.accdyn_sensor
 
-        # rotate accdyn into the world coordinate system
-        qaccdyn_world = self.qchip2world.conj() * quaternion.as_quat_array(qacc) * self.qchip2world
-        self.accdyn_world = np.array([q.components[1:] for q in qaccdyn_world])
-        self.accdyn = self.accdyn_world
-
+            # rotate accdyn into the world coordinate system
+            qaccdyn_world = self.qchip2world.conj() * quaternion.as_quat_array(qacc) * self.qchip2world
+            self.accdyn_world = np.array([q.components[1:] for q in qaccdyn_world])
+            self.accdyn = self.accdyn_world
 
         return self.orient_world
 
@@ -296,6 +303,7 @@ class IMU(object):
         assert(np.dot(np.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) > 0.9)
 
         self.chip2world_rot = basis
+        self.axord_world = axord
         self.qchip2world = quaternion.from_rotation_matrix(basis)
         self.qworld2chip = quaternion.from_rotation_matrix(basis.T)
 
@@ -364,7 +372,7 @@ class IMU(object):
             xk = xkM + Kk.dot(accel - hk)
             Pk = (np.eye(9) - Kk.dot(Hk)).dot(PkM)
 
-            QT = self._getQT(xk[:3])
+            QT = self._eul2rotm(xk[:3])
 
             eulerEKF.append(xk[:3])
             aD.append(QT.T.dot(xk[6:]))
@@ -459,7 +467,7 @@ class IMU(object):
 
         return hk, Jh
 
-    def _getQT(self, x):
+    def _eul2rotm(self, x):
         phi, theta, psi = x
 
         Rz_yaw =    np.array([[np.cos(psi),     np.sin(psi),    0],
@@ -474,6 +482,27 @@ class IMU(object):
         QT = Rx_roll.dot(Ry_pitch).dot(Rz_yaw)
 
         return QT
+
+    def _rotm2eul(self, rotm, singularity=0.001):
+        if rotm[2, 0] < -1 + singularity:
+            psi1 = 0
+            theta1 = -np.pi/2
+            phi1 = np.arctan(-rotm[0, 1], -rotm[0, 3])
+        elif rotm[2, 0] > 1 - singularity:
+            psi1 = 0
+            theta1 = np.pi / 2
+            phi1 = np.arctan(rotm[0, 1], rotm[0, 3])
+        else:
+            theta1 = np.pi + np.arcsin(rotm[2, 0])
+            theta2 = -np.arcsin(rotm[2, 0])
+
+            phi1 = np.arctan2(rotm[2, 1]/np.cos(theta1), rotm[2, 2]/np.cos(theta1))
+            phi2 = np.arctan2(rotm[2, 1]/np.cos(theta1), rotm[2, 2]/np.cos(theta1))
+
+            psi1 = np.arctan2(rotm[1, 0]/np.cos(theta2), rotm[0, 0]/np.cos(theta2))
+            psi2 = np.arctan2(rotm[1, 0]/np.cos(theta1), rotm[0, 0]/np.cos(theta1))
+
+        return phi1, theta1, psi1
 
     def _stack_matrices(self, M):
         m = []
