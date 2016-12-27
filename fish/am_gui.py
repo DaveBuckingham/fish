@@ -59,8 +59,12 @@ class Am_ui(QWidget):
         # MEASURED FREQUENCY OF DATA COLLECTED
         self.true_frequency = 0.0
 
+        self.last_data_path = ''
+
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
+
+
 
 
         ##################################################
@@ -108,6 +112,11 @@ class Am_ui(QWidget):
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
+
+        self.buttons['load'] = QPushButton('Load')
+        self.buttons['load'].setToolTip('Load recorded data')
+        self.buttons['load'].clicked.connect(self.load_button_slot)
+        button_layout.addWidget(self.buttons['load'])
 
         self.buttons['quit'] = QPushButton('Quit')
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
@@ -251,11 +260,6 @@ class Am_ui(QWidget):
 
     def test_button_slot(self):
 
-        # self.buttons['record'].setEnabled(False)
-        # self.buttons['test'].setEnabled(False)
-        # self.buttons['record'].update()
-        # self.buttons['test'].update()
-
 
         results = self.receiver.test()
 
@@ -282,8 +286,6 @@ class Am_ui(QWidget):
             self.message_slot("mag2 self test...")
             self.message_slot("not implemented\n")
 
-        # self.buttons['record'].setEnabled(True)
-        # self.buttons['test'].setEnabled(True)
 
 
     def quit_button_slot(self):
@@ -318,26 +320,54 @@ class Am_ui(QWidget):
 
 
     def save_button_slot(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', '', '*.hdf5')
+        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5')
+        self.last_data_path = os.path.dirname(filename)
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
+            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
                 filename += '.hdf5'
 
-            datafile = h5py.File(str(filename), 'w')
-            save_data = datafile.create_group("data")
-            save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
-            save_data.create_dataset('Accel',  data=[x['accel0'] for x in self.receiver.data])
-            save_data.create_dataset('Accel2', data=[x['accel1'] for x in self.receiver.data])
-            save_data.create_dataset('Gyro',   data=[x['gyro0']  for x in self.receiver.data])
-            save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
-            save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
-            save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
-            if (self.receiver.USE_ENCODER):
-                save_data.create_dataset('Encoder',   data=[x['encoder']   for x in self.receiver.data])
-            datafile.close()
+            with h5py.File(str(filename), 'w') as datafile:
+                save_data = datafile.create_group("data")
+                save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
+                save_data.create_dataset('Accel',  data=[x['accel0'] for x in self.receiver.data])
+                save_data.create_dataset('Accel2', data=[x['accel1'] for x in self.receiver.data])
+                save_data.create_dataset('Gyro',   data=[x['gyro0']  for x in self.receiver.data])
+                save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
+                save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
+                save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
+                if (self.receiver.USE_ENCODER):
+                    save_data.create_dataset('Encoder',   data=[x['encoder']   for x in self.receiver.data])
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
+
+
+    def load_button_slot(self):
+
+        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5')
+        self.last_data_path = os.path.dirname(filename)
+        if filename:
+            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
+                filename += '.hdf5'
+
+            with h5py.File(str(filename), 'w') as datafile:
+                #save_data = datafile.get("data")
+                time = datafile.get('data/t')
+                accel = datafile.get('data/Accel')
+                accel2 = datafile.get('data/Accel2')
+                gyro = datafile.get('data/Gyro')
+                gyro2 = datafile.get('data/Gyro2')
+                mag = datafile.get('data/Mag')
+                mag2 = datafile.get('data/Mag2')
+                if (self.receiver.USE_ENCODER):
+                    encoder = datafile.get('data/Encoder')    # might be empty
+
+            self.message_slot(filename + " loaded\n")
+            self.data_saved = True
+            self.buttons['save'].setEnabled(True)
+
+
+
 
 
 
