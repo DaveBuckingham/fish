@@ -46,8 +46,6 @@ class Am_rx(QObject):
 
 
 
-
-
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
@@ -109,7 +107,6 @@ class Am_rx(QObject):
             return 0
         else:
             return (3275 * (1.046 ** (g_test - 1)))
-
 
 
 
@@ -208,9 +205,6 @@ class Am_rx(QObject):
             self.error_signal.emit("serial connection established but handshake failed\n")
             self.close_connection()
             return False
-
-
-
 
 
 
@@ -324,19 +318,16 @@ class Am_rx(QObject):
                 # (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
 
 
-
-                entry = {}
-                entry['time']    = timestamp
-                entry['accel0']  = [ax0, ay0, az0]
-                entry['gyro0']   = [gx0, gy0, gz0]
-                entry['mag0']    = [mx0, my0, mz0]
-                entry['accel1']  = [ax1, ay1, az1]
-                entry['gyro1']   = [gx1, gy1, gz1]
-                entry['mag1']    = [mx1, my1, mz1]
+                entry = (timestamp,           \
+                         [ax0, ay0, az0],     \
+                         [ax1, ay1, az1],     \
+                         [gx0, gy0, gz0],     \
+                         [gx1, gy1, gz1],     \
+                         [mx0, my0, mz0],     \
+                         [mx1, my1, mz1])
 
                 if (Am_rx.USE_ENCODER):
-                    entry['encoder'] = enc
-
+                    entry = entry + (enc)
 
                 self.data.append(entry)
                 sample_index += 1
@@ -358,7 +349,6 @@ class Am_rx(QObject):
 
         self.message_signal.emit("stopping recording data\n")
         self.tx_byte(Am_rx.COM_SIGNAL_STOP)
-
 
 
         self.close_connection()

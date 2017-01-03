@@ -328,15 +328,17 @@ class Am_ui(QWidget):
 
             with h5py.File(str(filename), 'w') as datafile:
                 save_data = datafile.create_group("data")
-                save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
-                save_data.create_dataset('Accel',  data=[x['accel0'] for x in self.receiver.data])
-                save_data.create_dataset('Accel2', data=[x['accel1'] for x in self.receiver.data])
-                save_data.create_dataset('Gyro',   data=[x['gyro0']  for x in self.receiver.data])
-                save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
-                save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
-                save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
+
+                save_data.create_dataset('t',      data=[x[0] for x in self.receiver.data])
+                save_data.create_dataset('Accel',  data=[x[1] for x in self.receiver.data])
+                save_data.create_dataset('Accel2', data=[x[2] for x in self.receiver.data])
+                save_data.create_dataset('Gyro',   data=[x[3] for x in self.receiver.data])
+                save_data.create_dataset('Gyro2',  data=[x[4] for x in self.receiver.data])
+                save_data.create_dataset('Mag',    data=[x[5] for x in self.receiver.data])
+                save_data.create_dataset('Mag2',   data=[x[6] for x in self.receiver.data])
                 if (self.receiver.USE_ENCODER):
-                    save_data.create_dataset('Encoder',   data=[x['encoder']   for x in self.receiver.data])
+                    save_data.create_dataset('Encoder',   data=[x[7]   for x in self.receiver.data])
+
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
@@ -350,17 +352,19 @@ class Am_ui(QWidget):
             if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
                 filename += '.hdf5'
 
-            with h5py.File(str(filename), 'w') as datafile:
-                #save_data = datafile.get("data")
-                time = datafile.get('data/t')
-                accel = datafile.get('data/Accel')
-                accel2 = datafile.get('data/Accel2')
-                gyro = datafile.get('data/Gyro')
-                gyro2 = datafile.get('data/Gyro2')
-                mag = datafile.get('data/Mag')
-                mag2 = datafile.get('data/Mag2')
+            with h5py.File(str(filename), 'r') as datafile:
+                time = datafile.get('data/t')[()]
+                accel = datafile.get('data/Accel')[()]
+                accel2 = datafile.get('data/Accel2')[()]
+                gyro = datafile.get('data/Gyro')[()]
+                gyro2 = datafile.get('data/Gyro2')[()]
+                mag = datafile.get('data/Mag')[()]
+                mag2 = datafile.get('data/Mag2')[()]
+
                 if (self.receiver.USE_ENCODER):
-                    encoder = datafile.get('data/Encoder')    # might be empty
+                    self.receiver.data = list(zip(time, accel, accel2, gyro, gyro2, mag, mag2, datafile.get('data/Encoder')[()]))
+                else:
+                    self.receiver.data = list(zip(time, accel, accel2, gyro, gyro2, mag, mag2))
 
             self.message_slot(filename + " loaded\n")
             self.data_saved = True
