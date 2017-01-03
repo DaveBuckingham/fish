@@ -8,6 +8,7 @@ from PyQt4.QtGui import *
 from fish.am_rx import *
 from fish.am_plot import *
 from fish.am_settings import *
+from fish.am_process.py import *
 from collections import namedtuple
 import time
 import h5py
