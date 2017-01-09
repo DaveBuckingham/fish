@@ -7,7 +7,7 @@ import re
 
 import matplotlib.pyplot as plt
 
-class IMU(object):
+class Process(object):
     def __init__(self):
         self.t = []
         self.gyro = []
@@ -661,7 +661,7 @@ class IMU(object):
 # 
 #     plt.ion()
 # 
-#     imu = IMU()
+#     imu = Process()
 # 
 #     imu.calibrate(calibfilename)
 #     imu.get_inertial_coords(calibfilename)

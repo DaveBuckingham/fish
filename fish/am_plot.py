@@ -75,11 +75,11 @@ class Am_plot(pg.PlotWidget):
         self.data[2].append(values[2])
         self.timestamps.append(timestamp)
 
-        if (len(self.timestamps) > self.x_scale_max):
-            self.data[0].popleft()
-            self.data[1].popleft()
-            self.data[2].popleft()
-            self.timestamps.popleft()
+        # if (len(self.timestamps) > self.x_scale_max):
+        #     self.data[0].popleft()
+        #     self.data[1].popleft()
+        #     self.data[2].popleft()
+        #     self.timestamps.popleft()
 
 
         if (refresh):

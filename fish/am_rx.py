@@ -108,8 +108,6 @@ class Am_rx(QObject):
         else:
             return (3275 * (1.046 ** (g_test - 1)))
 
-
-
     def close_connection(self):
         self.message_signal.emit("closing serial connection\n")
         self.connection.flushInput()
@@ -163,10 +161,8 @@ class Am_rx(QObject):
 
     def open_connection(self):
         self.message_signal.emit("establishing serial connection...\n")
-
-
-
         
+        # FIND A PORT CONNECTED TO AN ARDUINO
         arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
             self.error_signal.emit('No arduino found\n')
@@ -175,16 +171,17 @@ class Am_rx(QObject):
             serial_port = arduino_ports[0]
             self.message_signal.emit('Using Arduino found on ' + serial_port + "\n")
 
+        # CONNECT
         try:
             self.connection = serial.Serial(
-                #port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
+                # port     = '/dev/ttyACM0' if (os.name == 'posix') else 'COM1',
                 port     = serial_port,
                 baudrate = 115200,
                 parity   = serial.PARITY_NONE,
                 stopbits = serial.STOPBITS_ONE,
                 bytesize = serial.EIGHTBITS,
-               #timeout  = None   # block, wait forever
-               #timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
+                # timeout  = None   # block, wait forever
+                # timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
                 timeout  = 1.0    # 1 second timeout 
             )
 
@@ -193,8 +190,11 @@ class Am_rx(QObject):
             # self.finished_signal.emit()
             return False
 
+        # GIVE ARDUINO TIME TO RESET
         self.connection.flushInput()
         time.sleep(3)
+
+        # HANDSHAKE
         self.tx_byte(Am_rx.COM_SIGNAL_HELLO)
         time.sleep(1)
         (message, message_type) = self.rx_packet()
@@ -205,8 +205,6 @@ class Am_rx(QObject):
             self.error_signal.emit("serial connection established but handshake failed\n")
             self.close_connection()
             return False
-
-
 
 
 
@@ -229,7 +227,6 @@ class Am_rx(QObject):
 
 
 
-
     @pyqtSlot()
     def run(self):
 
@@ -241,7 +238,6 @@ class Am_rx(QObject):
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
 
         time.sleep(3)
-
 
 
         ##################################
@@ -266,11 +262,12 @@ class Am_rx(QObject):
             self.error_signal.emit("using 1 adjustment\n")
 
 
-        self.message_signal.emit("sent record command to arduino\n")
-
-
+        ##################################
+        #        RECORD DATA             #
+        ##################################
 
         self.tx_byte(Am_rx.COM_SIGNAL_RUN)
+        self.message_signal.emit("sent record command to arduino\n")
 
 
         self.message_signal.emit("recording data\n")
@@ -289,14 +286,15 @@ class Am_rx(QObject):
 
 
                 if (Am_rx.USE_ENCODER):
-                    (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhhh?', received)
+                    (id, enc, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = \
+                        struct.unpack('>Lhhhhhhhhhhhhhhhhhhh?', received)
                     enc *= 0.3515625  # 360/1024
                 else:
-                    (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
+                    (id, ax0, ay0, az0, gx0, gy0, gz0, mx0, my0, mz0, ax1, ay1, az1, gx1, gy1, gz1, mx1, my1, mz1, trig ) = \
+                        struct.unpack('>Lhhhhhhhhhhhhhhhhhh?', received)
 
                 # SWAP MAG BYTES SO VALUES ARE BIG-ENDIAN
                 (mx0, my0, mz0, mx1, my1, mz1) = struct.unpack('<hhhhhh', struct.pack('>hhhhhh', mx0, my0, mz0, mx1, my1, mz1))
-
 
 
                 if (trig and self.use_trigger):
@@ -307,16 +305,16 @@ class Am_rx(QObject):
                 timestamp = (time.time() * 1000) - start_time
 
 
-                # CONVERT
+                # CONVERT ACCORDING TO SENSOR SENSITIVTY
                 (ax0, ay0, az0, ax1, ay1, az1) = map(lambda x: float(x) / Am_rx.ACCEL_SENSITIVITY, (ax0, ay0, az0, ax1, ay1, az1))
                 (gx0, gy0, gz0, gx1, gy1, gz1) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY,  (gx0, gy0, gz0, gx1, gy1, gz1))
                 (mx0, my0, mz0) = [(mx0, my0, mz0)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
                 (mx1, my1, mz1) = [(mx1, my1, mz1)[i] * Am_rx.mag_1_asa[i] for i in range(3)]
 
+                # TEMPERATURE
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 36.53, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 340.0) + 21.0, (temp0, temp1))
                 # (temp0, temp1) = map(lambda x: (float(x) / 333.87) + 21.0, (temp0, temp1))
-
 
                 entry = (timestamp,           \
                          [ax0, ay0, az0],     \
@@ -354,6 +352,5 @@ class Am_rx(QObject):
         self.close_connection()
 
         self.finished_signal.emit()
-
 
 
