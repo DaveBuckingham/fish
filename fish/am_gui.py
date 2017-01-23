@@ -8,7 +8,7 @@ from PyQt4.QtGui import *
 from fish.am_rx import *
 from fish.am_plot import *
 from fish.am_settings import *
-from fish.am_process.py import *
+#from fish.am_process import *
 from collections import namedtuple
 import time
 import h5py
@@ -25,7 +25,6 @@ class Am_ui(QWidget):
 
     # SIGNAL TO RESETS ALL THE PLOTS
     clear_plots_signal = pyqtSignal()
-
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
@@ -82,9 +81,6 @@ class Am_ui(QWidget):
 
 
 
-
-
-
         ##################################################
         #   CREATE GUI ELEMENTS AND ADD TO MAIN WINDOW   #
         ##################################################
@@ -100,7 +96,6 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
-        # self.buttons['record'].setStyleSheet("background-color: red")
 
 
         self.buttons['test'] = QPushButton('Test')

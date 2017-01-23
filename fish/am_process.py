@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import interpolate, signal
-import quaternion
+import Quaternion
 import h5py
 from copy import copy
 import re
@@ -609,7 +609,7 @@ class Process(object):
         N = len(t)
 
         nblocks = int(np.ceil(float(N)/n))
-        print "dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks)
+        print("dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks))
 
         pad = n*nblocks - N
 
@@ -626,7 +626,7 @@ class Process(object):
         ctrind = np.concatenate(([0], ctrind, [N-1]))
         ind = np.arange(N)
 
-        print "nblocks={}, ymn.shape={}".format(nblocks, ymn.shape)
+        print("nblocks={}, ymn.shape={}".format(nblocks, ymn.shape))
         ylo = interpolate.interp1d(ctrind, ymn, kind='cubic', axis=0)(ind)
         return ylo
 

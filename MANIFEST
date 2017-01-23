@@ -2,11 +2,9 @@ am_gui.py
 am_plot.py
 am_rx.py
 am_settings.py
-am_process.py
 am_tx/am_tx.ino
 __init__.py
 __main__.py
 MANIFEST
-LICENSE.txt
 README.rst
 setup.py

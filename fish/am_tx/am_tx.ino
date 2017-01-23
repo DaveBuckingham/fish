@@ -13,8 +13,9 @@
 //
 //    ARDUINO     PIN      IMU        COLOR
 //    
-//     CS1        9        NCS        WHITE/CLEAR
-//     CS2        10       NCS        WHITE/CLEAR
+//     CS1        8        NCS        WHITE/CLEAR
+//     CS2        9        NCS        WHITE/CLEAR
+//     CS3        10       NCS        WHITE/CLEAR
 //     MOSI       11       SDA/MOSI   GREEN
 //     MISO       12       AD0/MISO   BLUE
 //     SCK        13       SCL        YELLOW
@@ -58,7 +59,7 @@
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define NUM_IMUS                                  2              // how many imus, 1 or 2.
-const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select pins for imus (len == NUM_IMUS)
+const uint8_t IMU_SELECT[]                      = {8, 9, 10};       // chip select pins for imus (len == NUM_IMUS)
 #define TRIGGER_PIN                               4
 
 #ifdef USE_ENCODER
@@ -146,6 +147,7 @@ const uint8_t IMU_SELECT[]                      = {9, 10};       // chip select 
 
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
 unsigned long next_sample_id;                  // counter for sample ids
+byte num_imus;
 
 
 
@@ -530,6 +532,15 @@ void initialize(){
     begin_imu_com();
 
     uint8_t i;
+
+    num_imus = 0;
+    for (i=0; i < NUM_CHIP_SELECTS; i++) {
+        if (read_register(IMU_SELECT[1], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
+           active_chip_selects[num_imus] = i;
+           num_imus++;
+        }
+    }
+
     for (i=0; i < NUM_IMUS; i++) {
 
 

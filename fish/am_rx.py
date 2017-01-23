@@ -165,7 +165,7 @@ class Am_rx(QObject):
         # FIND A PORT CONNECTED TO AN ARDUINO
         arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
-            self.error_signal.emit('No arduino found\n')
+            self.error_signal.emit('No Arduino found\n')
             return False
         else:
             serial_port = arduino_ports[0]
