@@ -58,17 +58,11 @@
 #define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
-#define NUM_IMUS                                  2              // how many imus, 1 or 2.
-const uint8_t IMU_SELECT[]                      = {8, 9, 10};       // chip select pins for imus (len == NUM_IMUS)
+#define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
+const uint8_t IMU_SELECT[]                      = {8, 9, 10};    // len = MAX_CHIP_SELECTS
 #define TRIGGER_PIN                               4
 
-#ifdef USE_ENCODER
-#define RESPONSE_LEN                              43             // how many bytes tx per sample
-#else
-#define RESPONSE_LEN                              41
-#endif
-
-#define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: RESPONSE_LEN + room for byte stuffing
+#define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: response_len + room for byte stuffing
 
 // IMU REGISTERS
 #define SELF_TEST_X_GYRO                          0x00
@@ -112,7 +106,6 @@ const uint8_t IMU_SELECT[]                      = {8, 9, 10};       // chip sele
 #define READ_FLAG                                 0x80           // for spi com
  
 // FOR TXRX PACKETS OVER SERIAL
-
 #define COM_FLAG_START                            0x7E
 #define COM_FLAG_END                              0x7F
 #define COM_FLAG_ESCAPE                           0X7D
@@ -125,6 +118,7 @@ const uint8_t IMU_SELECT[]                      = {8, 9, 10};       // chip sele
 #define COM_PACKET_STRING                         0x64
 #define COM_PACKET_TEST                           0x65
 #define COM_PACKET_HELLO                          0x66
+#define COM_PACKET_NUMIMUS                        0x67
 
 // SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
 #define COM_SIGNAL_INIT                           0x50
@@ -148,6 +142,8 @@ const uint8_t IMU_SELECT[]                      = {8, 9, 10};       // chip sele
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
 unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
+byte imu_select[MAX_CHIP_SELECTS];
+byte response_len;
 
 
 
@@ -509,11 +505,23 @@ void begin_imu_com() {
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 
     uint8_t i;
-    for (i=0; i < NUM_IMUS; i++) {
-        pinMode(IMU_SELECT[i], OUTPUT);
-        digitalWrite(IMU_SELECT[i], HIGH);
+
+//     for (i=0; i < num_imus; i++) {
+//         pinMode(imu_select[i], OUTPUT);
+//         digitalWrite(imu_select[i], HIGH);
+//     }
+
+    num_imus = 0;
+
+    for (i=0; i < MAX_CHIP_SELECTS; i++) {
+        pinMode(IMU_SELECT_OPTION[i], OUTPUT);
+        digitalWrite(IMU_SELECT_OPTION[i], HIGH);
+        delay(400); // NEED THIS???
+        if (read_register(IMU_SELECT_OPTION[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
+           imu_select[num_imus] = i;
+           num_imus++;
+        }
     }
-    delay(400);                                    
 }
 
 void end_imu_com() {
@@ -530,39 +538,39 @@ void initialize(){
     pinMode(TRIGGER_PIN, INPUT);
 
     begin_imu_com();
+    tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);
+
+    response_len = 4 + (12 * num_imus) + 1;
+    #ifdef USE_ENCODER
+        resposne_len += 2;
+    #endif
+
 
     uint8_t i;
 
-    num_imus = 0;
-    for (i=0; i < NUM_CHIP_SELECTS; i++) {
-        if (read_register(IMU_SELECT[1], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
-           active_chip_selects[num_imus] = i;
-           num_imus++;
-        }
-    }
 
-    for (i=0; i < NUM_IMUS; i++) {
+    for (i=0; i < num_imus; i++) {
 
-
-        write_register(IMU_SELECT[i], REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
+        write_register(imu_select[i], REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
         delay(1);
 
-        write_register(IMU_SELECT[i], REG_CONFIG, 0x01);             // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
-        write_register(IMU_SELECT[i], REG_USER_CTRL, 0x20);          // RESERVED??
-        write_register(IMU_SELECT[i], REG_I2C_MST_CTRL, 0x0D);       // SET I2C MASTER CLOCK SPEED TO 400 KHZ
+        write_register(imu_select[i], REG_CONFIG, 0x01);             // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
+        write_register(imu_select[i], REG_USER_CTRL, 0x20);          // RESERVED??
+        write_register(imu_select[i], REG_I2C_MST_CTRL, 0x0D);       // SET I2C MASTER CLOCK SPEED TO 400 KHZ
 
         // SOFT RESET MAGNETOMETER
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL2);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x01);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG);
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL2);
+        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x01);
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 
         // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2, 100HZ
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x16);                                          // 100hz, 16-bit
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
+        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x16);                                          // 100hz, 16-bit
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 
     }
+
 
 #ifdef USE_ENCODER
     pinMode(PIN_EMS_CLK, OUTPUT);
@@ -579,34 +587,35 @@ void initialize(){
 
 void tx_asa(){
     int i;
-    uint8_t response[6];
-    for (i=0; i < 6; i++) {
-        response[i] = 0;
+    uint8_t response[3];
+
+    for (i=0; i < num_imus; i++) {
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_ASAX);
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG);
+        delay(DEL);
+        read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, response, 3);
+        delay(DEL);
+        tx_packet(response, 3, COM_PACKET_ASA);
     }
 
-    for (i=0; i < NUM_IMUS; i++) {
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_ASAX);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG); delay(DEL);
-        read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + (3*i), 3); delay(DEL);
-    }
-
-    tx_packet(response, 6, COM_PACKET_ASA);
 }
 
 
 
 void read_sample(){
-    uint8_t response[RESPONSE_LEN];
+    uint8_t response[response_len];
     uint8_t i;
     uint8_t j;
 
 
-    for (j=0; j < RESPONSE_LEN; j++) {
+    for (j=0; j < response_len; j++) {
         response[j] = 0;
     }
 
     j = 0;
+
+    // COULD SPEED THING UP BY REMOVING SAMPLE IDS...
     
     // SAMPLE ID
     response[j++] = next_sample_id >> 24;
@@ -623,35 +632,34 @@ void read_sample(){
 #endif
 
 
-    for (i=0; i < NUM_IMUS; i++) {
+    for (i=0; i < num_imus; i++) {
 
         // READ TEMPERATURE
-        // read_multiple_registers(IMU_SELECT[i], REG_TEMP_OUT_H, response + j, 2);
+        // read_multiple_registers(imu_select[i], REG_TEMP_OUT_H, response + j, 2);
 
         // READ ACCEL
-        read_multiple_registers(IMU_SELECT[i], REG_ACCEL_FIRST, response + j, 6);
+        read_multiple_registers(imu_select[i], REG_ACCEL_FIRST, response + j, 6);
         j += 6;
 
         // READ GYRO
-        read_multiple_registers(IMU_SELECT[i], REG_GYRO_FIRST, response + j, 6);
+        read_multiple_registers(imu_select[i], REG_GYRO_FIRST, response + j, 6);
         j += 6;
 
         // READ MAG
         // WE READ 7 BYTES SO READING STATUS2 TRIGGERS DATA RESET
         // N.B., MAG REGISTERS ARE LAID OUT IN LITTLE-ENDIAN ORDER, UNLIKE ACCEL AND GYRO
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
-        read_multiple_registers(IMU_SELECT[i], REG_EXT_SENS_DATA_00, response + j, 7);
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
+        read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, response + j, 7);
         j += 6;
 
     }
 
     // will overwrite the extra byte from mag STATUS2
-    response[j++] = digitalRead(TRIGGER_PIN) == HIGH ? 0x01 : 0x00;
+    response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
 
-    tx_packet(response, RESPONSE_LEN, COM_PACKET_SAMPLE);
-
+    tx_packet(response, response_len, COM_PACKET_SAMPLE);
 }
 
 
@@ -671,10 +679,10 @@ void stop_recording() {
     TIMSK1 &= ~(1 << OCIE1A);                            // disable timer compare interrupt
     // SET MAGS TO POWER-DOWN MODE
     byte i;
-    for (i=0; i < NUM_IMUS; i++) {
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_DO, 0x10);
-        write_register(IMU_SELECT[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+    for (i=0; i < num_imus; i++) {
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
+        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
     end_imu_com();
 
@@ -691,28 +699,31 @@ ISR(TIMER1_COMPA_vect) {
 
 
 void run_test() {
-    uint8_t response[6];
-    uint8_t i = 0;
 
-    begin_imu_com();
+// INITIALIZE FIRST???
 
+    uint8_t response[num_imus * 3];
+    uint8_t i;
+    uint8_t j = 0;
 
-    // COMMUNICATE WITH THE IMUS
-    response[i++] = ((NUM_IMUS > 0) && (read_register(IMU_SELECT[0], REG_WHO_AM_I) == IMU_WHOAMI_VAL)) ? 1 : 0;
-    response[i++] = ((NUM_IMUS > 1) && (read_register(IMU_SELECT[1], REG_WHO_AM_I) == IMU_WHOAMI_VAL)) ? 1 : 0;
+//    begin_imu_com();
+//
+//    for (i=0; i < num_imus; i++) {
+//
+//        // COMMUNICATE WITH THE IMUS
+//        response[j++] = (read_register(imu_select[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) ? 1 : 0;
+//
+//
+//        // RUN IMU SELF TESTS
+//        response[j++] = (self_test(imu_select[i])) ? 1 : 0;
+//
+//        // MAG SELF TESTS NOT IMPLEMENTED YET
+//        response[j++] = 0;
+//    }
+//
+//    end_imu_com();
 
-
-    // RUN IMU SELF TESTS
-    response[i++] = ((NUM_IMUS > 0) && (self_test(IMU_SELECT[0]))) ? 1 : 0;
-    response[i++] = ((NUM_IMUS > 1) && (self_test(IMU_SELECT[1]))) ? 1 : 0;
-
-    // MAG SELF TESTS NOT IMPLEMENTED YET
-    response[i++] = 0;
-    response[i++] = 0;
-
-    end_imu_com();
-
-    tx_packet(response, i, COM_PACKET_TEST);
+    tx_packet(response, j, COM_PACKET_TEST);
 }
 
 

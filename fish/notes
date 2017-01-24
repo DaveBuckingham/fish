@@ -1,5 +1,7 @@
 TODO:
 
+make sure num_imus doesn't change for one dataset
+
 clean up imports
 
 better default save directory
