@@ -63,6 +63,7 @@ class Am_rx(QObject):
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
+    numimus_signal = pyqtSignal(int)
 
 
     timestamp_signal = pyqtSignal(float)
@@ -242,11 +243,13 @@ class Am_rx(QObject):
             self.finished_signal.emit()
             return
 
+        self.numimus_signal.emit(num_imus)
+
         self.sample_length = 4 + (12 * self.num_imus) + 1
         if (Am_rx.USE_ENCODER):
             self.sample_length += 2
 
-        time.sleep(3)
+        time.sleep(2)
 
 
         ##################################

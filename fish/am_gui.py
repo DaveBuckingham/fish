@@ -53,6 +53,8 @@ class Am_ui(QWidget):
         # TIMESTAMPS OF COLLECTED DATA.
         self.timestamps   = []
 
+        self.num_imus = 0
+
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
@@ -63,6 +65,8 @@ class Am_ui(QWidget):
 
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
+
+
 
 
 
@@ -130,12 +134,12 @@ class Am_ui(QWidget):
 
         # GRAPHS
 
-        self.plot_a0 = Am_plot()
-        self.plot_a1 = Am_plot()
-        self.plot_g0 = Am_plot()
-        self.plot_g1 = Am_plot()
-        self.plot_m0 = Am_plot()
-        self.plot_m1 = Am_plot()
+        #self.plot_a0 = Am_plot()
+        #self.plot_a1 = Am_plot()
+        #self.plot_g0 = Am_plot()
+        #self.plot_g1 = Am_plot()
+        #self.plot_m0 = Am_plot()
+        #self.plot_m1 = Am_plot()
 
 
         # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
@@ -149,20 +153,23 @@ class Am_ui(QWidget):
         self.stats_num_samples = QLabel("Samples:")
         self.stats_true_frequency = QLabel("Frequency:")
         self.stats_time = QLabel("Time:")
+
         stats_layout.addWidget(self.stats_num_samples, 1, 2)
         stats_layout.addWidget(self.stats_true_frequency, 1, 3)
         stats_layout.addWidget(self.stats_time, 1, 4)
         stats_layout.setColumnMinimumWidth(2, 120)
 
+        plots_layout = QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
+        top_layout.addLayout(plots_layout, 1, 1)
 
-        top_layout.addWidget(self.plot_a0, 1, 1)
-        top_layout.addWidget(self.plot_a1, 1, 2)
-        top_layout.addWidget(self.plot_g0, 2, 1)
-        top_layout.addWidget(self.plot_g1, 2, 2)
-        top_layout.addWidget(self.plot_m0, 3, 1)
-        top_layout.addWidget(self.plot_m1, 3, 2)
+        # top_layout.addWidget(self.plot_a0, 1, 1)
+        # top_layout.addWidget(self.plot_a1, 1, 2)
+        # top_layout.addWidget(self.plot_g0, 2, 1)
+        # top_layout.addWidget(self.plot_g1, 2, 2)
+        # top_layout.addWidget(self.plot_m0, 3, 1)
+        # top_layout.addWidget(self.plot_m1, 3, 2)
 
         top_layout.addWidget(self.text_window, 4, 1, 1, 2)
         top_layout.addLayout(stats_layout, 5, 1, 1, 2)
@@ -211,12 +218,12 @@ class Am_ui(QWidget):
         #    QT CONNECTIONS    #
         ########################
 
-        self.clear_plots_signal.connect(self.plot_a0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_m0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_m1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_a0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_a1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_g0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_g1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_m0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_m1.clear_slot)
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
@@ -229,15 +236,16 @@ class Am_ui(QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.timestamp_signal.connect(self.timestamp_slot)
-        self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
-        self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
-        self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
-        self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
-        self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
-        self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
+        # self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
+        # self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
+        # self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
+        # self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
+        # self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
+        # self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
+        self.receiver.numimus_signal.connect(self.numimus_slot)
 
 
 
@@ -246,6 +254,21 @@ class Am_ui(QWidget):
             self.message_slot("PASS\n")
         else:
             self.error_slot("FAIL\n")
+
+
+    def make_plots(self):
+        self.plots = []
+        for i in (range(0, receiver.num_imus)):
+            plot_a = Am_plot(receiver.imu_data['imus'][i]['accel'])
+            plot_g = Am_plot(receiver.imu_data['imus'][i]['gyro'])
+            plot_m = Am_plot(receiver.imu_data['imus'][i]['mag'])
+            self.plots.append(plot_a)
+            self.plots.append(plot_g)
+            self.plots.append(plot_m)
+            plots_layout.addWidget(plot_a, i, 1)
+            plots_layout.addWidget(plot_g, i, 2)
+            plots_layout.addWidget(plot_m, i, 3)
+
 
 
 
@@ -420,6 +443,10 @@ class Am_ui(QWidget):
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
 
+
+    def numimus_slot(self, num_imus):
+        self.num_imus = num_imus
+        self.make_plots()
 
 
     # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT
