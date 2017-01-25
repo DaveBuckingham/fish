@@ -45,8 +45,6 @@ class Am_rx(QObject):
     COM_SIGNAL_HELLO                = 0x56
 
 
-
-
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
@@ -62,13 +60,13 @@ class Am_rx(QObject):
     mag_asas = []
 
 
-
     finished_signal = pyqtSignal()
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
 
 
     timestamp_signal = pyqtSignal(float)
+
     plot_a0_signal = pyqtSignal(float, list, bool)
     plot_a1_signal = pyqtSignal(float, list, bool)
     plot_g0_signal = pyqtSignal(float, list, bool)
@@ -224,8 +222,6 @@ class Am_rx(QObject):
         else:
             return None
 
-            
-
 
 
     @pyqtSlot()
@@ -298,7 +294,12 @@ class Am_rx(QObject):
         start_time = time.time() * 1000
 
         sample_index = 0
-        self.data = []
+
+        self.imu_data = {}
+        self.imu_data['timestamps'] = []
+        self.imu_data['imus'] = [[]] * num_imus
+        if (Am_rx.USE_ENCODER):
+            self.imu_data['encoder'] = []
 
         while (self.recording):
 
@@ -307,9 +308,8 @@ class Am_rx(QObject):
 
                 timestamp = (time.time() * 1000) - start_time
 
-                entry = (timestamp)
+                self.imu_data['timestamps'].append(timestamp)
 
-                #received = array.array('B', received).tostring()
                 received = bytearray(received)
 
                 (id) = struct.unpack('>L', received[:4])
@@ -320,8 +320,6 @@ class Am_rx(QObject):
                     del received[:2]
                     enc *= 0.3515625  # 360/1024
 
-
-                imu_data = []
                 for i in (range(0, num_imus)):
                     (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
                     del received[:12]
@@ -329,9 +327,9 @@ class Am_rx(QObject):
                     del received[:6]
                     (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
                     (mx, my, mz) = [(mx, my, mz)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
-                    imu_data.append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
-
-                entry = entry + (imu_data)
+                    imu_data['imus'][i]['accel'].append([ax, ay, az])
+                    imu_data['imus'][i]['gyro'].append([gx, gy, gz])
+                    imu_data['imus'][i]['mag'].append([mx, my, mz])
 
                 (trig) = struct.unpack('>?', received[0])
                 del received[0]
@@ -340,27 +338,25 @@ class Am_rx(QObject):
                     self.error_signal.emit("Sample packet too long.\n")
 
                 if (Am_rx.USE_ENCODER):
-                    entry = entry + (enc)
+                    imu_data['encoder'].append(enc)
 
                 if (trig and self.use_trigger):
                     self.message_signal.emit("received trigger\n")
                     self.recording = False
                     break
 
-                self.data.append(entry)
                 sample_index += 1
 
                 self.timestamp_signal.emit(timestamp)
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
 
-                for i in sample[2]:
-                self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
-                self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
-                self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
-                self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
-                self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
-                self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
+                #self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
+                #self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
+                #self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
+                #self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
+                #self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
+                #self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
             else:
                 print("unknown sample received. type: " + str(message_type))

@@ -17,7 +17,7 @@ class Am_plot(pg.PlotWidget):
         #self.setMinimumSize(3000, 100)
         #self.setMinimumHeight(500)
         self.data = [ deque([]), deque([]), deque([]) ]
-        self.timestamps = deque([])
+        #self.timestamps = deque([])
         self.x_scale_max = 300
 
         #font = QtGui.QFont('Serif', 7, QtGui.QFont.Light)
@@ -65,7 +65,7 @@ class Am_plot(pg.PlotWidget):
 
     def clear_slot(self):
         self.data = [ deque([]), deque([]), deque([]) ]
-        self.timestamps = deque([])
+        #self.timestamps = deque([])
 
     # RECEIVE A NEW DATA SAMPLE AND REPAINT GRAPH
     def data_slot(self, timestamp, values, refresh=True):
@@ -73,7 +73,7 @@ class Am_plot(pg.PlotWidget):
         self.data[0].append(values[0])
         self.data[1].append(values[1])
         self.data[2].append(values[2])
-        self.timestamps.append(timestamp)
+        #self.timestamps.append(timestamp)
 
         # if (len(self.timestamps) > self.x_scale_max):
         #     self.data[0].popleft()

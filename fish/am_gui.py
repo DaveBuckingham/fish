@@ -325,16 +325,16 @@ class Am_ui(QWidget):
             with h5py.File(str(filename), 'w') as datafile:
                 save_data = datafile.create_group("data")
 
-                save_data.create_dataset('t',      data=[x[0] for x in self.receiver.data])
-                save_data.create_dataset('Accel',  data=[x[1] for x in self.receiver.data])
-                save_data.create_dataset('Accel2', data=[x[2] for x in self.receiver.data])
-                save_data.create_dataset('Gyro',   data=[x[3] for x in self.receiver.data])
-                save_data.create_dataset('Gyro2',  data=[x[4] for x in self.receiver.data])
-                save_data.create_dataset('Mag',    data=[x[5] for x in self.receiver.data])
-                save_data.create_dataset('Mag2',   data=[x[6] for x in self.receiver.data])
-                if (self.receiver.USE_ENCODER):
-                    save_data.create_dataset('Encoder',   data=[x[7]   for x in self.receiver.data])
+                save_data.create_dataset('t', data=self.receiver.data['timestamps'])
+                for i in range(0, len(self.receiver.data['imus'])):
+                    imu = self.receiver.data['imus'][i]
+                    extension = "" if i < 1 else str(i + 1)
+                    save_data.create_dataset('Accel' + extension, data=self.receiver.data['imus'][i]['accel'])
+                    save_data.create_dataset('Gyro'  + extension, data=self.receiver.data['imus'][i]['gyro'])
+                    save_data.create_dataset('Mag'   + extension, data=self.receiver.data['imus'][i]['mag'])
 
+                if (self.receiver.USE_ENCODER):
+                    save_data.create_dataset('Encoder', data=self.receiver.data['encoder'])
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
@@ -349,25 +349,27 @@ class Am_ui(QWidget):
                 filename += '.hdf5'
 
             with h5py.File(str(filename), 'r') as datafile:
-                time = datafile.get('data/t')[()]
-                accel = datafile.get('data/Accel')[()]
-                accel2 = datafile.get('data/Accel2')[()]
-                gyro = datafile.get('data/Gyro')[()]
-                gyro2 = datafile.get('data/Gyro2')[()]
-                mag = datafile.get('data/Mag')[()]
-                mag2 = datafile.get('data/Mag2')[()]
+                self.receiver.d
+                self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+
+                self.receiver.imu_data['imus'] = []
+
+                i = 0
+                ext = ""
+                while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/mag' + ext in datafile):
+                    self.receiver.data['imus'].append([])
+                    self.receiver.imu_data['imus'][i]['accel'] = datafile.get('data/Accel' + ext)[()]
+                    self.receiver.imu_data['imus'][i]['gyro'] = datafile.get('data/Gyro' + ext)[()]
+                    self.receiver.imu_data['imus'][i]['mag'] = datafile.get('data/Mag' + ext)[()]
+                    i += 1
+                    ext = str(i + 1)
 
                 if (self.receiver.USE_ENCODER):
-                    self.receiver.data = list(zip(time, accel, accel2, gyro, gyro2, mag, mag2, datafile.get('data/Encoder')[()]))
-                else:
-                    self.receiver.data = list(zip(time, accel, accel2, gyro, gyro2, mag, mag2))
+                    self.receiver.data['encoder'] = datafile.get('data/Encoder')[()]
 
             self.message_slot(filename + " loaded\n")
             self.data_saved = True
             self.buttons['save'].setEnabled(True)
-
-
-
 
 
 
