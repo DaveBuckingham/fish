@@ -1,3 +1,0 @@
-[gui_scripts]
-fish = fish.__main__:main
-
