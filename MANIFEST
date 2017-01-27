@@ -6,6 +6,5 @@ am_tx/am_tx.ino
 __init__.py
 __main__.py
 MANIFEST
-LICENSE.txt
 README.rst
 setup.py

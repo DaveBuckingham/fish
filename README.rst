@@ -5,7 +5,7 @@ INSTALLATION
 PyQt4
 -----
 
-It is first necessary to install PyQt4. It is *not* possible to use
+It is first necessary to install PyQt4. It is not possible to use
 pip to install PyQt4.
 
 Windows

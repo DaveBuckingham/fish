@@ -8,7 +8,7 @@ import pyqtgraph as pg
 
 class Am_plot(pg.PlotWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, data0, data1, data2, parent=None):
 
 
         super(Am_plot, self).__init__()
@@ -16,8 +16,11 @@ class Am_plot(pg.PlotWidget):
 
         #self.setMinimumSize(3000, 100)
         #self.setMinimumHeight(500)
-        self.data = [ deque([]), deque([]), deque([]) ]
-        self.timestamps = deque([])
+        #self.data = [ deque([]), deque([]), deque([]) ]
+        self.data0 = data0
+        self.data1 = data1
+        self.data2 = data2
+
         self.x_scale_max = 300
 
         #font = QtGui.QFont('Serif', 7, QtGui.QFont.Light)
@@ -65,28 +68,34 @@ class Am_plot(pg.PlotWidget):
 
     def clear_slot(self):
         self.data = [ deque([]), deque([]), deque([]) ]
-        self.timestamps = deque([])
+        #self.timestamps = deque([])
+
+    def plot_slot(self):
+        x = range(len(self.data[0]), 0, -1)
+        self.line1.setData(x, self.data0)
+        self.line2.setData(x, self.data1)
+        self.line3.setData(x, self.data2)
 
     # RECEIVE A NEW DATA SAMPLE AND REPAINT GRAPH
     def data_slot(self, timestamp, values, refresh=True):
 
-        self.data[0].append(values[0])
-        self.data[1].append(values[1])
-        self.data[2].append(values[2])
-        self.timestamps.append(timestamp)
+        #self.data[0].append(values[0])
+        #self.data[1].append(values[1])
+        #self.data[2].append(values[2])
+        #self.timestamps.append(timestamp)
 
-        if (len(self.timestamps) > self.x_scale_max):
-            self.data[0].popleft()
-            self.data[1].popleft()
-            self.data[2].popleft()
-            self.timestamps.popleft()
+        # if (len(self.timestamps) > self.x_scale_max):
+        #     self.data[0].popleft()
+        #     self.data[1].popleft()
+        #     self.data[2].popleft()
+        #     self.timestamps.popleft()
 
 
         if (refresh):
             x = range(len(self.data[0]), 0, -1)
-            self.line1.setData(x, self.data[0])
-            self.line2.setData(x, self.data[1])
-            self.line3.setData(x, self.data[2])
+            #self.line1.setData(x, self.data[0])
+            #self.line2.setData(x, self.data[1])
+            #self.line3.setData(x, self.data[2])
             # self.autoRange(padding=0.2)
             # self.setXRange(0, 300, padding=0.0)
 

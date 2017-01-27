@@ -8,6 +8,7 @@ from PyQt4.QtGui import *
 from fish.am_rx import *
 from fish.am_plot import *
 from fish.am_settings import *
+#from fish.am_process import *
 from collections import namedtuple
 import time
 import h5py
@@ -24,7 +25,6 @@ class Am_ui(QWidget):
 
     # SIGNAL TO RESETS ALL THE PLOTS
     clear_plots_signal = pyqtSignal()
-
 
     def __init__(self, parent = None):
         super(Am_ui, self).__init__(parent)
@@ -53,14 +53,22 @@ class Am_ui(QWidget):
         # TIMESTAMPS OF COLLECTED DATA.
         self.timestamps   = []
 
+        self.num_imus = 0
+
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
         # MEASURED FREQUENCY OF DATA COLLECTED
         self.true_frequency = 0.0
 
+        self.last_data_path = ''
+
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
+
+
+
+
 
 
         ##################################################
@@ -70,9 +78,6 @@ class Am_ui(QWidget):
         self.receiver_thread = QThread()
         self.receiver = Am_rx()
         self.receiver.moveToThread(self.receiver_thread)
-
-
-
 
 
 
@@ -95,7 +100,6 @@ class Am_ui(QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
-        # self.buttons['record'].setStyleSheet("background-color: red")
 
 
         self.buttons['test'] = QPushButton('Test')
@@ -108,6 +112,11 @@ class Am_ui(QWidget):
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
+
+        self.buttons['load'] = QPushButton('Load')
+        self.buttons['load'].setToolTip('Load recorded data')
+        self.buttons['load'].clicked.connect(self.load_button_slot)
+        button_layout.addWidget(self.buttons['load'])
 
         self.buttons['quit'] = QPushButton('Quit')
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
@@ -125,12 +134,12 @@ class Am_ui(QWidget):
 
         # GRAPHS
 
-        self.plot_a0 = Am_plot()
-        self.plot_a1 = Am_plot()
-        self.plot_g0 = Am_plot()
-        self.plot_g1 = Am_plot()
-        self.plot_m0 = Am_plot()
-        self.plot_m1 = Am_plot()
+        #self.plot_a0 = Am_plot()
+        #self.plot_a1 = Am_plot()
+        #self.plot_g0 = Am_plot()
+        #self.plot_g1 = Am_plot()
+        #self.plot_m0 = Am_plot()
+        #self.plot_m1 = Am_plot()
 
 
         # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
@@ -144,20 +153,23 @@ class Am_ui(QWidget):
         self.stats_num_samples = QLabel("Samples:")
         self.stats_true_frequency = QLabel("Frequency:")
         self.stats_time = QLabel("Time:")
+
         stats_layout.addWidget(self.stats_num_samples, 1, 2)
         stats_layout.addWidget(self.stats_true_frequency, 1, 3)
         stats_layout.addWidget(self.stats_time, 1, 4)
         stats_layout.setColumnMinimumWidth(2, 120)
 
+        plots_layout = QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
+        top_layout.addLayout(plots_layout, 1, 1)
 
-        top_layout.addWidget(self.plot_a0, 1, 1)
-        top_layout.addWidget(self.plot_a1, 1, 2)
-        top_layout.addWidget(self.plot_g0, 2, 1)
-        top_layout.addWidget(self.plot_g1, 2, 2)
-        top_layout.addWidget(self.plot_m0, 3, 1)
-        top_layout.addWidget(self.plot_m1, 3, 2)
+        # top_layout.addWidget(self.plot_a0, 1, 1)
+        # top_layout.addWidget(self.plot_a1, 1, 2)
+        # top_layout.addWidget(self.plot_g0, 2, 1)
+        # top_layout.addWidget(self.plot_g1, 2, 2)
+        # top_layout.addWidget(self.plot_m0, 3, 1)
+        # top_layout.addWidget(self.plot_m1, 3, 2)
 
         top_layout.addWidget(self.text_window, 4, 1, 1, 2)
         top_layout.addLayout(stats_layout, 5, 1, 1, 2)
@@ -206,12 +218,12 @@ class Am_ui(QWidget):
         #    QT CONNECTIONS    #
         ########################
 
-        self.clear_plots_signal.connect(self.plot_a0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        self.clear_plots_signal.connect(self.plot_m0.clear_slot)
-        self.clear_plots_signal.connect(self.plot_m1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_a0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_a1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_g0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_g1.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_m0.clear_slot)
+        #self.clear_plots_signal.connect(self.plot_m1.clear_slot)
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
@@ -224,15 +236,16 @@ class Am_ui(QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.timestamp_signal.connect(self.timestamp_slot)
-        self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
-        self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
-        self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
-        self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
-        self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
-        self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
+        # self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
+        # self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
+        # self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
+        # self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
+        # self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
+        # self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
+        self.receiver.numimus_signal.connect(self.numimus_slot)
 
 
 
@@ -243,6 +256,21 @@ class Am_ui(QWidget):
             self.error_slot("FAIL\n")
 
 
+    def make_plots(self):
+        self.plots = []
+        for i in (range(0, receiver.num_imus)):
+            plot_a = Am_plot(receiver.imu_data['imus'][i]['accel'])
+            plot_g = Am_plot(receiver.imu_data['imus'][i]['gyro'])
+            plot_m = Am_plot(receiver.imu_data['imus'][i]['mag'])
+            self.plots.append(plot_a)
+            self.plots.append(plot_g)
+            self.plots.append(plot_m)
+            plots_layout.addWidget(plot_a, i, 1)
+            plots_layout.addWidget(plot_g, i, 2)
+            plots_layout.addWidget(plot_m, i, 3)
+
+
+
 
 ############################################
 #              BUTTON SLOTS                #
@@ -250,11 +278,6 @@ class Am_ui(QWidget):
 
 
     def test_button_slot(self):
-
-        # self.buttons['record'].setEnabled(False)
-        # self.buttons['test'].setEnabled(False)
-        # self.buttons['record'].update()
-        # self.buttons['test'].update()
 
 
         results = self.receiver.test()
@@ -282,8 +305,6 @@ class Am_ui(QWidget):
             self.message_slot("mag2 self test...")
             self.message_slot("not implemented\n")
 
-        # self.buttons['record'].setEnabled(True)
-        # self.buttons['test'].setEnabled(True)
 
 
     def quit_button_slot(self):
@@ -318,26 +339,60 @@ class Am_ui(QWidget):
 
 
     def save_button_slot(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', '', '*.hdf5')
+        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5')
+        self.last_data_path = os.path.dirname(filename)
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].toLower() != '.hdf5') ):
+            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
                 filename += '.hdf5'
 
-            datafile = h5py.File(str(filename), 'w')
-            save_data = datafile.create_group("data")
-            save_data.create_dataset('t',      data=[x['time']   for x in self.receiver.data])
-            save_data.create_dataset('Accel',  data=[x['accel0'] for x in self.receiver.data])
-            save_data.create_dataset('Accel2', data=[x['accel1'] for x in self.receiver.data])
-            save_data.create_dataset('Gyro',   data=[x['gyro0']  for x in self.receiver.data])
-            save_data.create_dataset('Gyro2',  data=[x['gyro1']  for x in self.receiver.data])
-            save_data.create_dataset('Mag',    data=[x['mag0']   for x in self.receiver.data])
-            save_data.create_dataset('Mag2',   data=[x['mag1']   for x in self.receiver.data])
-            if (self.receiver.USE_ENCODER):
-                save_data.create_dataset('Encoder',   data=[x['encoder']   for x in self.receiver.data])
-            datafile.close()
+            with h5py.File(str(filename), 'w') as datafile:
+                save_data = datafile.create_group("data")
+
+                save_data.create_dataset('t', data=self.receiver.data['timestamps'])
+                for i in range(0, len(self.receiver.data['imus'])):
+                    imu = self.receiver.data['imus'][i]
+                    extension = "" if i < 1 else str(i + 1)
+                    save_data.create_dataset('Accel' + extension, data=self.receiver.data['imus'][i]['accel'])
+                    save_data.create_dataset('Gyro'  + extension, data=self.receiver.data['imus'][i]['gyro'])
+                    save_data.create_dataset('Mag'   + extension, data=self.receiver.data['imus'][i]['mag'])
+
+                if (self.receiver.USE_ENCODER):
+                    save_data.create_dataset('Encoder', data=self.receiver.data['encoder'])
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
+
+
+    def load_button_slot(self):
+
+        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5')
+        self.last_data_path = os.path.dirname(filename)
+        if filename:
+            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
+                filename += '.hdf5'
+
+            with h5py.File(str(filename), 'r') as datafile:
+                self.receiver.d
+                self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+
+                self.receiver.imu_data['imus'] = []
+
+                i = 0
+                ext = ""
+                while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/mag' + ext in datafile):
+                    self.receiver.data['imus'].append([])
+                    self.receiver.imu_data['imus'][i]['accel'] = datafile.get('data/Accel' + ext)[()]
+                    self.receiver.imu_data['imus'][i]['gyro'] = datafile.get('data/Gyro' + ext)[()]
+                    self.receiver.imu_data['imus'][i]['mag'] = datafile.get('data/Mag' + ext)[()]
+                    i += 1
+                    ext = str(i + 1)
+
+                if (self.receiver.USE_ENCODER):
+                    self.receiver.data['encoder'] = datafile.get('data/Encoder')[()]
+
+            self.message_slot(filename + " loaded\n")
+            self.data_saved = True
+            self.buttons['save'].setEnabled(True)
 
 
 
@@ -388,6 +443,10 @@ class Am_ui(QWidget):
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
 
+
+    def numimus_slot(self, num_imus):
+        self.num_imus = num_imus
+        self.make_plots()
 
 
     # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT
