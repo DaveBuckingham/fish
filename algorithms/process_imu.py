@@ -178,6 +178,7 @@ class IMU(object):
                 Ca = np.array(Ca) / dt
             self._get_orientation_ekf(Ca=Ca)
 
+            # this is the bit that needs work!
             orient_world = []
             for chiprpy in self.orient_sensor:
                 QT = self._eul2rotm(chiprpy)
@@ -187,6 +188,7 @@ class IMU(object):
                 r, p, y = self._rotm2eul(worldrotm)
                 orient_world.append([r, p, y])
 
+            # and here!
             accdyn_world = []
             for acc1 in self.accdyn_sensor:
                 accdyn_world.append(self.chip2world_rot.dot(acc1))
