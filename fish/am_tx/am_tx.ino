@@ -59,7 +59,7 @@
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
-const uint8_t IMU_SELECT[]                      = {8, 9, 10};    // len = MAX_CHIP_SELECTS
+const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX_CHIP_SELECTS
 #define TRIGGER_PIN                               4
 
 #define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: response_len + room for byte stuffing
@@ -514,10 +514,10 @@ void begin_imu_com() {
     num_imus = 0;
 
     for (i=0; i < MAX_CHIP_SELECTS; i++) {
-        pinMode(IMU_SELECT_OPTION[i], OUTPUT);
-        digitalWrite(IMU_SELECT_OPTION[i], HIGH);
+        pinMode(IMU_SELECT_OPTIONS[i], OUTPUT);
+        digitalWrite(IMU_SELECT_OPTIONS[i], HIGH);
         delay(400); // NEED THIS???
-        if (read_register(IMU_SELECT_OPTION[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
+        if (read_register(IMU_SELECT_OPTIONS[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
            imu_select[num_imus] = i;
            num_imus++;
         }
@@ -542,7 +542,7 @@ void initialize(){
 
     response_len = 4 + (12 * num_imus) + 1;
     #ifdef USE_ENCODER
-        resposne_len += 2;
+        response_len += 2;
     #endif
 
 
@@ -730,6 +730,8 @@ void run_test() {
 void loop() {
     byte val;
     if (Serial.available() > 0) {
+        tx_packet(0, 0, Serial.read());
+        return;
         switch (Serial.read()) {
             case COM_SIGNAL_HELLO:
                 tx_packet(0, 0, COM_PACKET_HELLO);

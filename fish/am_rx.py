@@ -116,7 +116,8 @@ class Am_rx(QObject):
 
     # FOR SENDING COMMAND SIGNALS TO ARDUINO
     def tx_byte(self, val):
-        self.connection.write(chr(val))
+        #print(hex(val))
+        self.connection.write(bytes(val))
         
     # SHOULD ONLY BE USED BY rx_packet()
     def rx_byte(self):
@@ -124,6 +125,7 @@ class Am_rx(QObject):
         if (len(val) == 0):
             return None
         else:
+            print((ord(val)))
             return ord(val)
 
 
@@ -184,6 +186,7 @@ class Am_rx(QObject):
                 # timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
                 timeout  = 1.0    # 1 second timeout 
             )
+            self.message_signal.emit("serial connection established\n")
 
         except serial.serialutil.SerialException:
             self.error_signal.emit("failed to create connection\n")
@@ -199,10 +202,10 @@ class Am_rx(QObject):
         time.sleep(1)
         (message, message_type) = self.rx_packet()
         if ((message_type is not None) and (message_type == Am_rx.COM_PACKET_HELLO)):
-            self.message_signal.emit("serial connection established, handshake succesfull\n")
+            self.message_signal.emit("handshake succesfull\n")
             return True
         else:
-            self.error_signal.emit("serial connection established but handshake failed\n")
+            self.error_signal.emit("handshake failed. received: " + str(int(message_type)) + "\n")
             self.close_connection()
             return False
 
@@ -337,7 +340,7 @@ class Am_rx(QObject):
                 (trig) = struct.unpack('>?', received[0])
                 del received[0]
 
-                if (len(received > 0):
+                if (len(received > 0)):
                     self.error_signal.emit("Sample packet too long.\n")
 
                 if (Am_rx.USE_ENCODER):
