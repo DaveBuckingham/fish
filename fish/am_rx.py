@@ -116,8 +116,7 @@ class Am_rx(QObject):
 
     # FOR SENDING COMMAND SIGNALS TO ARDUINO
     def tx_byte(self, val):
-        #print(hex(val))
-        self.connection.write(bytes(val))
+        self.connection.write(chr(val))
         
     # SHOULD ONLY BE USED BY rx_packet()
     def rx_byte(self):
@@ -125,7 +124,6 @@ class Am_rx(QObject):
         if (len(val) == 0):
             return None
         else:
-            print((ord(val)))
             return ord(val)
 
 
@@ -239,14 +237,14 @@ class Am_rx(QObject):
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
         (message, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_NUMIMUS):
-            self.num_imus = message;
+            self.num_imus = message[0];
             self.message_signal.emit("Detected " + str(self.num_imus) + " IMUs.\n")
         else:
             self.error_signal.emit("Unable to determine number of IMUs.\n")
             self.finished_signal.emit()
             return
 
-        self.numimus_signal.emit(num_imus)
+        self.numimus_signal.emit(self.num_imus)
 
         self.sample_length = 4 + (12 * self.num_imus) + 1
         if (Am_rx.USE_ENCODER):
@@ -270,7 +268,7 @@ class Am_rx(QObject):
         #     self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
         #     self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
 
-        for i in (range(0, num_imus)):
+        for i in (range(0, self.num_imus)):
             (received, message_type) = self.rx_packet()
             if ((message_type == Am_rx.COM_PACKET_ASA) and (len(received) == 3)):
                 asa = []
@@ -303,14 +301,14 @@ class Am_rx(QObject):
 
         self.imu_data = {}
         self.imu_data['timestamps'] = []
-        self.imu_data['imus'] = [[]] * num_imus
+        self.imu_data['imus'] = [[]] * self.num_imus
         if (Am_rx.USE_ENCODER):
             self.imu_data['encoder'] = []
 
         while (self.recording):
 
             (received, message_type) = self.rx_packet()
-            if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == Am_rx.sample_length)):
+            if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
                 timestamp = (time.time() * 1000) - start_time
 

@@ -258,10 +258,10 @@ class Am_ui(QWidget):
 
     def make_plots(self):
         self.plots = []
-        for i in (range(0, receiver.num_imus)):
-            plot_a = Am_plot(receiver.imu_data['imus'][i]['accel'])
-            plot_g = Am_plot(receiver.imu_data['imus'][i]['gyro'])
-            plot_m = Am_plot(receiver.imu_data['imus'][i]['mag'])
+        for i in (range(0, self.receiver.num_imus)):
+            plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'])
+            plot_g = Am_plot(self.receiver.imu_data['imus'][i]['gyro'])
+            plot_m = Am_plot(self.receiver.imu_data['imus'][i]['mag'])
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)

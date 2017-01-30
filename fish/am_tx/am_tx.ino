@@ -144,6 +144,7 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
+byte recording;
 
 
 
@@ -673,6 +674,7 @@ void start_recording() {
     TCCR1B |= (1 << CS12);                               // 256 prescaler 
     TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
     interrupts();                                        // enable all interrupts
+    recording = 1;
 }
 
 void stop_recording() {
@@ -685,7 +687,7 @@ void stop_recording() {
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
     end_imu_com();
-
+    recording = 0;
 }
 
 void setup() {
@@ -730,12 +732,16 @@ void run_test() {
 void loop() {
     byte val;
     if (Serial.available() > 0) {
-        tx_packet(0, 0, Serial.read());
-        return;
         switch (Serial.read()) {
             case COM_SIGNAL_HELLO:
+                if (recording) {
+                    stop_recording;
+                }
                 tx_packet(0, 0, COM_PACKET_HELLO);
             case COM_SIGNAL_INIT:
+                if (recording) {
+                    stop_recording;
+                }
                 initialize();
                 break;
             case COM_SIGNAL_ASA:
