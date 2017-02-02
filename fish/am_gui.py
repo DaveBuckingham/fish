@@ -53,7 +53,7 @@ class Am_ui(QWidget):
         # TIMESTAMPS OF COLLECTED DATA.
         self.timestamps   = []
 
-        self.num_imus = 0
+        #self.num_imus = 0
 
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
@@ -159,46 +159,29 @@ class Am_ui(QWidget):
         stats_layout.addWidget(self.stats_time, 1, 4)
         stats_layout.setColumnMinimumWidth(2, 120)
 
-        plots_layout = QGridLayout()
+        self.plots_layout = QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
-        top_layout.addLayout(plots_layout, 1, 1)
-
-        # top_layout.addWidget(self.plot_a0, 1, 1)
-        # top_layout.addWidget(self.plot_a1, 1, 2)
-        # top_layout.addWidget(self.plot_g0, 2, 1)
-        # top_layout.addWidget(self.plot_g1, 2, 2)
-        # top_layout.addWidget(self.plot_m0, 3, 1)
-        # top_layout.addWidget(self.plot_m1, 3, 2)
+        top_layout.addLayout(self.plots_layout, 1, 1)
 
         top_layout.addWidget(self.text_window, 4, 1, 1, 2)
         top_layout.addLayout(stats_layout, 5, 1, 1, 2)
 
-        top_layout.addWidget(self.button_container, 1, 3, 3, 1)
-        top_layout.addWidget(self.settings, 4, 3)
+        top_layout.addWidget(self.button_container, 1, 4, 3, 1)
+        top_layout.addWidget(self.settings, 4, 4)
 
-
-        # GRAPH LABELS
-
-        label = QtGui.QLabel("IMU 1")
-        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 0, 1)
-
-        label = QtGui.QLabel("IMU 2")
-        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 0, 2)
 
         label = QtGui.QLabel("Accel.")
         label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 1, 0)
+        self.plots_layout.addWidget(label, 0, 1)
 
         label = QtGui.QLabel("Gyro.")
         label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 2, 0)
+        self.plots_layout.addWidget(label, 0, 2)
 
         label = QtGui.QLabel("Mag.")
         label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 3, 0)
+        self.plots_layout.addWidget(label, 0, 3)
 
 
         # ADD TOP LEVEL LAYOUT
@@ -236,6 +219,8 @@ class Am_ui(QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
 
         self.receiver.timestamp_signal.connect(self.timestamp_slot)
+
+
         # self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
         # self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
         # self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
@@ -265,9 +250,17 @@ class Am_ui(QWidget):
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
-            plots_layout.addWidget(plot_a, i, 1)
-            plots_layout.addWidget(plot_g, i, 2)
-            plots_layout.addWidget(plot_m, i, 3)
+            self.plots_layout.addWidget(plot_a, i+1, 1)
+            self.plots_layout.addWidget(plot_g, i+1, 2)
+            self.plots_layout.addWidget(plot_m, i+1, 3)
+
+            label = QtGui.QLabel("IMU " + str(i+1))
+            label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
+            self.plots_layout.addWidget(label, i+1, 0)
+
+
+
+
 
 
 
@@ -442,6 +435,10 @@ class Am_ui(QWidget):
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
+
+
+        for p in self.plots:
+            p.plot_slot()
 
 
     def numimus_slot(self, num_imus):

@@ -164,7 +164,7 @@ class Process(object):
             initwindow - Initial time window to average to get the initial orientation.
             beta - Madgwick beta parameter. beta=0 is equivalent to integrating the gyros
             lCa - log10 of the Ca parameter.  Makes it easier to give values for Ca that are close to but not
-                equal to zero.  lCa overrides Ca if you give both.
+                equal to zero.  lCa overrides Ca if you give both. (is this last sentance true? -db)
             Ca - Dynamic acceleration drift parameter. Roughly related to the frequency range of dynamic acceleartion.
                 Small values (close to zero) mean that dynamic acceleration will be relatively smooth, while larger
                  values (> 1) mean that dynamic acceleration will track the overall acceleration more closely

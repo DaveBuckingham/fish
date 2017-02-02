@@ -8,7 +8,7 @@ import pyqtgraph as pg
 
 class Am_plot(pg.PlotWidget):
 
-    def __init__(self, data0, data1, data2, parent=None):
+    def __init__(self, plot_data, parent=None):
 
 
         super(Am_plot, self).__init__()
@@ -17,9 +17,10 @@ class Am_plot(pg.PlotWidget):
         #self.setMinimumSize(3000, 100)
         #self.setMinimumHeight(500)
         #self.data = [ deque([]), deque([]), deque([]) ]
-        self.data0 = data0
-        self.data1 = data1
-        self.data2 = data2
+        self.plot_data = plot_data
+        self.data0 = plot_data[0]
+        self.data1 = plot_data[1]
+        self.data2 = plot_data[2]
 
         self.x_scale_max = 300
 
@@ -67,11 +68,14 @@ class Am_plot(pg.PlotWidget):
 
 
     def clear_slot(self):
-        self.data = [ deque([]), deque([]), deque([]) ]
+        pass
+        #self.data = [ deque([]), deque([]), deque([]) ]
         #self.timestamps = deque([])
 
     def plot_slot(self):
-        x = range(len(self.data[0]), 0, -1)
+        #print("DATA: " + str(self.data0) + "\t" + str(self.data1) + "\t" + str(self.data2))
+        #print("DATA: " + str(self.plot_data))
+        x = range(len(self.data0), 0, -1)
         self.line1.setData(x, self.data0)
         self.line2.setData(x, self.data1)
         self.line3.setData(x, self.data2)

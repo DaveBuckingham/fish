@@ -112,8 +112,8 @@ const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX
 #define COM_FLAG_XOR                              0X20
 
 // TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-#define COM_PACKET_SAMPLE                         0x60
-#define COM_PACKET_ASA                            0x61
+#define COM_PACKET_SAMPLE                         0x60   // 96
+#define COM_PACKET_ASA                            0x61   // 97
 #define COM_PACKET_TRIGGER                        0x63
 #define COM_PACKET_STRING                         0x64
 #define COM_PACKET_TEST                           0x65
@@ -144,7 +144,7 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
-byte recording;
+byte first;
 
 
 
@@ -172,6 +172,7 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
     }
     serial_buffer[j++] = COM_FLAG_END;
     Serial.write(serial_buffer, j);
+    //Serial.flush();
 }
 
 
@@ -541,7 +542,7 @@ void initialize(){
     begin_imu_com();
     tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);
 
-    response_len = 4 + (12 * num_imus) + 1;
+    response_len = 4 + (18 * num_imus) + 1;
     #ifdef USE_ENCODER
         response_len += 2;
     #endif
@@ -674,7 +675,6 @@ void start_recording() {
     TCCR1B |= (1 << CS12);                               // 256 prescaler 
     TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
     interrupts();                                        // enable all interrupts
-    recording = 1;
 }
 
 void stop_recording() {
@@ -687,10 +687,10 @@ void stop_recording() {
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
     end_imu_com();
-    recording = 0;
 }
 
 void setup() {
+    first = 1;
     Serial.begin(115200);
 }
 
@@ -734,14 +734,9 @@ void loop() {
     if (Serial.available() > 0) {
         switch (Serial.read()) {
             case COM_SIGNAL_HELLO:
-                if (recording) {
-                    stop_recording;
-                }
                 tx_packet(0, 0, COM_PACKET_HELLO);
+                break;
             case COM_SIGNAL_INIT:
-                if (recording) {
-                    stop_recording;
-                }
                 initialize();
                 break;
             case COM_SIGNAL_ASA:
