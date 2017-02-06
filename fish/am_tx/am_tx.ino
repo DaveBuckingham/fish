@@ -112,21 +112,21 @@ const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX
 #define COM_FLAG_XOR                              0X20
 
 // TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-#define COM_PACKET_SAMPLE                         0x60   // 96
-#define COM_PACKET_ASA                            0x61   // 97
-#define COM_PACKET_TRIGGER                        0x63
-#define COM_PACKET_STRING                         0x64
-#define COM_PACKET_TEST                           0x65
-#define COM_PACKET_HELLO                          0x66
-#define COM_PACKET_NUMIMUS                        0x67
+#define COM_PACKET_SAMPLE                         0x50
+#define COM_PACKET_ASA                            0x51
+#define COM_PACKET_TRIGGER                        0x53
+#define COM_PACKET_STRING                         0x54
+#define COM_PACKET_TEST                           0x55
+#define COM_PACKET_HELLO                          0x56
+#define COM_PACKET_NUMIMUS                        0x57
 
 // SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-#define COM_SIGNAL_INIT                           0x50
-#define COM_SIGNAL_ASA                            0x52
-#define COM_SIGNAL_RUN                            0x53
-#define COM_SIGNAL_STOP                           0x54
-#define COM_SIGNAL_TEST                           0x55
-#define COM_SIGNAL_HELLO                          0x56
+#define COM_SIGNAL_INIT                           0x69  // 'i'
+#define COM_SIGNAL_ASA                            0x61  // 'a'
+#define COM_SIGNAL_RUN                            0x72  // 'r'
+#define COM_SIGNAL_STOP                           0x73  // 's'
+#define COM_SIGNAL_TEST                           0x74  // 't'
+#define COM_SIGNAL_HELLO                          0x68  // 'h'
 
 #define IMU_WHOAMI_VAL                            0x71
 
@@ -172,7 +172,6 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
     }
     serial_buffer[j++] = COM_FLAG_END;
     Serial.write(serial_buffer, j);
-    //Serial.flush();
 }
 
 
@@ -248,10 +247,6 @@ int read_encoder() {
 #define NUM_REPS         200
 
 byte self_test(byte chip) {
-    // uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
-    // uint8_t selfTest[6];
-    // int32_t gAvg[3] = {0}, aAvg[3] = {0}, aSTAvg[3] = {0}, gSTAvg[3] = {0};
-    // float factoryTrim[6];
 
     uint8_t FS = 0;
 
@@ -503,15 +498,7 @@ byte self_test(byte chip) {
 
 void begin_imu_com() {
 
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
-
     uint8_t i;
-
-//     for (i=0; i < num_imus; i++) {
-//         pinMode(imu_select[i], OUTPUT);
-//         digitalWrite(imu_select[i], HIGH);
-//     }
 
     num_imus = 0;
 
@@ -526,13 +513,6 @@ void begin_imu_com() {
     }
 }
 
-void end_imu_com() {
-    SPI.endTransaction();
-    SPI.end();
-    Serial.flush();
-}
-
-
 
 void initialize(){
     next_sample_id = 0;
@@ -546,7 +526,6 @@ void initialize(){
     #ifdef USE_ENCODER
         response_len += 2;
     #endif
-
 
     uint8_t i;
 
@@ -600,9 +579,7 @@ void tx_asa(){
         delay(DEL);
         tx_packet(response, 3, COM_PACKET_ASA);
     }
-
 }
-
 
 
 void read_sample(){
@@ -661,6 +638,7 @@ void read_sample(){
     // will overwrite the extra byte from mag STATUS2
     response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
 
+
     tx_packet(response, response_len, COM_PACKET_SAMPLE);
 }
 
@@ -686,12 +664,13 @@ void stop_recording() {
         write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
-    end_imu_com();
 }
 
 void setup() {
     first = 1;
     Serial.begin(115200);
+    SPI.begin();
+    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 }
 
 

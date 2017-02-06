@@ -29,20 +29,20 @@ class Am_rx(QObject):
     COM_FLAG_XOR                    = 0x20
 
     # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-    COM_PACKET_SAMPLE               = 0x60     # 96
-    COM_PACKET_ASA                  = 0x61     # 97
-    COM_PACKET_STRING               = 0x64
-    COM_PACKET_TEST                 = 0x65
-    COM_PACKET_HELLO                = 0x66
-    COM_PACKET_NUMIMUS              = 0x67
+    COM_PACKET_SAMPLE               = 0x50
+    COM_PACKET_ASA                  = 0x51
+    COM_PACKET_STRING               = 0x54
+    COM_PACKET_TEST                 = 0x55
+    COM_PACKET_HELLO                = 0x56
+    COM_PACKET_NUMIMUS              = 0x57
 
     # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-    COM_SIGNAL_INIT                 = 0x50
-    COM_SIGNAL_ASA                  = 0x52
-    COM_SIGNAL_RUN                  = 0x53
-    COM_SIGNAL_STOP                 = 0x54
-    COM_SIGNAL_TEST                 = 0x55
-    COM_SIGNAL_HELLO                = 0x56
+    COM_SIGNAL_INIT                 = 0x69
+    COM_SIGNAL_ASA                  = 0x61
+    COM_SIGNAL_RUN                  = 0x72
+    COM_SIGNAL_STOP                 = 0x73
+    COM_SIGNAL_TEST                 = 0x74
+    COM_SIGNAL_HELLO                = 0x68
 
 
     GYRO_SENSITIVITY             = 131     # if range is +- 250
@@ -361,6 +361,7 @@ class Am_rx(QObject):
                     enc *= 0.3515625  # 360/1024
 
                 for i in (range(0, self.num_imus)):
+                    #print(ord(received))
                     (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
                     print(str((ax, ay, az, gx, gy)))
                     del received[:12]
