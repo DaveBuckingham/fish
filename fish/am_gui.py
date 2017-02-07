@@ -244,9 +244,9 @@ class Am_ui(QWidget):
     def make_plots(self):
         self.plots = []
         for i in (range(0, self.receiver.num_imus)):
-            plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'])
-            plot_g = Am_plot(self.receiver.imu_data['imus'][i]['gyro'])
-            plot_m = Am_plot(self.receiver.imu_data['imus'][i]['mag'])
+            plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'], self)
+            plot_g = Am_plot(self.receiver.imu_data['imus'][i]['gyro'], self)
+            plot_m = Am_plot(self.receiver.imu_data['imus'][i]['mag'], self)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
@@ -332,7 +332,8 @@ class Am_ui(QWidget):
 
 
     def save_button_slot(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5')
+        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5 *.csv')
+        filename = str(filename)
         self.last_data_path = os.path.dirname(filename)
         if filename:
             if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
@@ -341,16 +342,17 @@ class Am_ui(QWidget):
             with h5py.File(str(filename), 'w') as datafile:
                 save_data = datafile.create_group("data")
 
-                save_data.create_dataset('t', data=self.receiver.data['timestamps'])
-                for i in range(0, len(self.receiver.data['imus'])):
-                    imu = self.receiver.data['imus'][i]
+                save_data.create_dataset('t', data=self.receiver.imu_data['timestamps'])
+                for i in range(0, len(self.receiver.imu_data['imus'])):
+                    imu = self.receiver.imu_data['imus'][i]
                     extension = "" if i < 1 else str(i + 1)
-                    save_data.create_dataset('Accel' + extension, data=self.receiver.data['imus'][i]['accel'])
-                    save_data.create_dataset('Gyro'  + extension, data=self.receiver.data['imus'][i]['gyro'])
-                    save_data.create_dataset('Mag'   + extension, data=self.receiver.data['imus'][i]['mag'])
+
+                    save_data.create_dataset('Accel' + extension, data=zip(*self.receiver.imu_data['imus'][i]['accel']))
+                    save_data.create_dataset('Gyro'  + extension, data=zip(*self.receiver.imu_data['imus'][i]['gyro']))
+                    save_data.create_dataset('Mag'   + extension, data=zip(*self.receiver.imu_data['imus'][i]['mag']))
 
                 if (self.receiver.USE_ENCODER):
-                    save_data.create_dataset('Encoder', data=self.receiver.data['encoder'])
+                    save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
@@ -358,30 +360,34 @@ class Am_ui(QWidget):
 
     def load_button_slot(self):
 
-        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5')
+        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5 *.csv')
+        filename = str(filename)
         self.last_data_path = os.path.dirname(filename)
         if filename:
             if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
                 filename += '.hdf5'
 
             with h5py.File(str(filename), 'r') as datafile:
-                self.receiver.d
+                self.receiver.imu_data = {}
                 self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
 
                 self.receiver.imu_data['imus'] = []
 
+
                 i = 0
                 ext = ""
                 while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/mag' + ext in datafile):
-                    self.receiver.data['imus'].append([])
-                    self.receiver.imu_data['imus'][i]['accel'] = datafile.get('data/Accel' + ext)[()]
-                    self.receiver.imu_data['imus'][i]['gyro'] = datafile.get('data/Gyro' + ext)[()]
-                    self.receiver.imu_data['imus'][i]['mag'] = datafile.get('data/Mag' + ext)[()]
+                    self.receiver.imu_data['imus'].append([])
+                    self.receiver.imu_data['imus'][i]['accel'] = map(list, zip(*datafile.get('data/Accel' + ext)[()]))
+                    self.receiver.imu_data['imus'][i]['gyro'] = map(list, zip(*datafile.get('data/Gyro' + ext)[()]))
+                    self.receiver.imu_data['imus'][i]['mag'] = map(list, zip(*datafile.get('data/Mag' + ext)[()]))
                     i += 1
                     ext = str(i + 1)
 
+                self.receiver.num_imus = i
+
                 if (self.receiver.USE_ENCODER):
-                    self.receiver.data['encoder'] = datafile.get('data/Encoder')[()]
+                    self.receiver.imu_data['encoder'] = datafile.get('data/Encoder')[()]
 
             self.message_slot(filename + " loaded\n")
             self.data_saved = True
@@ -407,11 +413,11 @@ class Am_ui(QWidget):
         # CROP DATA IF PRE-TRIGGER
         if (len(self.timestamps) > 0):
             if (self.receiver.use_trigger):
-                data_start_time = self.receiver.data[-1]['time'] - (self.pre_trigger_delay * 1000);
+                data_start_time = self.receiver.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
                 data_start_index = 0
-                for i in range(0, len(self.receiver.data)):
-                    if (self.receiver.data[i]['time'] > data_start_time):
-                        self.receiver.data = self.receiver.data[i:]
+                for i in range(0, len(self.receiver.imu_data)):
+                    if (self.receiver.imu_data[i]['time'] > data_start_time):
+                        self.receiver.imu_data = self.receiver.imu_data[i:]
                         break
 
         self.message_slot("done recording\n")
@@ -438,7 +444,8 @@ class Am_ui(QWidget):
 
 
         for p in self.plots:
-            p.plot_slot()
+            pass
+            #p.plot_slot()
 
 
     def numimus_slot(self, num_imus):

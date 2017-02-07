@@ -94,6 +94,8 @@ class Am_rx(QObject):
         self.sample_length = 0
 
 
+        self.imu_data = {}
+
         self.end_timestamp = 'inf'
 
         self.use_trigger = False
@@ -363,16 +365,27 @@ class Am_rx(QObject):
                 for i in (range(0, self.num_imus)):
                     #print(ord(received))
                     (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
-                    print(str((ax, ay, az, gx, gy)))
                     del received[:12]
                     (mx, my, mz) = struct.unpack('<hhh', received[:6]) # BIG ENDIAN
                     del received[:6]
                     (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
                     (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
-                    self.imu_data['imus'][i]['accel'].append([ax, ay, az])
-                    self.imu_data['imus'][i]['gyro'].append([gx, gy, gz])
-                    self.imu_data['imus'][i]['mag'].append([mx, my, mz])
-                    #print(str((ax, ay, az, gx, gy, gz, mx, my, mz)))
+
+                    #self.imu_data['imus'][i]['accel'].append([ax, ay, az])
+                    #self.imu_data['imus'][i]['gyro'].append([gx, gy, gz])
+                    #self.imu_data['imus'][i]['mag'].append([mx, my, mz])
+
+                    self.imu_data['imus'][i]['accel'][0].append(ax)
+                    self.imu_data['imus'][i]['accel'][1].append(ay)
+                    self.imu_data['imus'][i]['accel'][2].append(az)
+
+                    self.imu_data['imus'][i]['gyro'][0].append(gx)
+                    self.imu_data['imus'][i]['gyro'][1].append(gy)
+                    self.imu_data['imus'][i]['gyro'][2].append(gz)
+
+                    self.imu_data['imus'][i]['mag'][0].append(mx)
+                    self.imu_data['imus'][i]['mag'][1].append(my)
+                    self.imu_data['imus'][i]['mag'][2].append(mz)
 
                 (trig,) = struct.unpack('>?', str(received[0]))
                 del received[0]

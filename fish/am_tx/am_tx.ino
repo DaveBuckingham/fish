@@ -57,6 +57,7 @@
 
 #define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
+//#define SAMPLE_FREQ_HZ                            1            // attempted samples per second
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
 const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX_CHIP_SELECTS
@@ -505,9 +506,9 @@ void begin_imu_com() {
     for (i=0; i < MAX_CHIP_SELECTS; i++) {
         pinMode(IMU_SELECT_OPTIONS[i], OUTPUT);
         digitalWrite(IMU_SELECT_OPTIONS[i], HIGH);
-        delay(400); // NEED THIS???
+        //delay(400); // NEED THIS???
         if (read_register(IMU_SELECT_OPTIONS[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
-           imu_select[num_imus] = i;
+           imu_select[num_imus] = IMU_SELECT_OPTIONS[i];
            num_imus++;
         }
     }
@@ -617,11 +618,13 @@ void read_sample(){
         // read_multiple_registers(imu_select[i], REG_TEMP_OUT_H, response + j, 2);
 
         // READ ACCEL
+        //read_multiple_registers(9, REG_ACCEL_FIRST, response + j, 6);
         read_multiple_registers(imu_select[i], REG_ACCEL_FIRST, response + j, 6);
         j += 6;
 
         // READ GYRO
         read_multiple_registers(imu_select[i], REG_GYRO_FIRST, response + j, 6);
+        //read_multiple_registers(9, REG_GYRO_FIRST, response + j, 6);
         j += 6;
 
         // READ MAG
