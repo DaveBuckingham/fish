@@ -16,20 +16,21 @@ import signal
 import atexit
 from collections import deque
 
-class Am_ui(QWidget):
+class Am_gui(QWidget):
 
     # DISPLAYED IN WINDOW HEADER AND SUCH
     APPLICATION_NAME = 'IMU Collect 0.01'
 
     FREQ_AVERAGE_WINDOW = 100
 
-    # SIGNAL TO RESETS ALL THE PLOTS
-    clear_plots_signal = pyqtSignal()
+    PLOT_DELAY_MS = 50
 
     def __init__(self, parent = None):
-        super(Am_ui, self).__init__(parent)
+        super(Am_gui, self).__init__(parent)
 
 
+        #self.timer = QTimer();
+        #QtCore.QTimer.connect(self.timer, QtCore.SIGNAL("timeout()"), self, QtCore.SLOT("update()"))
 
         ########################
         #       VARIABLES      #
@@ -51,7 +52,7 @@ class Am_ui(QWidget):
 
 
         # TIMESTAMPS OF COLLECTED DATA.
-        self.timestamps   = []
+        #self.timestamps   = []
 
         #self.num_imus = 0
 
@@ -67,6 +68,8 @@ class Am_ui(QWidget):
         top_layout = QGridLayout()
 
 
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update)
 
 
 
@@ -78,7 +81,6 @@ class Am_ui(QWidget):
         self.receiver_thread = QThread()
         self.receiver = Am_rx()
         self.receiver.moveToThread(self.receiver_thread)
-
 
 
 
@@ -132,16 +134,6 @@ class Am_ui(QWidget):
 
 
 
-        # GRAPHS
-
-        #self.plot_a0 = Am_plot()
-        #self.plot_a1 = Am_plot()
-        #self.plot_g0 = Am_plot()
-        #self.plot_g1 = Am_plot()
-        #self.plot_m0 = Am_plot()
-        #self.plot_m1 = Am_plot()
-
-
         # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
 
         self.settings = Am_settings(self)
@@ -192,7 +184,7 @@ class Am_ui(QWidget):
 
 
         # SET WINDOW TITLE
-        self.setWindowTitle(Am_ui.APPLICATION_NAME) 
+        self.setWindowTitle(Am_gui.APPLICATION_NAME) 
 
 
 
@@ -201,14 +193,11 @@ class Am_ui(QWidget):
         #    QT CONNECTIONS    #
         ########################
 
-        #self.clear_plots_signal.connect(self.plot_a0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_g0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_m0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_m1.clear_slot)
+
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
+
+        self.receiver.recording_signal.connect(self.start_plot_slot)
 
         # USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
         # self.receiver_thread.started.connect(self.receiver.run_fake)
@@ -218,15 +207,8 @@ class Am_ui(QWidget):
 
         self.receiver_thread.finished.connect(self.receiver_done)
 
-        self.receiver.timestamp_signal.connect(self.timestamp_slot)
 
 
-        # self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
-        # self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
-        # self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
-        # self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
-        # self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
-        # self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
@@ -244,9 +226,9 @@ class Am_ui(QWidget):
     def make_plots(self):
         self.plots = []
         for i in (range(0, self.receiver.num_imus)):
-            plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'], self)
-            plot_g = Am_plot(self.receiver.imu_data['imus'][i]['gyro'], self)
-            plot_m = Am_plot(self.receiver.imu_data['imus'][i]['mag'], self)
+            plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'], self.receiver.data_lock, self)
+            plot_g = Am_plot(self.receiver.imu_data['imus'][i]['gyro'], self.receiver.data_lock, self)
+            plot_m = Am_plot(self.receiver.imu_data['imus'][i]['mag'], self.receiver.data_lock, self)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
@@ -302,7 +284,7 @@ class Am_ui(QWidget):
 
     def quit_button_slot(self):
         result = (QMessageBox.question(self,
-                                       Am_ui.APPLICATION_NAME,
+                                       Am_gui.APPLICATION_NAME,
                                        'Really quit?',
                                        QMessageBox.Yes | QMessageBox.No,
                                        QMessageBox.Yes))
@@ -406,12 +388,13 @@ class Am_ui(QWidget):
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(len(self.timestamps) > 0)
+        self.buttons['save'].setEnabled(len(self.receiver.imu_data['timestamps']) > 0)
         self.buttons['test'].setEnabled(True)
 
 
+
         # CROP DATA IF PRE-TRIGGER
-        if (len(self.timestamps) > 0):
+        if (len(self.receiver.imu_data['timestamps']) > 0):
             if (self.receiver.use_trigger):
                 data_start_time = self.receiver.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
                 data_start_index = 0
@@ -423,29 +406,27 @@ class Am_ui(QWidget):
         self.message_slot("done recording\n")
 
 
+    def update(self):
+ 
+        timestamps = self.receiver.imu_data['timestamps']
 
+        if(len(timestamps) > 0):
+            self.stats_time.setText('Time: %.1f' % (timestamps[-1]))
 
-    # CALLED BY am_rx.py FOR EVERY SAMPLE
-    def timestamp_slot(self, timestamp):
+        num_samples = len(timestamps)
+        self.stats_num_samples.setText('Samples: %d' % num_samples)
 
-        self.timestamps.append(timestamp)
-
-        self.stats_time.setText('Time: %.1f' % (timestamp))
-
-        self.num_samples += 1
-        self.stats_num_samples.setText('Samples: %d' % self.num_samples)
-
-        if (self.num_samples > Am_ui.FREQ_AVERAGE_WINDOW):
-            # self.true_frequency = (Am_ui.FREQ_AVERAGE_WINDOW / (self.timestamps[-1] - self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW + 1)])) * 1000
-            window = self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW):]
+        if (num_samples > Am_gui.FREQ_AVERAGE_WINDOW):
+            window = timestamps[-(Am_gui.FREQ_AVERAGE_WINDOW):]
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
 
-
         for p in self.plots:
-            pass
-            #p.plot_slot()
+            p.plot_slot()
+
+
+
 
 
     def numimus_slot(self, num_imus):
@@ -477,6 +458,8 @@ class Am_ui(QWidget):
 #         OTHER FUNCTIONS (NOT SLOTS)      #
 ############################################
 
+    def start_plot_slot(self):
+        self.timer.start(Am_gui.PLOT_DELAY_MS)
 
     # START RECORDING DATA
     def record(self):
@@ -491,9 +474,11 @@ class Am_ui(QWidget):
         self.buttons['save'].setEnabled(False)
         self.buttons['test'].setEnabled(False)
 
-        self.clear_plots_signal.emit()
-
         self.receiver_thread.start()
+
+
+
+
 
 
     # STOP RECORDING DATA
@@ -504,12 +489,13 @@ class Am_ui(QWidget):
     # THIS FUNCTION SHOULD BE OK WITH BEING CALLED REPEATEDLY
     def stop_recording(self):
         self.receiver.recording = False
+        self.timer.stop()
 
                                           
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt, will leave child process running!
     app = QApplication(sys.argv)
-    ex = Am_ui()
+    ex = Am_gui()
     atexit.register(ex.stop_recording)
     ex.show()
     sys.exit(app.exec_())

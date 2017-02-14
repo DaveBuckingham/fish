@@ -1,4 +1,6 @@
 
+import time
+import random
 import sys
 from PyQt4 import QtGui, QtCore
 from collections import deque
@@ -8,14 +10,12 @@ import pyqtgraph as pg
 
 class Am_plot(pg.PlotWidget):
 
-    def __init__(self, plot_data, parent=None):
+    def __init__(self, plot_data, lock, parent=None):
 
         super(Am_plot, self).__init__()
 
-        #self.setMinimumSize(3000, 100)
-        #self.setMinimumHeight(500)
-        #self.data = [ deque([]), deque([]), deque([]) ]
         self.plot_data = plot_data
+        self.lock = lock
 
         self.parent = parent;
 
@@ -29,7 +29,6 @@ class Am_plot(pg.PlotWidget):
                       QtGui.QColor(30, 30, 255)]
 
 
-        #self.setDownsampling(ds=2, auto=False, mode='peak')
 
         left_axis   = self.getAxis('left')
         right_axis  = self.getAxis('right')
@@ -37,25 +36,20 @@ class Am_plot(pg.PlotWidget):
         bottom_axis = self.getAxis('bottom')
 
         self.setClipToView(False)
-
-
         self.showGrid(True, True, 0.5)
+        self.setMenuEnabled(enableMenu=True)
+        #self.enableAutoRange(True)
 
-        self.setMenuEnabled(enableMenu=False)
-
+        #self.setMinimumSize(3000, 100)
         # self.hideAxis('bottom')
-        self.setMouseEnabled(x=False, y=False)
-
-        self.enableAutoRange(True)
-
+        #self.setMinimumHeight(500)
+        #self.data = [ deque([]), deque([]), deque([]) ]
+        #self.setDownsampling(ds=None, auto=True, mode='subsample')
+        #self.setMouseEnabled(x=False, y=False)
         #self.setXRange(0, 300, padding=0.00)
-
-
-        self.hideButtons()
-
+        #self.hideButtons()
         #self.getViewBox().setMouseMode(self.getViewBox().RectMode)
-        self.getViewBox().invertX(b=True)
-        
+        #self.getViewBox().invertX(b=True)
         #self.setLimits(maxYRange=10000)
 
 
@@ -64,8 +58,6 @@ class Am_plot(pg.PlotWidget):
         self.curve_blue  = self.plot([], [], pen=(0, 0, 255, 155))
 
 
-    def clear_slot(self):
-        pass
 
     def plot_slot(self):
 
@@ -73,9 +65,14 @@ class Am_plot(pg.PlotWidget):
         #x = range(len(self.data0), 0, -1)
         #print(self.plot_data)
         #x = range(len(self.plot_data[:][0]), 0, -1)
-        self.curve_red.setData(self.plot_data[0])
-        self.curve_green.setData(self.plot_data[1])
-        self.curve_blue.setData(self.plot_data[2])
+
+        if (not self.lock[0]):
+            self.curve_red.setData(self.plot_data[0])
+            self.curve_green.setData(self.plot_data[1])
+            self.curve_blue.setData(self.plot_data[2])
+        else:
+            print("LOCKED")
+
         #self.autoRange(padding=0.2)
         #self.setXRange(0, 300, padding=0.0)
 

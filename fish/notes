@@ -1,5 +1,9 @@
 TODO:
 
+mutex on plot data?
+
+fix behavior on "rx failed"
+
 detect mega (or clock speed) and adjust accordingly?
 
 make sure num_imus doesn't change for one dataset

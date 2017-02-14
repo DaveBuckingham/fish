@@ -65,8 +65,6 @@ class Am_rx(QObject):
         str(COM_SIGNAL_HELLO): 'COM_SIGNAL_HELLO', 
         }
 
-    # mag_0_asa = [1, 1, 1]
-    # mag_1_asa = [1, 1, 1]
     mag_asas = []
 
 
@@ -74,6 +72,8 @@ class Am_rx(QObject):
     message_signal = pyqtSignal(QString)
     error_signal = pyqtSignal(QString)
     numimus_signal = pyqtSignal(int)
+
+    recording_signal = pyqtSignal()
 
 
     timestamp_signal = pyqtSignal(float)
@@ -95,10 +95,13 @@ class Am_rx(QObject):
 
 
         self.imu_data = {}
+        self.imu_data['timestamps'] = []
 
         self.end_timestamp = 'inf'
 
         self.use_trigger = False
+
+        self.data_lock = [False]
         
 
 
@@ -202,7 +205,6 @@ class Am_rx(QObject):
 
         except serial.serialutil.SerialException:
             self.error_signal.emit("failed to create connection\n")
-            # self.finished_signal.emit()
             return False
 
 
@@ -256,14 +258,19 @@ class Am_rx(QObject):
         else:
             return None
 
+    def abort(self):
+        self.tx_byte(Am_rx.COM_SIGNAL_STOP)
+        self.close_connection()
+        self.finished_signal.emit()
+        self.recording = False
 
 
     @pyqtSlot()
     def run(self):
 
         if (not self.open_connection()):
-            self.finished_signal.emit()
-            return
+            self.error_signal.emit("No connection, aborting.\n")
+            self.abort()
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
@@ -273,10 +280,13 @@ class Am_rx(QObject):
             self.num_imus = message[0];
             self.message_signal.emit("Detected " + str(self.num_imus) + " IMUs.\n")
         else:
-            self.error_signal.emit("Unable to determine number of IMUs.\n")
-            self.finished_signal.emit()
-            return
+            self.error_signal.emit("Unable to determine number of IMUs, aborting.\n")
+            self.abort()
 
+
+        if (self.num_imus < 1):
+            self.error_signal.emit("No IMUs detected, aborting.\n")
+            self.abort()
 
         self.sample_length = 4 + (18 * self.num_imus) + 1
         if (Am_rx.USE_ENCODER):
@@ -289,10 +299,11 @@ class Am_rx(QObject):
         #        MAG ADJUSTMENT          #
         ##################################
 
-        self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
-        time.sleep(3)
+        self.message_signal.emit("calculating magnetometer sensitivty adjustment...\n")
+        Am_rx.mag_asas = []
+        time.sleep(1)
         self.tx_byte(Am_rx.COM_SIGNAL_ASA)
-        time.sleep(3)
+        time.sleep(1)
 
         for i in (range(0, self.num_imus)):
             (received, message_type) = self.rx_packet()
@@ -322,17 +333,21 @@ class Am_rx(QObject):
 
         self.message_signal.emit("recording data\n")
 
+        self.recording_signal.emit()
+
         # RESET TIMER
         start_time = time.time() * 1000
 
         sample_index = 0
 
         # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
+        self.data_lock[0] = True
         self.imu_data = {}
         self.imu_data['timestamps'] = []
         self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * self.num_imus
         if (Am_rx.USE_ENCODER):
             self.imu_data['encoder'] = []
+        self.data_lock[0] = False
 
         # MUST BE AFTER imu_data SET UP
         self.numimus_signal.emit(self.num_imus)
@@ -349,7 +364,6 @@ class Am_rx(QObject):
 
                 timestamp = (time.time() * 1000) - start_time
 
-                self.imu_data['timestamps'].append(timestamp)
 
                 received = bytearray(received)
                
@@ -357,11 +371,15 @@ class Am_rx(QObject):
                 (id,) = struct.unpack('>L', received[:4])
                 del received[:4]
 
+
                 if (Am_rx.USE_ENCODER):
                     (enc,) = struct.unpack('>h', received[:2])
                     del received[:2]
                     enc *= 0.3515625  # 360/1024
 
+                self.data_lock[0] = True
+
+                self.imu_data['timestamps'].append(timestamp)
                 for i in (range(0, self.num_imus)):
                     #print(ord(received))
                     (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
@@ -371,9 +389,8 @@ class Am_rx(QObject):
                     (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
                     (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                    #self.imu_data['imus'][i]['accel'].append([ax, ay, az])
-                    #self.imu_data['imus'][i]['gyro'].append([gx, gy, gz])
-                    #self.imu_data['imus'][i]['mag'].append([mx, my, mz])
+                    #print(mx, my, mz)
+
 
                     self.imu_data['imus'][i]['accel'][0].append(ax)
                     self.imu_data['imus'][i]['accel'][1].append(ay)
@@ -390,40 +407,33 @@ class Am_rx(QObject):
                 (trig,) = struct.unpack('>?', str(received[0]))
                 del received[0]
 
-                if (len(received) > 0):
-                    self.error_signal.emit("Sample packet too long.\n")
 
                 if (Am_rx.USE_ENCODER):
                     self.imu_data['encoder'].append(enc)
 
+                self.data_lock[0] = False
+
+
+                if (len(received) > 0):
+                    self.error_signal.emit("Sample packet too long.\n")
+
+
+
                 if (trig and self.use_trigger):
                     self.message_signal.emit("received trigger\n")
-                    self.recording = False
-                    break
+                    self.abort()
 
                 sample_index += 1
 
-                self.timestamp_signal.emit(timestamp)
+                #self.timestamp_signal.emit(timestamp)
 
                 count = sample_index % Am_rx.PLOT_REFRESH_RATE
-
-                #self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
-                #self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
-                #self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
-                #self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
-                #self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
-                #self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
 
             else:
                 print("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
 
 
         self.message_signal.emit("stopping recording data\n")
-        self.tx_byte(Am_rx.COM_SIGNAL_STOP)
-
-
-        self.close_connection()
-
-        self.finished_signal.emit()
+        self.abort()
 
 

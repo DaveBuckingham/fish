@@ -588,7 +588,6 @@ void read_sample(){
     uint8_t i;
     uint8_t j;
 
-
     for (j=0; j < response_len; j++) {
         response[j] = 0;
     }
@@ -647,6 +646,19 @@ void read_sample(){
 
 
 void start_recording() {
+
+    // DO ONE MAG READING BECAUSE FIRST MEASUREMENT SEEMS TO BE GARBAGE
+    uint8_t buff[7];
+    uint8_t i;
+    for (i=0; i < num_imus; i++) {
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
+        read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, buff, 7);
+    }
+    delay(10);
+
+    // SET TIMER FOR read_sample()
     noInterrupts();                                      // disable all interrupts
     TCCR1A = 0;
     TCCR1B = 0;
