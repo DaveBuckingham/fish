@@ -378,11 +378,12 @@ class Am_rx(QObject):
                
 
                 (id,) = struct.unpack('>L', received[:4])
-                #del received[:4]
+
+                trig = False
 
 
 
-                if(self.data_lock):
+                if(self.data_lock[0]):
                     print("WRITE LOCKED am_rx")
                 else:
                     self.data_lock[0] = True
@@ -406,19 +407,17 @@ class Am_rx(QObject):
                         self.imu_data['imus'][i]['mag'][1].append(my)
                         self.imu_data['imus'][i]['mag'][2].append(mz)
 
-                    (trig,) = struct.unpack('>?', str(received[22]))
+                    (trig,) = struct.unpack('>?', received[22:23])
 
                     if (Am_rx.USE_ENCODER):
-                        (enc,) = struct.unpack('>h', received[23])
+                        (enc,) = struct.unpack('>h', received[23:25])
                         enc *= 0.3515625  # 360/1024
                         self.imu_data['encoder'].append(enc)
 
-                    if (len(received) > 0):
-                        self.error_signal.emit("Sample packet too long.\n")
+#                   if (len(received) > 0):
+#                       self.error_signal.emit("Sample packet too long.\n")
 
                     self.data_lock[0] = False
-
-
 
                 if (trig and self.use_trigger):
                     self.message_signal.emit("received trigger\n")
@@ -436,6 +435,8 @@ class Am_rx(QObject):
 
 
         self.message_signal.emit("stopping recording data\n")
-        self.abort()
+        self.close_connection()
+        self.finished_signal.emit()
+        return()
 
 

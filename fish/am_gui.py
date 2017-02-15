@@ -449,7 +449,7 @@ class Am_gui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(len(self.receiver.imu_data['timestamps']) > 0)
-        self.buttons['test'].setEnabled(True)
+        #self.buttons['test'].setEnabled(True)
 
 
 

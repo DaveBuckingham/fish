@@ -604,21 +604,17 @@ void read_sample(){
     next_sample_id++;
 
 
-
-
     for (i=0; i < num_imus; i++) {
 
         // READ TEMPERATURE
         // read_multiple_registers(imu_select[i], REG_TEMP_OUT_H, response + j, 2);
 
         // READ ACCEL
-        //read_multiple_registers(9, REG_ACCEL_FIRST, response + j, 6);
         read_multiple_registers(imu_select[i], REG_ACCEL_FIRST, response + j, 6);
         j += 6;
 
         // READ GYRO
         read_multiple_registers(imu_select[i], REG_GYRO_FIRST, response + j, 6);
-        //read_multiple_registers(9, REG_GYRO_FIRST, response + j, 6);
         j += 6;
 
         // READ MAG
