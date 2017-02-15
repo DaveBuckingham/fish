@@ -3,8 +3,8 @@
 # USE PYTHON 2.6 OR LATER
 
 import sys
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from fish.am_rx import *
 from fish.am_plot import *
 from fish.am_settings import *
@@ -12,6 +12,7 @@ from fish.am_settings import *
 from collections import namedtuple
 import time
 import h5py
+import csv
 import signal
 import atexit
 from collections import deque
@@ -104,10 +105,10 @@ class Am_gui(QWidget):
         button_layout.addWidget(self.buttons['record'])
 
 
-        self.buttons['test'] = QPushButton('Test')
-        self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
-        self.buttons['test'].clicked.connect(self.test_button_slot)
-        button_layout.addWidget(self.buttons['test'])
+        # self.buttons['test'] = QPushButton('Test')
+        # self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
+        # self.buttons['test'].clicked.connect(self.test_button_slot)
+        # button_layout.addWidget(self.buttons['test'])
 
         self.buttons['save'] = QPushButton('Save')
         self.buttons['save'].setToolTip('Save recorded data')
@@ -252,33 +253,32 @@ class Am_gui(QWidget):
 ############################################
 
 
-    def test_button_slot(self):
-
-
-        results = self.receiver.test()
-
-        if (not results):
-            self.error_slot("Arduino com error.\n")
-
-        else:
-
-            self.message_slot("imu1 communication test...")
-            self.print_pass_fail(results[0])
-
-            self.message_slot("imu2 communication test...")
-            self.print_pass_fail(results[1])
-
-            self.message_slot("imu1 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("imu2 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("mag1 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("mag2 self test...")
-            self.message_slot("not implemented\n")
+#    def test_button_slot(self):
+#
+#        results = self.receiver.test()
+#
+#        if (not results):
+#            self.error_slot("Arduino com error.\n")
+#
+#        else:
+#
+#            self.message_slot("imu1 communication test...")
+#            self.print_pass_fail(results[0])
+#
+#            self.message_slot("imu2 communication test...")
+#            self.print_pass_fail(results[1])
+#
+#            self.message_slot("imu1 self test...")
+#            self.message_slot("not implemented\n")
+#
+#            self.message_slot("imu2 self test...")
+#            self.message_slot("not implemented\n")
+#
+#            self.message_slot("mag1 self test...")
+#            self.message_slot("not implemented\n")
+#
+#            self.message_slot("mag2 self test...")
+#            self.message_slot("not implemented\n")
 
 
 
@@ -314,27 +314,58 @@ class Am_gui(QWidget):
 
 
     def save_button_slot(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5 *.csv')
-        filename = str(filename)
-        self.last_data_path = os.path.dirname(filename)
+
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        filename, filetype = QFileDialog.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
+
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
-                filename += '.hdf5'
+            filename = str(filename)
+            self.last_data_path = os.path.dirname(filename)
 
-            with h5py.File(str(filename), 'w') as datafile:
-                save_data = datafile.create_group("data")
+            #if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
+            #    filename += '.hdf5'
 
-                save_data.create_dataset('t', data=self.receiver.imu_data['timestamps'])
-                for i in range(0, len(self.receiver.imu_data['imus'])):
-                    imu = self.receiver.imu_data['imus'][i]
-                    extension = "" if i < 1 else str(i + 1)
+            if (filetype == "*.hdf5"):
+                with h5py.File(str(filename), 'w') as datafile:
+                    save_data = datafile.create_group("data")
 
-                    save_data.create_dataset('Accel' + extension, data=zip(*self.receiver.imu_data['imus'][i]['accel']))
-                    save_data.create_dataset('Gyro'  + extension, data=zip(*self.receiver.imu_data['imus'][i]['gyro']))
-                    save_data.create_dataset('Mag'   + extension, data=zip(*self.receiver.imu_data['imus'][i]['mag']))
+                    save_data.create_dataset('t', data=self.receiver.imu_data['timestamps'])
+                    for i in range(0, len(self.receiver.imu_data['imus'])):
+                        imu = self.receiver.imu_data['imus'][i]
+                        extension = "" if i < 1 else str(i + 1)
 
-                if (self.receiver.USE_ENCODER):
-                    save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
+                        save_data.create_dataset('Accel' + extension, data=zip(*self.receiver.imu_data['imus'][i]['accel']))
+                        save_data.create_dataset('Gyro'  + extension, data=zip(*self.receiver.imu_data['imus'][i]['gyro']))
+                        save_data.create_dataset('Mag'   + extension, data=zip(*self.receiver.imu_data['imus'][i]['mag']))
+
+                    if (self.receiver.USE_ENCODER):
+                        save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
+
+            elif (filetype == "*.csv"):
+                with open(filename, 'wb') as datafile:
+                    writer = csv.writer(datafile, delimiter=',')
+
+                    for i in range(0, len(self.receiver.imu_data['timestamps'])):
+                        row = [self.receiver.imu_data['timestamps'][i]]
+                        for j in range(0, len(self.receiver.imu_data['imus'])):
+                            row.append(self.receiver.imu_data['imus'][j]['accel'][0][i])
+                            row.append(self.receiver.imu_data['imus'][j]['accel'][1][i])
+                            row.append(self.receiver.imu_data['imus'][j]['accel'][2][i])
+                            row.append(self.receiver.imu_data['imus'][j]['gyro'][0][i])
+                            row.append(self.receiver.imu_data['imus'][j]['gyro'][1][i])
+                            row.append(self.receiver.imu_data['imus'][j]['gyro'][2][i])
+                            row.append(self.receiver.imu_data['imus'][j]['mag'][0][i])
+                            row.append(self.receiver.imu_data['imus'][j]['mag'][1][i])
+                            row.append(self.receiver.imu_data['imus'][j]['mag'][2][i])
+
+                        if (self.receiver.USE_ENCODER):
+                            row.append(self.receiver.imu_data['encoder'][i])
+                        writer.writerow(row)
+
+            else:
+                self.error_slot("invalid file type: " + filetype + "\n")
+                return
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
@@ -342,34 +373,63 @@ class Am_gui(QWidget):
 
     def load_button_slot(self):
 
-        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5 *.csv')
-        filename = str(filename)
-        self.last_data_path = os.path.dirname(filename)
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        filename, filetype = QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
+
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
-                filename += '.hdf5'
+            filename = str(filename)
+            self.last_data_path = os.path.dirname(filename)
 
-            with h5py.File(str(filename), 'r') as datafile:
-                self.receiver.imu_data = {}
-                self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+            if (filetype == "*.hdf5"):
+                with h5py.File(filename, 'r') as datafile:
+                    self.receiver.imu_data = {}
+                    self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+                    self.receiver.imu_data['imus'] = []
 
-                self.receiver.imu_data['imus'] = []
+                    i = 0
+                    ext = ""
+                    while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/Mag' + ext in datafile):
+                        self.receiver.imu_data['imus'].append({})
+                        self.receiver.imu_data['imus'][i]['accel'] = map(list, zip(*datafile.get('data/Accel' + ext)[()]))
+                        self.receiver.imu_data['imus'][i]['gyro'] = map(list, zip(*datafile.get('data/Gyro' + ext)[()]))
+                        self.receiver.imu_data['imus'][i]['mag'] = map(list, zip(*datafile.get('data/Mag' + ext)[()]))
+                        i += 1
+                        ext = str(i + 1)
 
+                    self.receiver.num_imus = i
 
-                i = 0
-                ext = ""
-                while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/mag' + ext in datafile):
-                    self.receiver.imu_data['imus'].append([])
-                    self.receiver.imu_data['imus'][i]['accel'] = map(list, zip(*datafile.get('data/Accel' + ext)[()]))
-                    self.receiver.imu_data['imus'][i]['gyro'] = map(list, zip(*datafile.get('data/Gyro' + ext)[()]))
-                    self.receiver.imu_data['imus'][i]['mag'] = map(list, zip(*datafile.get('data/Mag' + ext)[()]))
-                    i += 1
-                    ext = str(i + 1)
+                    if (self.receiver.USE_ENCODER):
+                        self.receiver.imu_data['encoder'] = datafile.get('data/Encoder')[()]
 
-                self.receiver.num_imus = i
+            elif (filetype == "*.csv"):
 
                 if (self.receiver.USE_ENCODER):
-                    self.receiver.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+                    expected_non_imu_columns = 2
+                else:
+                    expected_non_imu_columns = 1
+                self.receiver.num_imus = None
+                with open(filename, 'rb') as datafile:
+                    self.receiver.imu_data = {}
+                    self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+                    self.receiver.imu_data['imus'] = []
+                    reader = csv.reader(datafile, delimiter=',')
+                    for row in reader:
+                        if (len(row) % 3 != expected_non_imu_columns):
+                            self.error_slot("invalid csv file\n")
+                            return
+                        row_num_imus = (len(row) - 2) / 3
+                        if self.receiver.num_imus is None:
+                            self.receiver.num_imus = row_num_imus
+                        else:
+                            if (len(row) != self.receiver.num_imus):
+                                self.error_slot("invalid csv file\n")
+                                return
+                            
+
+            else:
+                self.error_slot("invalid file type: " + filetype + "\n")
+                return
 
             self.message_slot(filename + " loaded\n")
             self.data_saved = True
@@ -441,13 +501,11 @@ class Am_gui(QWidget):
 
     # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
     def message_slot(self, the_string, red=False):
-        # self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
-        # self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
-
         if (red):
             self.text_window.setTextColor(QtGui.QColor(255,0,0))
         else:
-            self.text_window.setTextColor(QtGui.QColor(0,0,0))
+            self.text_window.setTextColor(QtGui.QColor(200,200,200))
+            #self.text_window.setTextColor(QtGui.QColor(0,0,0))
         self.text_window.insertPlainText(the_string)
         sb = self.text_window.verticalScrollBar();
         sb.setValue(sb.maximum());
@@ -472,7 +530,7 @@ class Am_gui(QWidget):
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        self.buttons['test'].setEnabled(False)
+        #self.buttons['test'].setEnabled(False)
 
         self.receiver_thread.start()
 

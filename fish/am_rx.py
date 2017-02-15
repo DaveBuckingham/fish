@@ -11,10 +11,10 @@ import array
 
 import serial.tools.list_ports
 
-from PyQt4.QtCore import pyqtSignal, QObject, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
 
 try:
-    from PyQt4.QtCore import QString
+    from PyQt5.QtCore import QString
 except ImportError:
     QString = str
 
@@ -127,6 +127,15 @@ class Am_rx(QObject):
         self.message_signal.emit("closing serial connection\n")
         self.connection.flushInput()
         self.connection.close()
+
+#       try:
+#           self.connection
+#       except NameError:
+#           pass
+#       else:
+#           self.message_signal.emit("closing serial connection\n")
+#           self.connection.flushInput()
+#           self.connection.close()
 
     # FOR SENDING COMMAND SIGNALS TO ARDUINO
     def tx_byte(self, val):
@@ -258,11 +267,6 @@ class Am_rx(QObject):
         else:
             return None
 
-    def abort(self):
-        self.tx_byte(Am_rx.COM_SIGNAL_STOP)
-        self.close_connection()
-        self.finished_signal.emit()
-        self.recording = False
 
 
     @pyqtSlot()
@@ -270,7 +274,8 @@ class Am_rx(QObject):
 
         if (not self.open_connection()):
             self.error_signal.emit("No connection, aborting.\n")
-            self.abort()
+            self.finished_signal.emit()
+            return()
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
@@ -281,12 +286,16 @@ class Am_rx(QObject):
             self.message_signal.emit("Detected " + str(self.num_imus) + " IMUs.\n")
         else:
             self.error_signal.emit("Unable to determine number of IMUs, aborting.\n")
-            self.abort()
+            self.close_connection()
+            self.finished_signal.emit()
+            return()
 
 
         if (self.num_imus < 1):
             self.error_signal.emit("No IMUs detected, aborting.\n")
-            self.abort()
+            self.close_connection()
+            self.finished_signal.emit()
+            return()
 
         self.sample_length = 4 + (18 * self.num_imus) + 1
         if (Am_rx.USE_ENCODER):
@@ -338,7 +347,7 @@ class Am_rx(QObject):
         # RESET TIMER
         start_time = time.time() * 1000
 
-        sample_index = 0
+        #sample_index = 0
 
         # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
         self.data_lock[0] = True
@@ -369,65 +378,58 @@ class Am_rx(QObject):
                
 
                 (id,) = struct.unpack('>L', received[:4])
-                del received[:4]
+                #del received[:4]
 
 
-                if (Am_rx.USE_ENCODER):
-                    (enc,) = struct.unpack('>h', received[:2])
-                    del received[:2]
-                    enc *= 0.3515625  # 360/1024
 
-                self.data_lock[0] = True
+                if(self.data_lock):
+                    print("WRITE LOCKED am_rx")
+                else:
+                    self.data_lock[0] = True
 
-                self.imu_data['timestamps'].append(timestamp)
-                for i in (range(0, self.num_imus)):
-                    #print(ord(received))
-                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
-                    del received[:12]
-                    (mx, my, mz) = struct.unpack('<hhh', received[:6]) # BIG ENDIAN
-                    del received[:6]
-                    (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
-                    (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
+                    self.imu_data['timestamps'].append(timestamp)
+                    for i in (range(0, self.num_imus)):
+                        (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
+                        (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
+                        (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
+                        (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                    #print(mx, my, mz)
+                        self.imu_data['imus'][i]['accel'][0].append(ax)
+                        self.imu_data['imus'][i]['accel'][1].append(ay)
+                        self.imu_data['imus'][i]['accel'][2].append(az)
 
+                        self.imu_data['imus'][i]['gyro'][0].append(gx)
+                        self.imu_data['imus'][i]['gyro'][1].append(gy)
+                        self.imu_data['imus'][i]['gyro'][2].append(gz)
 
-                    self.imu_data['imus'][i]['accel'][0].append(ax)
-                    self.imu_data['imus'][i]['accel'][1].append(ay)
-                    self.imu_data['imus'][i]['accel'][2].append(az)
+                        self.imu_data['imus'][i]['mag'][0].append(mx)
+                        self.imu_data['imus'][i]['mag'][1].append(my)
+                        self.imu_data['imus'][i]['mag'][2].append(mz)
 
-                    self.imu_data['imus'][i]['gyro'][0].append(gx)
-                    self.imu_data['imus'][i]['gyro'][1].append(gy)
-                    self.imu_data['imus'][i]['gyro'][2].append(gz)
+                    (trig,) = struct.unpack('>?', str(received[22]))
 
-                    self.imu_data['imus'][i]['mag'][0].append(mx)
-                    self.imu_data['imus'][i]['mag'][1].append(my)
-                    self.imu_data['imus'][i]['mag'][2].append(mz)
+                    if (Am_rx.USE_ENCODER):
+                        (enc,) = struct.unpack('>h', received[23])
+                        enc *= 0.3515625  # 360/1024
+                        self.imu_data['encoder'].append(enc)
 
-                (trig,) = struct.unpack('>?', str(received[0]))
-                del received[0]
+                    if (len(received) > 0):
+                        self.error_signal.emit("Sample packet too long.\n")
 
-
-                if (Am_rx.USE_ENCODER):
-                    self.imu_data['encoder'].append(enc)
-
-                self.data_lock[0] = False
-
-
-                if (len(received) > 0):
-                    self.error_signal.emit("Sample packet too long.\n")
+                    self.data_lock[0] = False
 
 
 
                 if (trig and self.use_trigger):
                     self.message_signal.emit("received trigger\n")
-                    self.abort()
+                    self.tx_byte(Am_rx.COM_SIGNAL_STOP)
+                    self.close_connection()
+                    self.finished_signal.emit()
+                    return()
 
-                sample_index += 1
+                #sample_index += 1
 
-                #self.timestamp_signal.emit(timestamp)
-
-                count = sample_index % Am_rx.PLOT_REFRESH_RATE
+                #count = sample_index % Am_rx.PLOT_REFRESH_RATE
 
             else:
                 print("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))

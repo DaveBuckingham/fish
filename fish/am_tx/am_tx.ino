@@ -604,11 +604,6 @@ void read_sample(){
     next_sample_id++;
 
 
-#ifdef USE_ENCODER
-    int encoder_angle = read_encoder();
-    response[j++] = encoder_angle >> 8;
-    response[j++] = encoder_angle;
-#endif
 
 
     for (i=0; i < num_imus; i++) {
@@ -639,6 +634,12 @@ void read_sample(){
 
     // will overwrite the extra byte from mag STATUS2
     response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
+
+#ifdef USE_ENCODER
+    int encoder_angle = read_encoder();
+    response[j++] = encoder_angle >> 8;
+    response[j++] = encoder_angle;
+#endif
 
 
     tx_packet(response, response_len, COM_PACKET_SAMPLE);
