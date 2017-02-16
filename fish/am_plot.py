@@ -44,7 +44,6 @@ class Am_plot(pg.PlotWidget):
         # self.hideAxis('bottom')
         #self.setMinimumHeight(500)
         #self.data = [ deque([]), deque([]), deque([]) ]
-        #self.setDownsampling(ds=None, auto=True, mode='subsample')
         #self.setMouseEnabled(x=False, y=False)
         #self.setXRange(0, 300, padding=0.00)
         #self.hideButtons()
@@ -70,6 +69,8 @@ class Am_plot(pg.PlotWidget):
             self.curve_red.setData(self.plot_data[0])
             self.curve_green.setData(self.plot_data[1])
             self.curve_blue.setData(self.plot_data[2])
+            #self.setDownsampling(ds=None, auto=True, mode='subsample')
+            #self.setDownsampling(ds=100, auto=False, mode='subsample')
         else:
             print("LOCKED")
 

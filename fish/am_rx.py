@@ -268,6 +268,18 @@ class Am_rx(QObject):
             return None
 
 
+    def reset_data(self, num_imus):
+        # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
+        self.data_lock[0] = True
+        self.imu_data = {}
+        self.imu_data['timestamps'] = []
+        self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * num_imus
+        if (Am_rx.USE_ENCODER):
+            self.imu_data['encoder'] = []
+        self.data_lock[0] = False
+        self.num_imus = num_imus
+
+
 
     @pyqtSlot()
     def run(self):
@@ -282,22 +294,27 @@ class Am_rx(QObject):
         time.sleep(1)
         (message, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_NUMIMUS):
-            self.num_imus = message[0];
-            self.message_signal.emit("Detected " + str(self.num_imus) + " IMUs.\n")
+            num_imus = message[0];
+            self.message_signal.emit("Detected " + str(num_imus) + " IMUs.\n")
         else:
             self.error_signal.emit("Unable to determine number of IMUs, aborting.\n")
             self.close_connection()
             self.finished_signal.emit()
             return()
 
+        self.reset_data(num_imus)
 
-        if (self.num_imus < 1):
+
+        if (num_imus < 1):
             self.error_signal.emit("No IMUs detected, aborting.\n")
             self.close_connection()
             self.finished_signal.emit()
             return()
 
-        self.sample_length = 4 + (18 * self.num_imus) + 1
+        # MUST BE AFTER imu_data SET UP
+        self.numimus_signal.emit(self.num_imus)
+
+        self.sample_length = 4 + (18 * num_imus) + 1
         if (Am_rx.USE_ENCODER):
             self.sample_length += 2
 
@@ -314,7 +331,7 @@ class Am_rx(QObject):
         self.tx_byte(Am_rx.COM_SIGNAL_ASA)
         time.sleep(1)
 
-        for i in (range(0, self.num_imus)):
+        for i in (range(0, num_imus)):
             (received, message_type) = self.rx_packet()
             if ((message_type == Am_rx.COM_PACKET_ASA) and (len(received) == 3)):
                 asa = []
@@ -349,17 +366,8 @@ class Am_rx(QObject):
 
         #sample_index = 0
 
-        # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
-        self.data_lock[0] = True
-        self.imu_data = {}
-        self.imu_data['timestamps'] = []
-        self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * self.num_imus
-        if (Am_rx.USE_ENCODER):
-            self.imu_data['encoder'] = []
-        self.data_lock[0] = False
+        #self.reset_data()
 
-        # MUST BE AFTER imu_data SET UP
-        self.numimus_signal.emit(self.num_imus)
 
         while (self.recording):
 

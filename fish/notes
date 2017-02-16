@@ -1,6 +1,8 @@
 TODO:
 
-mutex on plot data?
+slightly different float rounding for python2 and 3
+
+fix trigger
 
 fix behavior on "rx failed"
 

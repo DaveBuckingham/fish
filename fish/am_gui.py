@@ -317,16 +317,17 @@ class Am_gui(QWidget):
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        filename, filetype = QFileDialog.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
+        dlg = QFileDialog()
+        filename, filetype = dlg.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
 
         if filename:
             filename = str(filename)
             self.last_data_path = os.path.dirname(filename)
 
-            #if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
-            #    filename += '.hdf5'
 
             if (filetype == "*.hdf5"):
+                if '.' not in filename:
+                    filename += '.hdf5'
                 with h5py.File(str(filename), 'w') as datafile:
                     save_data = datafile.create_group("data")
 
@@ -335,15 +336,18 @@ class Am_gui(QWidget):
                         imu = self.receiver.imu_data['imus'][i]
                         extension = "" if i < 1 else str(i + 1)
 
-                        save_data.create_dataset('Accel' + extension, data=zip(*self.receiver.imu_data['imus'][i]['accel']))
-                        save_data.create_dataset('Gyro'  + extension, data=zip(*self.receiver.imu_data['imus'][i]['gyro']))
-                        save_data.create_dataset('Mag'   + extension, data=zip(*self.receiver.imu_data['imus'][i]['mag']))
+                        save_data.create_dataset('Accel' + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['accel'])))
+                        save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['gyro'])))
+                        save_data.create_dataset('Mag'   + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['mag'])))
 
                     if (self.receiver.USE_ENCODER):
                         save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
 
             elif (filetype == "*.csv"):
-                with open(filename, 'wb') as datafile:
+                if '.' not in filename:
+                    filename += '.csv'
+                #with open(filename, 'wb') as datafile:
+                with open(filename, 'w') as datafile:
                     writer = csv.writer(datafile, delimiter=',')
 
                     for i in range(0, len(self.receiver.imu_data['timestamps'])):
@@ -391,9 +395,9 @@ class Am_gui(QWidget):
                     ext = ""
                     while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/Mag' + ext in datafile):
                         self.receiver.imu_data['imus'].append({})
-                        self.receiver.imu_data['imus'][i]['accel'] = map(list, zip(*datafile.get('data/Accel' + ext)[()]))
-                        self.receiver.imu_data['imus'][i]['gyro'] = map(list, zip(*datafile.get('data/Gyro' + ext)[()]))
-                        self.receiver.imu_data['imus'][i]['mag'] = map(list, zip(*datafile.get('data/Mag' + ext)[()]))
+                        self.receiver.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/Accel' + ext)[()])))
+                        self.receiver.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/Gyro' + ext)[()])))
+                        self.receiver.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/Mag' + ext)[()])))
                         i += 1
                         ext = str(i + 1)
 
@@ -408,23 +412,42 @@ class Am_gui(QWidget):
                     expected_non_imu_columns = 2
                 else:
                     expected_non_imu_columns = 1
+
                 self.receiver.num_imus = None
-                with open(filename, 'rb') as datafile:
-                    self.receiver.imu_data = {}
-                    self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
-                    self.receiver.imu_data['imus'] = []
+                #with open(filename, 'rb') as datafile:
+                with open(filename, 'r') as datafile:
                     reader = csv.reader(datafile, delimiter=',')
                     for row in reader:
-                        if (len(row) % 3 != expected_non_imu_columns):
+                        if (len(row) % 9 != expected_non_imu_columns):
                             self.error_slot("invalid csv file\n")
                             return
-                        row_num_imus = (len(row) - 2) / 3
-                        if self.receiver.num_imus is None:
+                        row_num_imus = (len(row) - 2) // 9       # // for integer division in python3
+                        if self.receiver.num_imus is None:       # READING FIRST LINE OF CSV
                             self.receiver.num_imus = row_num_imus
+                            self.receiver.reset_data(row_num_imus)
                         else:
-                            if (len(row) != self.receiver.num_imus):
+                            if (len(row) != (self.receiver.num_imus * 9) + expected_non_imu_columns):
                                 self.error_slot("invalid csv file\n")
                                 return
+                        row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
+                        self.receiver.imu_data['timestamps'].append(row[0])
+
+                        j = 1
+                        for i in range(0, row_num_imus):
+                            self.receiver.imu_data['imus'][i]['accel'][0].append(row[j])
+                            self.receiver.imu_data['imus'][i]['accel'][1].append(row[j+1])
+                            self.receiver.imu_data['imus'][i]['accel'][2].append(row[j+2])
+                            self.receiver.imu_data['imus'][i]['gyro'][0].append(row[j+3])
+                            self.receiver.imu_data['imus'][i]['gyro'][1].append(row[j+4])
+                            self.receiver.imu_data['imus'][i]['gyro'][2].append(row[j+5])
+                            self.receiver.imu_data['imus'][i]['mag'][0].append(row[j+6])
+                            self.receiver.imu_data['imus'][i]['mag'][1].append(row[j+7])
+                            self.receiver.imu_data['imus'][i]['mag'][2].append(row[j+8])
+                            j+=9
+
+                        self.receiver.imu_data['encoder'].append(row[-1])
+
+
                             
 
             else:
