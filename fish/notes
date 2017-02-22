@@ -1,5 +1,9 @@
 TODO:
 
+when loading file, check for correctness
+
+if load will overwrite unsaved data, ask user
+
 slightly different float rounding for python2 and 3
 
 fix trigger

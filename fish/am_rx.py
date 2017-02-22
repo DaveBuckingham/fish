@@ -104,6 +104,9 @@ class Am_rx(QObject):
         self.data_lock = [False]
         
 
+    def has_data(self):
+        return (len(self.imu_data['timestamps']) > 0)
+
 
     def calculate_accel_ft(self, a_test):
         # SEE MPU-6000, 6050 MANUAL PAGE 11
@@ -366,7 +369,6 @@ class Am_rx(QObject):
 
         #sample_index = 0
 
-        #self.reset_data()
 
 
         while (self.recording):

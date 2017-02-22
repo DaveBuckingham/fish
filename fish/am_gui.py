@@ -110,6 +110,11 @@ class Am_gui(QWidget):
         # self.buttons['test'].clicked.connect(self.test_button_slot)
         # button_layout.addWidget(self.buttons['test'])
 
+        self.buttons['process'] = QPushButton('Process')
+        self.buttons['process'].setToolTip('Process data')
+        self.buttons['process'].clicked.connect(self.process_button_slot)
+        button_layout.addWidget(self.buttons['process'])
+
         self.buttons['save'] = QPushButton('Save')
         self.buttons['save'].setToolTip('Save recorded data')
         self.buttons['save'].clicked.connect(self.save_button_slot)
@@ -224,6 +229,7 @@ class Am_gui(QWidget):
             self.error_slot("FAIL\n")
 
 
+
     def make_plots(self):
         self.plots = []
         for i in (range(0, self.receiver.num_imus)):
@@ -242,8 +248,40 @@ class Am_gui(QWidget):
             self.plots_layout.addWidget(label, i+1, 0)
 
 
+    def check_saved(self):
+        if (self.data_saved):
+            return True
+        else:
+
+            msgBox = QtGui.QMessageBox()
+            msgBox.setText('Unsaved data will be lost.')
+            msgBox.setIcon(QMessageBox.Warning)
+            continue_btn = QtGui.QPushButton('Continue anyway')
+            save_btn = QtGui.QPushButton('Save data')
+            cancel_btn = QtGui.QPushButton('Cancel')
+            msgBox.addButton(continue_btn, QtGui.QMessageBox.YesRole)
+            msgBox.addButton(save_btn, QtGui.QMessageBox.YesRole)
+            msgBox.addButton(cancel_btn, QtGui.QMessageBox.NoRole)
+            msgBox.exec_()
+
+            if (msgBox.clickedButton() == save_btn):
+                return(self.save_button_slot())
+            elif (msgBox.clickedButton() == continue_btn):
+                return True
+            else:
+                return False
 
 
+
+
+    def process_data(self):
+        if (self.receiver.has_data()):
+            for i in range(0, len(self.receiver.imu_data['timestamps'])):
+                for j in range(0, len(self.receiver.imu_data['imus'])):
+                    for k in range(0, 3):
+                        self.receiver.imu_data['imus'][j]['accel'][k][i] *= -2
+                        self.receiver.imu_data['imus'][j]['gyro'][k][i] *= -1
+                        self.receiver.imu_data['imus'][j]['mag'][k][i] *= 2
 
 
 
@@ -251,6 +289,73 @@ class Am_gui(QWidget):
 ############################################
 #              BUTTON SLOTS                #
 ############################################
+
+    def batch_process(self):
+        # options = QFileDialog.Options()
+        # options |= QFileDialog.DontUseNativeDialog
+        # options |= QFileDialog.ShowDirsOnly
+        # options |= QFileDialog.DontResolveSymlinks
+        # dir_name = QFileDialog.getExistingDirectory(self, "Select a Directory", self.last_data_path, options=options)
+
+        # LET THE USER SET THIS
+        suffix = "_processed"
+
+
+
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        (filename_list, types) = QFileDialog.getOpenFileNames(self, "Select files to process", self.last_data_path, "*.hdf5 *.csv", options=options)
+
+        for filename in filename_list:
+            (base, extension) = os.path.splitext(filename)
+            if ((extension == ".hdf5") or (extension == ".csv")):
+                if (extension == ".hdf5"):
+                    self.load_hdf5_file(filename)
+                    self.process_data()
+                    out_name = base + suffix + extension
+                    self.save_hdf5_file(out_name)
+                elif (extension == ".csv"):
+                    self.load_csv_file(filename)
+                    self.process_data()
+                    out_name = base + suffix + extension
+                    self.save_csv_file(out_name)
+        self.receiver.reset_data(0)
+        self.data_saved = True
+
+
+
+
+
+
+    def process_button_slot(self):
+        if (not self.receiver.has_data()):
+            self.batch_process()
+        else:
+
+            msgBox = QtGui.QMessageBox()
+            msgBox.setText('Do you want to process previously saved data or the currently loaded data?')
+            msgBox.setIcon(QMessageBox.Question)
+            use_saved_btn = QtGui.QPushButton('Select a directory for batch processing')
+            use_current_btn = QtGui.QPushButton('Use current data')
+            cancel_btn = QtGui.QPushButton('Cancel')
+            msgBox.addButton(use_saved_btn, QtGui.QMessageBox.YesRole)
+            msgBox.addButton(use_current_btn, QtGui.QMessageBox.YesRole)
+            msgBox.addButton(cancel_btn, QtGui.QMessageBox.NoRole)
+            msgBox.exec_()
+
+            if (msgBox.clickedButton() == use_current_btn):
+                self.process_data()
+                for p in self.plots:
+                    p.plot_slot()
+                self.data_saved = False
+            elif (msgBox.clickedButton() == use_saved_btn):
+                self.batch_process()
+
+            else:
+                return
+
+
+
 
 
 #    def test_button_slot(self):
@@ -283,13 +388,7 @@ class Am_gui(QWidget):
 
 
     def quit_button_slot(self):
-        result = (QMessageBox.question(self,
-                                       Am_gui.APPLICATION_NAME,
-                                       'Really quit?',
-                                       QMessageBox.Yes | QMessageBox.No,
-                                       QMessageBox.Yes))
-
-        if (result == QMessageBox.Yes):
+        if (self.check_saved()):
             self.stop_recording()
             time.sleep(.2)  # let thread finish
             self.message_slot("exiting")
@@ -301,17 +400,9 @@ class Am_gui(QWidget):
         if (self.recording):
             self.stop_recording()
         else:
-            if (not self.data_saved):
-                result = (QMessageBox.question(self,
-                                               'Message',
-                                               'Overwrite recorded data without saving?',
-                                               QMessageBox.Yes | QMessageBox.No,
-                                               QMessageBox.No))
-
-            if (self.data_saved or (result == QMessageBox.Yes)):
+            if (self.check_saved()):
                 self.num_samples = 0
                 self.record()
-
 
     def save_button_slot(self):
 
@@ -324,58 +415,140 @@ class Am_gui(QWidget):
             filename = str(filename)
             self.last_data_path = os.path.dirname(filename)
 
-
             if (filetype == "*.hdf5"):
                 if '.' not in filename:
                     filename += '.hdf5'
-                with h5py.File(str(filename), 'w') as datafile:
-                    save_data = datafile.create_group("data")
-
-                    save_data.create_dataset('t', data=self.receiver.imu_data['timestamps'])
-                    for i in range(0, len(self.receiver.imu_data['imus'])):
-                        imu = self.receiver.imu_data['imus'][i]
-                        extension = "" if i < 1 else str(i + 1)
-
-                        save_data.create_dataset('Accel' + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['accel'])))
-                        save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['gyro'])))
-                        save_data.create_dataset('Mag'   + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['mag'])))
-
-                    if (self.receiver.USE_ENCODER):
-                        save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
+                self.save_hdf5_file(filename)
 
             elif (filetype == "*.csv"):
                 if '.' not in filename:
                     filename += '.csv'
-                #with open(filename, 'wb') as datafile:
-                with open(filename, 'w') as datafile:
-                    writer = csv.writer(datafile, delimiter=',')
-
-                    for i in range(0, len(self.receiver.imu_data['timestamps'])):
-                        row = [self.receiver.imu_data['timestamps'][i]]
-                        for j in range(0, len(self.receiver.imu_data['imus'])):
-                            row.append(self.receiver.imu_data['imus'][j]['accel'][0][i])
-                            row.append(self.receiver.imu_data['imus'][j]['accel'][1][i])
-                            row.append(self.receiver.imu_data['imus'][j]['accel'][2][i])
-                            row.append(self.receiver.imu_data['imus'][j]['gyro'][0][i])
-                            row.append(self.receiver.imu_data['imus'][j]['gyro'][1][i])
-                            row.append(self.receiver.imu_data['imus'][j]['gyro'][2][i])
-                            row.append(self.receiver.imu_data['imus'][j]['mag'][0][i])
-                            row.append(self.receiver.imu_data['imus'][j]['mag'][1][i])
-                            row.append(self.receiver.imu_data['imus'][j]['mag'][2][i])
-
-                        if (self.receiver.USE_ENCODER):
-                            row.append(self.receiver.imu_data['encoder'][i])
-                        writer.writerow(row)
-
+                self.save_csv_file(filename)
             else:
                 self.error_slot("invalid file type: " + filetype + "\n")
-                return
+                return False
 
             self.message_slot("data saved to  " + filename + "\n")
             self.data_saved = True
+            return True
+
+
+    def load_csv_file(self, filename):
+
+        if (self.receiver.USE_ENCODER):
+            expected_non_imu_columns = 2
+        else:
+            expected_non_imu_columns = 1
+
+        self.receiver.num_imus = None
+        #with open(filename, 'rb') as datafile:
+        with open(filename, 'r') as datafile:
+            reader = csv.reader(datafile, delimiter=',')
+            for row in reader:
+                if (len(row) % 9 != expected_non_imu_columns):
+                    self.error_slot("invalid csv file\n")
+                    return False
+                row_num_imus = (len(row) - 2) // 9       # // for integer division in python3
+                if self.receiver.num_imus is None:       # READING FIRST LINE OF CSV
+                    self.receiver.num_imus = row_num_imus
+                    self.receiver.reset_data(row_num_imus)
+                else:
+                    if (len(row) != (self.receiver.num_imus * 9) + expected_non_imu_columns):
+                        self.error_slot("invalid csv file\n")
+                        return False
+                row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
+                self.receiver.imu_data['timestamps'].append(row[0])
+
+                j = 1
+                for i in range(0, row_num_imus):
+                    self.receiver.imu_data['imus'][i]['accel'][0].append(row[j])
+                    self.receiver.imu_data['imus'][i]['accel'][1].append(row[j+1])
+                    self.receiver.imu_data['imus'][i]['accel'][2].append(row[j+2])
+                    self.receiver.imu_data['imus'][i]['gyro'][0].append(row[j+3])
+                    self.receiver.imu_data['imus'][i]['gyro'][1].append(row[j+4])
+                    self.receiver.imu_data['imus'][i]['gyro'][2].append(row[j+5])
+                    self.receiver.imu_data['imus'][i]['mag'][0].append(row[j+6])
+                    self.receiver.imu_data['imus'][i]['mag'][1].append(row[j+7])
+                    self.receiver.imu_data['imus'][i]['mag'][2].append(row[j+8])
+                    j+=9
+
+                self.receiver.imu_data['encoder'].append(row[-1])
+            return True
+        return False
+
+
+
+    def load_hdf5_file(self, filename):
+        with h5py.File(filename, 'r') as datafile:
+            self.receiver.imu_data = {}
+            self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+            self.receiver.imu_data['imus'] = []
+
+            i = 0
+            ext = ""
+            while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/Mag' + ext in datafile):
+                self.receiver.imu_data['imus'].append({})
+                self.receiver.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/Accel' + ext)[()])))
+                self.receiver.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/Gyro' + ext)[()])))
+                self.receiver.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/Mag' + ext)[()])))
+                i += 1
+                ext = str(i + 1)
+
+            self.receiver.num_imus = i
+
+            if (self.receiver.USE_ENCODER):
+                self.receiver.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+            return True
+        return False
+
+
+    def save_hdf5_file(self, filename):
+        with h5py.File(filename, 'w') as datafile:
+            save_data = datafile.create_group("data")
+
+            save_data.create_dataset('t', data=self.receiver.imu_data['timestamps'])
+            for i in range(0, len(self.receiver.imu_data['imus'])):
+                imu = self.receiver.imu_data['imus'][i]
+                extension = "" if i < 1 else str(i + 1)
+
+                save_data.create_dataset('Accel' + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['accel'])))
+                save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['gyro'])))
+                save_data.create_dataset('Mag'   + extension, data=list(zip(*self.receiver.imu_data['imus'][i]['mag'])))
+
+            if (self.receiver.USE_ENCODER):
+                save_data.create_dataset('Encoder', data=self.receiver.imu_data['encoder'])
+
+
+
+    def save_csv_file(self, filename):
+        with open(filename, 'w') as datafile:
+            writer = csv.writer(datafile, delimiter=',')
+
+            for i in range(0, len(self.receiver.imu_data['timestamps'])):
+                row = [self.receiver.imu_data['timestamps'][i]]
+                for j in range(0, len(self.receiver.imu_data['imus'])):
+                    row.append(self.receiver.imu_data['imus'][j]['accel'][0][i])
+                    row.append(self.receiver.imu_data['imus'][j]['accel'][1][i])
+                    row.append(self.receiver.imu_data['imus'][j]['accel'][2][i])
+                    row.append(self.receiver.imu_data['imus'][j]['gyro'][0][i])
+                    row.append(self.receiver.imu_data['imus'][j]['gyro'][1][i])
+                    row.append(self.receiver.imu_data['imus'][j]['gyro'][2][i])
+                    row.append(self.receiver.imu_data['imus'][j]['mag'][0][i])
+                    row.append(self.receiver.imu_data['imus'][j]['mag'][1][i])
+                    row.append(self.receiver.imu_data['imus'][j]['mag'][2][i])
+
+                if (self.receiver.USE_ENCODER):
+                    row.append(self.receiver.imu_data['encoder'][i])
+                writer.writerow(row)
+
+
+
 
 
     def load_button_slot(self):
+
+        if (not self.check_saved()):
+            return
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -386,73 +559,16 @@ class Am_gui(QWidget):
             self.last_data_path = os.path.dirname(filename)
 
             if (filetype == "*.hdf5"):
-                with h5py.File(filename, 'r') as datafile:
-                    self.receiver.imu_data = {}
-                    self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
-                    self.receiver.imu_data['imus'] = []
-
-                    i = 0
-                    ext = ""
-                    while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/Mag' + ext in datafile):
-                        self.receiver.imu_data['imus'].append({})
-                        self.receiver.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/Accel' + ext)[()])))
-                        self.receiver.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/Gyro' + ext)[()])))
-                        self.receiver.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/Mag' + ext)[()])))
-                        i += 1
-                        ext = str(i + 1)
-
-                    self.receiver.num_imus = i
-
-                    if (self.receiver.USE_ENCODER):
-                        self.receiver.imu_data['encoder'] = datafile.get('data/Encoder')[()]
-
+                self.load_hdf5_file(filename)
             elif (filetype == "*.csv"):
-
-                if (self.receiver.USE_ENCODER):
-                    expected_non_imu_columns = 2
-                else:
-                    expected_non_imu_columns = 1
-
-                self.receiver.num_imus = None
-                #with open(filename, 'rb') as datafile:
-                with open(filename, 'r') as datafile:
-                    reader = csv.reader(datafile, delimiter=',')
-                    for row in reader:
-                        if (len(row) % 9 != expected_non_imu_columns):
-                            self.error_slot("invalid csv file\n")
-                            return
-                        row_num_imus = (len(row) - 2) // 9       # // for integer division in python3
-                        if self.receiver.num_imus is None:       # READING FIRST LINE OF CSV
-                            self.receiver.num_imus = row_num_imus
-                            self.receiver.reset_data(row_num_imus)
-                        else:
-                            if (len(row) != (self.receiver.num_imus * 9) + expected_non_imu_columns):
-                                self.error_slot("invalid csv file\n")
-                                return
-                        row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
-                        self.receiver.imu_data['timestamps'].append(row[0])
-
-                        j = 1
-                        for i in range(0, row_num_imus):
-                            self.receiver.imu_data['imus'][i]['accel'][0].append(row[j])
-                            self.receiver.imu_data['imus'][i]['accel'][1].append(row[j+1])
-                            self.receiver.imu_data['imus'][i]['accel'][2].append(row[j+2])
-                            self.receiver.imu_data['imus'][i]['gyro'][0].append(row[j+3])
-                            self.receiver.imu_data['imus'][i]['gyro'][1].append(row[j+4])
-                            self.receiver.imu_data['imus'][i]['gyro'][2].append(row[j+5])
-                            self.receiver.imu_data['imus'][i]['mag'][0].append(row[j+6])
-                            self.receiver.imu_data['imus'][i]['mag'][1].append(row[j+7])
-                            self.receiver.imu_data['imus'][i]['mag'][2].append(row[j+8])
-                            j+=9
-
-                        self.receiver.imu_data['encoder'].append(row[-1])
-
-
-                            
-
+                self.load_csv_file(filename)
             else:
                 self.error_slot("invalid file type: " + filetype + "\n")
                 return
+
+            self.make_plots()
+            for p in self.plots:
+                p.plot_slot()
 
             self.message_slot(filename + " loaded\n")
             self.data_saved = True
@@ -471,13 +587,14 @@ class Am_gui(QWidget):
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(len(self.receiver.imu_data['timestamps']) > 0)
+        self.buttons['save'].setEnabled(self.receiver.has_data())
+        #self.buttons['save'].setEnabled(len(self.receiver.imu_data['timestamps']) > 0)
         #self.buttons['test'].setEnabled(True)
 
 
 
         # CROP DATA IF PRE-TRIGGER
-        if (len(self.receiver.imu_data['timestamps']) > 0):
+        if (self.receiver.has_data()):
             if (self.receiver.use_trigger):
                 data_start_time = self.receiver.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
                 data_start_index = 0
@@ -507,7 +624,6 @@ class Am_gui(QWidget):
 
         for p in self.plots:
             p.plot_slot()
-
 
 
 
@@ -579,7 +695,8 @@ def main():
     ex = Am_gui()
     atexit.register(ex.stop_recording)
     ex.show()
-    sys.exit(app.exec_())
+    #sys.exit(app.exec_())
+    return app.exec_()
           
 if __name__ == '__main__':
     main()
