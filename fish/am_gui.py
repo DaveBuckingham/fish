@@ -26,6 +26,8 @@ class Am_gui(QWidget):
 
     PLOT_DELAY_MS = 50
 
+    BUTTON_WIDTH = 300
+
     def __init__(self, parent = None):
         super(Am_gui, self).__init__(parent)
 
@@ -68,6 +70,7 @@ class Am_gui(QWidget):
         # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
         top_layout = QGridLayout()
 
+        self.plots = []
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update)
@@ -100,6 +103,7 @@ class Am_gui(QWidget):
         self.button_container.setLayout(button_layout)
 
         self.buttons['record'] = QPushButton('Record')
+        self.buttons['record'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
@@ -111,22 +115,26 @@ class Am_gui(QWidget):
         # button_layout.addWidget(self.buttons['test'])
 
         self.buttons['process'] = QPushButton('Process')
+        self.buttons['process'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['process'].setToolTip('Process data')
         self.buttons['process'].clicked.connect(self.process_button_slot)
         button_layout.addWidget(self.buttons['process'])
 
         self.buttons['save'] = QPushButton('Save')
+        self.buttons['save'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['save'].setToolTip('Save recorded data')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
         self.buttons['load'] = QPushButton('Load')
+        self.buttons['load'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['load'].setToolTip('Load recorded data')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
         self.buttons['quit'] = QPushButton('Quit')
+        self.buttons['quit'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
         button_layout.addWidget(self.buttons['quit'])
 
@@ -169,18 +177,6 @@ class Am_gui(QWidget):
         top_layout.addWidget(self.settings, 4, 4)
 
 
-        label = QtGui.QLabel("Accel.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 1)
-
-        label = QtGui.QLabel("Gyro.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 2)
-
-        label = QtGui.QLabel("Mag.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 3)
-
 
         # ADD TOP LEVEL LAYOUT
         self.setLayout(top_layout)
@@ -221,16 +217,41 @@ class Am_gui(QWidget):
         self.receiver.numimus_signal.connect(self.numimus_slot)
 
 
-
     def print_pass_fail(self, val):
         if (val):
             self.message_slot("PASS\n")
         else:
             self.error_slot("FAIL\n")
 
+    # thanks to ekhumoro for this function
+    # http://stackoverflow.com/questions/9374063/remove-widgets-and-layout-as-well
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clearLayout(item.layout())
 
 
     def make_plots(self):
+
+        self.clear_layout(self.plots_layout)
+
+        label = QtGui.QLabel("Accel.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 1)
+
+        label = QtGui.QLabel("Gyro.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 2)
+
+        label = QtGui.QLabel("Mag.")
+        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 3)
+
         self.plots = []
         for i in (range(0, self.receiver.num_imus)):
             plot_a = Am_plot(self.receiver.imu_data['imus'][i]['accel'], self.receiver.data_lock, self)
@@ -270,7 +291,6 @@ class Am_gui(QWidget):
                 return True
             else:
                 return False
-
 
 
 
@@ -321,6 +341,7 @@ class Am_gui(QWidget):
                     self.save_csv_file(out_name)
         self.receiver.reset_data(0)
         self.data_saved = True
+        self.make_plots()
 
 
 
@@ -388,11 +409,11 @@ class Am_gui(QWidget):
 
 
     def quit_button_slot(self):
-        if (self.check_saved()):
-            self.stop_recording()
-            time.sleep(.2)  # let thread finish
-            self.message_slot("exiting")
-            self.close()
+        #if (self.check_saved()):
+        self.stop_recording()
+        time.sleep(.2)  # let thread finish
+        self.message_slot("exiting")
+        self.close()
 
 
     # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
@@ -400,9 +421,9 @@ class Am_gui(QWidget):
         if (self.recording):
             self.stop_recording()
         else:
-            if (self.check_saved()):
-                self.num_samples = 0
-                self.record()
+            #if (self.check_saved()):
+            self.num_samples = 0
+            self.record()
 
     def save_button_slot(self):
 
@@ -547,8 +568,8 @@ class Am_gui(QWidget):
 
     def load_button_slot(self):
 
-        if (not self.check_saved()):
-            return
+        #if (not self.check_saved()):
+        #    return
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -672,7 +693,6 @@ class Am_gui(QWidget):
         #self.buttons['test'].setEnabled(False)
 
         self.receiver_thread.start()
-
 
 
 

@@ -15,8 +15,10 @@ class Am_settings(QWidget):
 
         self.setWindowModality(Qt.ApplicationModal)
 
+        self.setMaximumWidth(300)
+
         top_layout = QGridLayout()
-        top_layout.setColumnMinimumWidth(2, 50)
+        #top_layout.setColumnMinimumWidth(2, 50)
 
         
         ########################################
@@ -59,6 +61,7 @@ class Am_settings(QWidget):
         #      TEXTBOX FOR TRIGGER DELAY       #
         ########################################
         self.textbox_pre_trigger = QLineEdit(str(self.parent.post_trigger_delay), self)
+        self.textbox_pre_trigger.setMaximumWidth(50)
         validator = QIntValidator(self.PRE_TRIGGER_MIN, self.PRE_TRIGGER_MAX)
         self.textbox_pre_trigger.setValidator(validator)
         self.textbox_pre_trigger.setEnabled(self.parent.receiver.use_trigger)
