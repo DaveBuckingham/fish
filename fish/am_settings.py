@@ -7,6 +7,7 @@ class Am_settings(QWidget):
 
     def __init__(self, parent=None):
 
+
         ########################################
         #               SETUP                  #
         ########################################

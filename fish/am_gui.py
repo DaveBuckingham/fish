@@ -9,6 +9,7 @@ from fish.am_rx import *
 from fish.am_plot import *
 from fish.am_settings import *
 #from fish.am_process import *
+from fish.am_process_dialog import *
 from collections import namedtuple
 import time
 import h5py
@@ -311,37 +312,31 @@ class Am_gui(QWidget):
 ############################################
 
     def batch_process(self):
-        # options = QFileDialog.Options()
-        # options |= QFileDialog.DontUseNativeDialog
-        # options |= QFileDialog.ShowDirsOnly
-        # options |= QFileDialog.DontResolveSymlinks
-        # dir_name = QFileDialog.getExistingDirectory(self, "Select a Directory", self.last_data_path, options=options)
 
         # LET THE USER SET THIS
         suffix = "_processed"
-
-
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         (filename_list, types) = QFileDialog.getOpenFileNames(self, "Select files to process", self.last_data_path, "*.hdf5 *.csv", options=options)
 
-        for filename in filename_list:
-            (base, extension) = os.path.splitext(filename)
-            if ((extension == ".hdf5") or (extension == ".csv")):
-                if (extension == ".hdf5"):
-                    self.load_hdf5_file(filename)
-                    self.process_data()
-                    out_name = base + suffix + extension
-                    self.save_hdf5_file(out_name)
-                elif (extension == ".csv"):
-                    self.load_csv_file(filename)
-                    self.process_data()
-                    out_name = base + suffix + extension
-                    self.save_csv_file(out_name)
-        self.receiver.reset_data(0)
-        self.data_saved = True
-        self.make_plots()
+        if(filename_list):
+            for filename in filename_list:
+                (base, extension) = os.path.splitext(filename)
+                if ((extension == ".hdf5") or (extension == ".csv")):
+                    if (extension == ".hdf5"):
+                        self.load_hdf5_file(filename)
+                        self.process_data()
+                        out_name = base + suffix + extension
+                        self.save_hdf5_file(out_name)
+                    elif (extension == ".csv"):
+                        self.load_csv_file(filename)
+                        self.process_data()
+                        out_name = base + suffix + extension
+                        self.save_csv_file(out_name)
+            self.receiver.reset_data(0)
+            self.data_saved = True
+            self.make_plots()
 
 
 
@@ -349,63 +344,35 @@ class Am_gui(QWidget):
 
 
     def process_button_slot(self):
-        if (not self.receiver.has_data()):
-            self.batch_process()
-        else:
 
-            msgBox = QtGui.QMessageBox()
-            msgBox.setText('Do you want to process previously saved data or the currently loaded data?')
-            msgBox.setIcon(QMessageBox.Question)
-            use_saved_btn = QtGui.QPushButton('Select a directory for batch processing')
-            use_current_btn = QtGui.QPushButton('Use current data')
-            cancel_btn = QtGui.QPushButton('Cancel')
-            msgBox.addButton(use_saved_btn, QtGui.QMessageBox.YesRole)
-            msgBox.addButton(use_current_btn, QtGui.QMessageBox.YesRole)
-            msgBox.addButton(cancel_btn, QtGui.QMessageBox.NoRole)
-            msgBox.exec_()
+        self.w = Am_process_dialog(True)
+        # self.w = Am_process_dialog(self.receiver.has_data())
+        #self.w.setGeometry(QRect(100, 100, 400, 200))
+        self.w.show()
 
-            if (msgBox.clickedButton() == use_current_btn):
-                self.process_data()
-                for p in self.plots:
-                    p.plot_slot()
-                self.data_saved = False
-            elif (msgBox.clickedButton() == use_saved_btn):
-                self.batch_process()
+        #if (not self.receiver.has_data()):
+        #    self.batch_process()
+        #else:
+        #    msgBox = QtGui.QMessageBox()
+        #    msgBox.setText('Do you want to process previously saved data or the currently loaded data?')
+        #    msgBox.setIcon(QMessageBox.Question)
+        #    use_saved_btn = QtGui.QPushButton('Select files for batch processing')
+        #    use_current_btn = QtGui.QPushButton('Use current data')
+        #    cancel_btn = QtGui.QPushButton('Cancel')
+        #    msgBox.addButton(use_saved_btn, QtGui.QMessageBox.YesRole)
+        #    msgBox.addButton(use_current_btn, QtGui.QMessageBox.YesRole)
+        #    msgBox.addButton(cancel_btn, QtGui.QMessageBox.NoRole)
+        #    msgBox.exec_()
 
-            else:
-                return
-
-
-
-
-
-#    def test_button_slot(self):
-#
-#        results = self.receiver.test()
-#
-#        if (not results):
-#            self.error_slot("Arduino com error.\n")
-#
-#        else:
-#
-#            self.message_slot("imu1 communication test...")
-#            self.print_pass_fail(results[0])
-#
-#            self.message_slot("imu2 communication test...")
-#            self.print_pass_fail(results[1])
-#
-#            self.message_slot("imu1 self test...")
-#            self.message_slot("not implemented\n")
-#
-#            self.message_slot("imu2 self test...")
-#            self.message_slot("not implemented\n")
-#
-#            self.message_slot("mag1 self test...")
-#            self.message_slot("not implemented\n")
-#
-#            self.message_slot("mag2 self test...")
-#            self.message_slot("not implemented\n")
-
+        #    if (msgBox.clickedButton() == use_current_btn):
+        #        self.process_data()
+        #        for p in self.plots:
+        #            p.plot_slot()
+        #        self.data_saved = False
+        #    elif (msgBox.clickedButton() == use_saved_btn):
+        #        self.batch_process()
+        #    else:
+        #        return
 
 
     def quit_button_slot(self):
@@ -567,9 +534,6 @@ class Am_gui(QWidget):
 
 
     def load_button_slot(self):
-
-        #if (not self.check_saved()):
-        #    return
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
