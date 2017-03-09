@@ -1,8 +1,14 @@
 TODO:
 
-when loading file, check for correctness
+global class:
+last search path
+disable/enable format
 
-if load will overwrite unsaved data, ask user
+cant plot for very long...
+
+segfault on exit with python3
+
+when loading file, check for correctness
 
 slightly different float rounding for python2 and 3
 

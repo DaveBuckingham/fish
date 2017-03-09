@@ -81,15 +81,17 @@ class Am_plot(pg.PlotWidget):
         #x = range(len(self.plot_data[:][0]), 0, -1)
 
         if (not self.lock[0]):
-            #self.curve_red.setData(self.plot_data[0])
-            #self.curve_green.setData(self.plot_data[1])
-            #self.curve_blue.setData(self.plot_data[2])
-            d = self.downsample(self.plot_data[0], self.MAX_SAMPLES)
-            self.curve_red.setData(d[1], d[0])
-            d = self.downsample(self.plot_data[1], self.MAX_SAMPLES)
-            self.curve_green.setData(d[1], d[0])
-            d = self.downsample(self.plot_data[2], self.MAX_SAMPLES)
-            self.curve_blue.setData(d[1], d[0])
+            self.curve_red.setData(self.plot_data[0])
+            self.curve_green.setData(self.plot_data[1])
+            self.curve_blue.setData(self.plot_data[2])
+
+            #d = self.downsample(self.plot_data[0], self.MAX_SAMPLES)
+            #self.curve_red.setData(d[1], d[0])
+            #d = self.downsample(self.plot_data[1], self.MAX_SAMPLES)
+            #self.curve_green.setData(d[1], d[0])
+            #d = self.downsample(self.plot_data[2], self.MAX_SAMPLES)
+            #self.curve_blue.setData(d[1], d[0])
+
             # self.curve_red.setData(self.downsample(self.plot_data[0], self.MAX_SAMPLES))
             # self.curve_green.setData(self.downsample(self.plot_data[1], self.MAX_SAMPLES))
             # self.curve_blue.setData(self.downsample(self.plot_data[2], self.MAX_SAMPLES))
