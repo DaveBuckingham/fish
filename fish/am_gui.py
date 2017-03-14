@@ -39,16 +39,10 @@ class Am_gui(QWidget):
         #       VARIABLES      #
         ########################
 
-        # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
-        self.data_saved = True
 
         # CURRENTLY RECORDING DATA?
         self.recording = False
 
-        # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING, IGNORE PIN
-        # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY, HALT ON PIN
-        self.pre_trigger_delay = 3
-        self.post_trigger_delay = 3
 
         # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
@@ -76,7 +70,12 @@ class Am_gui(QWidget):
         self.timer.timeout.connect(self.update)
 
 
-        self.data = Am_data()
+        self.settings = Am_settings(self)
+
+        self.data = Am_data(self.settings)
+        # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
+        self.data.saved = True
+
 
 
         ##################################################
@@ -84,7 +83,7 @@ class Am_gui(QWidget):
         ##################################################
 
         self.receiver_thread = QThread()
-        self.receiver = Am_rx(self.data)
+        self.receiver = Am_rx(self.data, self.settings)
         self.receiver.moveToThread(self.receiver_thread)
 
 
@@ -149,10 +148,6 @@ class Am_gui(QWidget):
 
 
 
-        # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
-
-        self.settings = Am_settings(self)
-
 
         # STATUS INFO
 
@@ -197,7 +192,6 @@ class Am_gui(QWidget):
         ########################
 
 
-
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
         self.receiver.recording_signal.connect(self.start_plot_slot)
@@ -216,6 +210,10 @@ class Am_gui(QWidget):
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
         self.receiver.numimus_signal.connect(self.numimus_slot)
+
+        self.data.message_signal.connect(self.message_slot)
+        self.data.error_signal.connect(self.error_slot)
+
 
 
     def print_pass_fail(self, val):
@@ -271,7 +269,7 @@ class Am_gui(QWidget):
 
 
     def check_saved(self):
-        if (self.data_saved):
+        if (self.data.saved):
             return True
         else:
 
@@ -308,6 +306,11 @@ class Am_gui(QWidget):
 
         self.w = Am_process_dialog(self.data)
         #self.w.setGeometry(QRect(100, 100, 400, 200))
+        
+        self.w.finished_signal.connect(self.update)
+        self.w.message_signal.connect(self.message_slot)
+        self.w.error_signal.connect(self.error_slot)
+
         self.w.show()
 
 
@@ -352,8 +355,8 @@ class Am_gui(QWidget):
                 self.error_slot("invalid file type: " + filetype + "\n")
                 return False
 
-            self.message_slot("data saved to  " + filename + "\n")
-            self.data_saved = True
+            #self.message_slot("data saved to  " + filename + "\n")
+            self.data.saved = True
             return True
 
 
@@ -381,8 +384,8 @@ class Am_gui(QWidget):
             for p in self.plots:
                 p.plot_slot()
 
-            self.message_slot(filename + " loaded\n")
-            self.data_saved = True
+            #self.message_slot(filename + " loaded\n")
+            self.data.saved = True
             self.buttons['save'].setEnabled(True)
 
 
@@ -405,14 +408,14 @@ class Am_gui(QWidget):
 
 
         # CROP DATA IF PRE-TRIGGER
-        if (self.data.has_data()):
-            if (self.receiver.use_trigger):
-                data_start_time = self.data.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
-                data_start_index = 0
-                for i in range(0, len(self.data.imu_data)):
-                    if (self.data.imu_data[i]['time'] > data_start_time):
-                        self.data.imu_data = self.data.imu_data[i:]
-                        break
+#        if (self.data.has_data()):
+#            if (self.receiver.use_trigger):
+#                data_start_time = self.data.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
+#                data_start_index = 0
+#                for i in range(0, len(self.data.imu_data)):
+#                    if (self.data.imu_data[i]['time'] > data_start_time):
+#                        self.data.imu_data = self.data.imu_data[i:]
+#                        break
 
         self.message_slot("done recording\n")
 
@@ -473,7 +476,7 @@ class Am_gui(QWidget):
     def record(self):
         self.recording = True
         self.receiver.recording = True
-        self.data_saved = False
+        self.data.saved = False
 
         self.buttons['record'].setText('Stop')
 

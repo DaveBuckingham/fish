@@ -7,6 +7,10 @@ class Am_settings(QWidget):
 
     def __init__(self, parent=None):
 
+        
+        self.use_trigger = False
+        self.data_buffer_len = 30
+
 
         ########################################
         #               SETUP                  #
@@ -19,63 +23,55 @@ class Am_settings(QWidget):
         self.setMaximumWidth(300)
 
         top_layout = QGridLayout()
-        #top_layout.setColumnMinimumWidth(2, 50)
 
         
         ########################################
         #              COSNTANTS               #
         ########################################
-        self.PRE_TRIGGER_MIN = 1
-        self.PRE_TRIGGER_MAX = 180
-        self.POST_TRIGGER_MIN = 1
-        self.POST_TRIGGER_MAX = 180
+        self.DATA_BUFFER_MIN = 1
+        self.DATA_BUFFER_MAX = 181
 
 
         ########################################
         #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
         ########################################
-        self.checkbox_trigger = QCheckBox('use trigger', self)
-        self.checkbox_trigger.setChecked(self.parent.receiver.use_trigger)
-        self.checkbox_trigger.stateChanged.connect(self.toggle_trigger)
+        trigger_checkbox = QCheckBox('use trigger', self)
+        trigger_checkbox.stateChanged.connect(self.toggle_trigger)
 
 
         ########################################
-        #       LABEL FOR TRIGGER DELAY        #
+        #        DATA BUFFER SETTINGS          #
         ########################################
-        self.pre_trigger_label = QLabel("pre-trigger delay (sec.)")
-        self.pre_trigger_label.setEnabled(self.parent.receiver.use_trigger)
 
+        # LAYOUT
+        buffer_layout = QGridLayout()
 
-        ########################################
-        #       SLIDER FOR TRIGGER DELAY       #
-        ########################################
-        self.slider_pre_trigger = QSlider(Qt.Horizontal, self)
-        self.slider_pre_trigger.setValue(self.parent.pre_trigger_delay)
-        self.slider_pre_trigger.setEnabled(self.parent.receiver.use_trigger)
-        self.slider_pre_trigger.setFocusPolicy(Qt.NoFocus)
-        self.slider_pre_trigger.valueChanged[int].connect(self.read_pre_trigger_slider_slot)
-        self.slider_pre_trigger.setMinimum(self.PRE_TRIGGER_MIN)
-        self.slider_pre_trigger.setMaximum(self.PRE_TRIGGER_MAX)
+        # LABEL
+        buffer_label = QLabel("data buffer length (sec.)")
+        buffer_layout.addWidget(buffer_label, 1, 1)
 
+        # SLIDER
+        self.buffer_slider = QSlider(Qt.Horizontal, self)
+        self.buffer_slider.setValue(self.data_buffer_len)
+        self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
+        self.buffer_slider.setMinimum(self.DATA_BUFFER_MIN)
+        self.buffer_slider.setMaximum(self.DATA_BUFFER_MAX)
+        buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
-        ########################################
-        #      TEXTBOX FOR TRIGGER DELAY       #
-        ########################################
-        self.textbox_pre_trigger = QLineEdit(str(self.parent.post_trigger_delay), self)
-        self.textbox_pre_trigger.setMaximumWidth(50)
-        validator = QIntValidator(self.PRE_TRIGGER_MIN, self.PRE_TRIGGER_MAX)
-        self.textbox_pre_trigger.setValidator(validator)
-        self.textbox_pre_trigger.setEnabled(self.parent.receiver.use_trigger)
-        self.textbox_pre_trigger.editingFinished.connect(self.read_pre_trigger_text_slot)
+        # TEXTBOX
+        self.buffer_textbox = QLineEdit(str(self.data_buffer_len), self)
+        self.buffer_textbox.setMaximumWidth(50)
+        validator = QIntValidator(self.DATA_BUFFER_MIN, self.DATA_BUFFER_MAX)
+        self.buffer_textbox.setValidator(validator)
+        self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)
+        buffer_layout.addWidget(self.buffer_textbox, 2, 2)
 
 
         ########################################
         #      PLACE EVERYTHING IN LAYOUT      #
         ########################################
-        top_layout.addWidget(self.checkbox_trigger, 1, 1)
-        top_layout.addWidget(self.pre_trigger_label, 2, 1)
-        top_layout.addWidget(self.slider_pre_trigger, 3, 1)
-        top_layout.addWidget(self.textbox_pre_trigger, 3, 2)
+        top_layout.addWidget(trigger_checkbox, 1, 1)
+        top_layout.addLayout(buffer_layout, 2, 1)
         self.setLayout(top_layout)
 
 
@@ -83,32 +79,23 @@ class Am_settings(QWidget):
     #        HANDLE TRIGGER CHECKBOX       #
     ########################################
     def toggle_trigger(self, state):
-        if (state == Qt.Checked):
-            self.slider_pre_trigger.setEnabled(True)
-            self.textbox_pre_trigger.setEnabled(True)
-            self.pre_trigger_label.setEnabled(True)
-            self.parent.receiver.use_trigger = True
-        else:
-            self.slider_pre_trigger.setEnabled(False)
-            self.textbox_pre_trigger.setEnabled(False)
-            self.pre_trigger_label.setEnabled(False)
-            self.parent.receiver.use_trigger = False
+        self.use_trigger = not self.use_trigger
 
           
     ########################################
     #        HANDLE SLIDER CHANGES         #
     ########################################
-    def read_pre_trigger_slider_slot(self, val):
-        self.parent.pre_trigger_delay = val
-        self.textbox_pre_trigger.setText(str(self.parent.pre_trigger_delay))
+    def read_buffer_slider_slot(self, val):
+        self.data_buffer_len = val
+        self.buffer_textbox.setText(str(self.data_buffer_len))
 
 
     ########################################
     #        HANDLE TEXTBOX ENTRY          #
     ########################################
-    def read_pre_trigger_text_slot(self):
-        val = int(self.textbox_pre_trigger.text())
-        self.parent.pre_trigger_delay = val
-        self.slider_pre_trigger.setValue(self.parent.pre_trigger_delay)
+    def read_buffer_text_slot(self):
+        val = int(self.buffer_textbox.text())
+        self.data_buffer_len = val
+        self.buffer_slider.setValue(self.data_buffer_len)
 
 

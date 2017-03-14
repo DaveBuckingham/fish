@@ -1,5 +1,11 @@
 TODO:
 
+better mutex
+
+fix trigger
+
+replot after process
+
 global class:
 last search path
 disable/enable format

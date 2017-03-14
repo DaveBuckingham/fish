@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import collections
 import os
 import sys
 import time
@@ -78,7 +79,7 @@ class Am_rx(QObject):
 
     timestamp_signal = pyqtSignal(float)
 
-    def __init__(self, data):
+    def __init__(self, data, settings):
         super(Am_rx, self).__init__()
 
         self.recording = False
@@ -86,12 +87,8 @@ class Am_rx(QObject):
         self.sample_length = 0
 
         self.data = data
+        self.settings = settings
 
-        #self.imu_data = {}
-        #self.imu_data['timestamps'] = []
-        #self.data_lock = [False]
-
-        self.use_trigger = False
 
 
 
@@ -357,45 +354,67 @@ class Am_rx(QObject):
 
                 (id,) = struct.unpack('>L', received[:4])
 
-                trig = False
+                trigger_value = False
 
 
+                sample = []
+                sample.append(timestamp)
+                sample.append([])
 
-                if(self.data.data_lock[0]):
-                    print("WRITE LOCKED am_rx")
-                else:
-                    self.data.data_lock[0] = True
+                for i in (range(0, self.data.num_imus)):
 
-                    self.data.imu_data['timestamps'].append(timestamp)
-                    for i in (range(0, self.data.num_imus)):
-                        (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
-                        (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
-                        (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
-                        (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
+                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
+                    (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
+                    (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
+                    (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                        self.data.imu_data['imus'][i]['accel'][0].append(ax)
-                        self.data.imu_data['imus'][i]['accel'][1].append(ay)
-                        self.data.imu_data['imus'][i]['accel'][2].append(az)
+                    sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
-                        self.data.imu_data['imus'][i]['gyro'][0].append(gx)
-                        self.data.imu_data['imus'][i]['gyro'][1].append(gy)
-                        self.data.imu_data['imus'][i]['gyro'][2].append(gz)
+                (trigger_value,) = struct.unpack('>?', received[22:23])
 
-                        self.data.imu_data['imus'][i]['mag'][0].append(mx)
-                        self.data.imu_data['imus'][i]['mag'][1].append(my)
-                        self.data.imu_data['imus'][i]['mag'][2].append(mz)
+                if (Am_rx.USE_ENCODER):
+                    (enc,) = struct.unpack('>h', received[23:25])
+                    enc *= 0.3515625  # 360/1024
+                    sample.append(enc)
 
-                    (trig,) = struct.unpack('>?', received[22:23])
+                self.data.add_sample(sample)
 
-                    if (Am_rx.USE_ENCODER):
-                        (enc,) = struct.unpack('>h', received[23:25])
-                        enc *= 0.3515625  # 360/1024
-                        self.data.imu_data['encoder'].append(enc)
+               
+#                if(self.data.data_lock[0]):
+#                    print("WRITE LOCKED am_rx")
+#                else:
+#                    self.data.data_lock[0] = True
+#
+#                    self.data.imu_data['timestamps'].append(timestamp)
+#                    for i in (range(0, self.data.num_imus)):
+#                        (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
+#                        (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
+#                        (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
+#                        (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
+#
+#                        self.data.imu_data['imus'][i]['accel'][0].append(ax)
+#                        self.data.imu_data['imus'][i]['accel'][1].append(ay)
+#                        self.data.imu_data['imus'][i]['accel'][2].append(az)
+#
+#                        self.data.imu_data['imus'][i]['gyro'][0].append(gx)
+#                        self.data.imu_data['imus'][i]['gyro'][1].append(gy)
+#                        self.data.imu_data['imus'][i]['gyro'][2].append(gz)
+#
+#                        self.data.imu_data['imus'][i]['mag'][0].append(mx)
+#                        self.data.imu_data['imus'][i]['mag'][1].append(my)
+#                        self.data.imu_data['imus'][i]['mag'][2].append(mz)
+#
+#                    (trigger_value,) = struct.unpack('>?', received[22:23])
+#
+#                    if (Am_rx.USE_ENCODER):
+#                        (enc,) = struct.unpack('>h', received[23:25])
+#                        enc *= 0.3515625  # 360/1024
+#                        self.data.imu_data['encoder'].append(enc)
+#
+#
+#                    self.data.data_lock[0] = False
 
-
-                    self.data.data_lock[0] = False
-
-                if (trig and self.use_trigger):
+                if (self.settings.use_trigger and trigger_value):
                     self.message_signal.emit("received trigger\n")
                     self.tx_byte(Am_rx.COM_SIGNAL_STOP)
                     self.close_connection()

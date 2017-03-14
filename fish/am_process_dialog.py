@@ -1,9 +1,19 @@
 #!/usr/bin/python
 
+import os
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+try:
+    from PyQt5.QtCore import QString
+except ImportError:
+    QString = str
+
 class Am_process_dialog(QWidget):
+
+    finished_signal = pyqtSignal()
+    message_signal = pyqtSignal(QString)
+    error_signal = pyqtSignal(QString)
 
     #def __init__(self, current_data=False, parent=None):
     def __init__(self, data):
@@ -22,96 +32,116 @@ class Am_process_dialog(QWidget):
         top_layout = QGridLayout()
 
         self.batch_process = False
-        self.batch_output_filetupe = ""
+        self.batch_output_filetype = ""
         self.process_algorithm = ""
 
         self.filename_list = []
 
+
         
-        ########################################
-        #              COSNTANTS               #
-        ########################################
-
-
-        ########################################
-        #          RADIO BUTOONS               #
-        ########################################
-
-        # Alex's approach to radio buttons was helpful:
-        # http://stackoverflow.com/questions/17402452/how-to-get-the-checked-radiobutton-from-a-groupbox-in-pyqt
 
         top_layout = QGridLayout()
 
-        # MODE RADIOS
-        mode_layout = QVBoxLayout()
-        self.mode_button_group = QButtonGroup(self)
-        self.mode_radios = [QRadioButton("Use current data"), QRadioButton("Batch process")]
-
-        for i in range(len(self.mode_radios)):
-            mode_layout.addWidget(self.mode_radios[i])
-            self.mode_button_group.addButton(self.mode_radios[i])
 
 
-        # BATCH OPTIONS
+        #########################################################
+        #   BATCH OPTIONS, ACTIVE ONLY WHEN BATCH IS SELECTED   #
+        #########################################################
+
         self.batch_layout = QVBoxLayout()
+
+        # SELECT FILES BUTTON
         select_files_btn = QPushButton('Select files')
         select_files_btn.clicked.connect(self.select_files)
         self.batch_layout.addWidget(select_files_btn)
 
+        # NUMBER OF FILES SELECTED
         self.num_files_label = QLabel("0 files selected")
         self.batch_layout.addWidget(self.num_files_label)
 
-        filetype_button_group = QButtonGroup(self)
-        filetype_radios = [QRadioButton("hdf5"), QRadioButton("csv"), QRadioButton("input")]
+        # OUTPUT FILE TYPE
+        filetype_box = QGroupBox("Output file type")
+        filetype_layout = QVBoxLayout()
 
-        filetype_radios[0].clicked.connect(self.set_output_hdf5)
-        filetype_radios[1].clicked.connect(self.set_output_csv)
-        filetype_radios[2].clicked.connect(self.set_output_input)
+        radio = QRadioButton("hdf5")
+        radio.clicked.connect(self.set_output_hdf5)
+        filetype_layout.addWidget(radio)
+        radio.click()
 
-        for i in range(len(filetype_radios)):
-            self.batch_layout.addWidget(filetype_radios[i])
-            filetype_button_group.addButton(filetype_radios[i])
+        radio = QRadioButton("csv")
+        radio.clicked.connect(self.set_output_csv)
+        filetype_layout.addWidget(radio)
 
+        radio = QRadioButton("same as input")
+        radio.clicked.connect(self.set_output_input)
+        filetype_layout.addWidget(radio)
+
+        filetype_box.setLayout(filetype_layout)
+        self.batch_layout.addWidget(filetype_box)
+
+        # OUTPUT FILENAME POSTFIX
         postfix_layout = QHBoxLayout()
         postfix_label = QLabel("output suffix:")
         postfix_layout.addWidget(postfix_label)
 
-        postfix_textbox = QLineEdit("_processed")
-        postfix_layout.addWidget(postfix_textbox)
+        self.postfix_textbox = QLineEdit("_processed")
+        postfix_layout.addWidget(self.postfix_textbox)
 
         self.batch_layout.addLayout(postfix_layout)
 
 
-        mode_layout.addLayout(self.batch_layout)
 
 
-        self.mode_radios[0].clicked.connect(self.set_single_mode)
-        self.mode_radios[1].clicked.connect(self.set_batch_mode)
+        #########################################################
+        #   CURRENT DATA OR BATCH MODE, INCLUDES BATCH OPTIONS  #
+        #########################################################
 
+        mode_layout = QVBoxLayout()
+        mode_box = QGroupBox("Process mode")
+
+        radio = QRadioButton("Use current data")
+        radio.clicked.connect(self.set_single_mode)
+        mode_layout.addWidget(radio);
         if(self.data.has_data()):
-            self.mode_radios[0].click()
-            #self.mode_radios[0].setChecked(True)
-            #self.set_single_mode()
+            radio.click()
         else:
-            self.mode_radios[0].setEnabled(False)
-            self.mode_radios[1].click()
-            #self.mode_radios[1].setChecked(True)
-            #self.set_batch_mode()
+            radio.setEnabled(False)
+
+        radio = QRadioButton("Batch process")
+        radio.clicked.connect(self.set_batch_mode)
+        mode_layout.addWidget(radio)
+        if(not self.data.has_data()):
+            radio.click()
+
+        mode_box.setLayout(mode_layout)
 
 
 
+        #########################################################
+        #          PROCESSIING ALGORITHM SELECTION              #
+        #########################################################
 
-
-        # ALGORITHM RADIOS
         algorithm_layout = QVBoxLayout()
-        self.algorithm_button_group = QButtonGroup(self)
-        self.algorithm_radios = [QRadioButton("Madgwick"), QRadioButton("Simple integration"), QRadioButton("Extended Kalman")]
-        #self.algorithm_radios[0].setChecked(True)
-        self.algorithm_radios[0].click()
+        algorithm_box = QGroupBox("Integration algorithm")
 
-        for i in range(len(self.algorithm_radios)):
-            algorithm_layout.addWidget(self.algorithm_radios[i])
-            self.algorithm_button_group.addButton(self.algorithm_radios[i])
+
+        radio = QRadioButton("Madgwick")
+        radio.clicked.connect(lambda: self.set_algorithm('madgwick'))
+        algorithm_layout.addWidget(radio)
+        radio.click()
+
+        radio = QRadioButton("Simple integration")
+        radio.clicked.connect(lambda: self.set_algorithm('integrate'))
+        algorithm_layout.addWidget(radio)
+
+        radio = QRadioButton("Extended Kalman")
+        radio.clicked.connect(lambda: self.set_algorithm('ekf'))
+        algorithm_layout.addWidget(radio)
+
+        algorithm_box.setLayout(algorithm_layout)
+
+
+
 
 
         # BUTTONS
@@ -126,8 +156,9 @@ class Am_process_dialog(QWidget):
         button_layout.addWidget(process_btn)
  
 
-        top_layout.addLayout(mode_layout, 0, 0)
-        top_layout.addLayout(algorithm_layout, 0, 1)
+        top_layout.addWidget(mode_box, 0, 0)
+        top_layout.addLayout(self.batch_layout, 1, 0)
+        top_layout.addWidget(algorithm_box, 0, 1)
         top_layout.addLayout(button_layout, 2, 0, 2, 0)
         self.setLayout(top_layout)
 
@@ -158,7 +189,7 @@ class Am_process_dialog(QWidget):
     def set_output_input(self):
         self.batch_output_filetype = "input"
 
-    def set_algorith(self, name):
+    def set_algorithm(self, name):
         if (name == 'madgwick' or name == 'integrate' or name == 'ekf'):
             self.process_algorithm = name
 
@@ -172,6 +203,7 @@ class Am_process_dialog(QWidget):
 
 
     def process_current_dataset(self, algorithm):
+        self.message_signal.emit("running " + algorithm + "\n")
         if (self.data.has_data()):
             for i in range(0, len(self.data.imu_data['timestamps'])):
                 for j in range(0, len(self.data.imu_data['imus'])):
@@ -182,7 +214,7 @@ class Am_process_dialog(QWidget):
 
 
     def process_multiple_datasets(self, algorithm):
-        suffix = "_processed"
+        suffix = self.postfix_textbox.text()
 
         if(self.filename_list):
             for filename in self.filename_list:
@@ -190,22 +222,21 @@ class Am_process_dialog(QWidget):
                 if ((extension == ".hdf5") or (extension == ".csv")):
 
                     if (extension == ".hdf5"):
-                        self.load_hdf5_file(filename)
+                        self.data.load_hdf5_file(filename)
                         self.process_current_dataset(algorithm)
                     elif (extension == ".csv"):
-                        self.load_csv_file(filename)
+                        self.data.load_csv_file(filename)
                         self.process_current_dataset(algorithm)
 
                     if ((self.batch_output_filetype == "hdf5") or ((self.batch_output_filetype == "input") and (extension == ".hdf5"))):
                         out_name = base + suffix + ".hdf5"
-                        self.save_hdf5_file(out_name)
+                        self.data.save_hdf5_file(out_name)
                     elif ((self.batch_output_filetype == "csv") or ((self.batch_output_filetype == "input") and (extension == ".csv"))):
                         out_name = base + suffix + ".csv"
-                        self.save_csv_file(out_name)
+                        self.data.save_csv_file(out_name)
 
             self.data.reset_data(0)
-            self.data_saved = True
-            self.make_plots()
+            self.data.saved = True
 
 
     def run_process(self):
@@ -213,7 +244,11 @@ class Am_process_dialog(QWidget):
             self.process_multiple_datasets(self.process_algorithm)
         else:
             self.process_current_dataset(self.process_algorithm)
-
         self.close()
+
+    # OVERRIDE
+    def closeEvent(self, event):
+        self.finished_signal.emit()
+        event.accept()
 
 

@@ -21,7 +21,7 @@ except ImportError:
     QString = str
 
 
-class Am_data():
+class Am_data(QObject):
 
     USE_ENCODER = True
 
@@ -39,14 +39,17 @@ class Am_data():
     timestamp_signal = pyqtSignal(float)
 
 
-    def __init__(self):
+    def __init__(self, settings):
+        super(Am_data, self).__init__()
 
         self.imu_data = {}
         self.imu_data['timestamps'] = []
 
-
+        self.settings = settings
 
         self.data_lock = [False]
+
+        self.saved = True
         
 
     def has_data(self):
@@ -64,10 +67,48 @@ class Am_data():
         self.data_lock[0] = False
         self.num_imus = num_imus
 
+    def add_sample(self, sample):
+        if (Am_data.USE_ENCODER):
+            assert(len(sample) == 3)
+        else:
+            assert(len(sample) == 2)
+        assert(len(sample[1]) == self.num_imus)
 
 
+        if(self.data_lock[0]):
+            print("WRITE LOCKED am_rx")
+        else:
+            self.data_lock[0] = True
+
+            self.imu_data['timestamps'].append(sample[0])
+
+            for i in (range(0, self.num_imus)):
+                self.imu_data['imus'][i]['accel'][0].append(sample[1][i][0][0])
+                self.imu_data['imus'][i]['accel'][1].append(sample[1][i][0][1])
+                self.imu_data['imus'][i]['accel'][2].append(sample[1][i][0][2])
+
+                self.imu_data['imus'][i]['gyro'][0].append(sample[1][i][1][0])
+                self.imu_data['imus'][i]['gyro'][1].append(sample[1][i][1][1])
+                self.imu_data['imus'][i]['gyro'][2].append(sample[1][i][1][2])
+
+                self.imu_data['imus'][i]['mag'][0].append(sample[1][i][2][0])
+                self.imu_data['imus'][i]['mag'][1].append(sample[1][i][2][1])
+                self.imu_data['imus'][i]['mag'][2].append(sample[1][i][2][2])
+
+
+            self.imu_data['encoder'].append(sample[2])
+
+            self.data_lock[0] = False
+
+
+
+
+    ##################################################
+    #            LOAD AND SAVE FILES                 #
+    ##################################################
 
     def load_csv_file(self, filename):
+        self.message_signal.emit("loading " + filename + "\n")
 
         if (Am_data.USE_ENCODER):
             expected_non_imu_columns = 2
@@ -111,8 +152,8 @@ class Am_data():
         return False
 
 
-
     def load_hdf5_file(self, filename):
+        self.message_signal.emit("loading " + filename + "\n")
         with h5py.File(filename, 'r') as datafile:
             self.imu_data = {}
             self.imu_data['timestamps'] = datafile.get('data/t')[()]
@@ -137,6 +178,7 @@ class Am_data():
 
 
     def save_hdf5_file(self, filename):
+        self.message_signal.emit("saving " + filename + "\n")
         with h5py.File(filename, 'w') as datafile:
             save_data = datafile.create_group("data")
 
@@ -153,8 +195,8 @@ class Am_data():
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
 
 
-
     def save_csv_file(self, filename):
+        self.message_signal.emit("saving " + filename + "\n")
         with open(filename, 'w') as datafile:
             writer = csv.writer(datafile, delimiter=',')
 
