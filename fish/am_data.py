@@ -50,6 +50,8 @@ class Am_data(QObject):
         self.data_lock = [False]
 
         self.saved = True
+
+        self.total_samples = 0
         
 
     def has_data(self):
@@ -96,8 +98,35 @@ class Am_data(QObject):
                 self.imu_data['imus'][i]['mag'][2].append(sample[1][i][2][2])
 
 
-            self.imu_data['encoder'].append(sample[2])
+            if (Am_data.USE_ENCODER):
+                self.imu_data['encoder'].append(sample[2])
 
+
+            limit = self.settings.data_buffer_len
+            if (len(self.imu_data['timestamps']) > limit):
+                self.imu_data['timestamps'] = self.imu_data['timestamps'][-limit:]
+
+                for i in (range(0, self.num_imus)):
+                    self.imu_data['imus'][i]['accel'][0] = self.imu_data['imus'][i]['accel'][0][-limit:]
+                    self.imu_data['imus'][i]['accel'][1] = self.imu_data['imus'][i]['accel'][1][-limit:]
+                    self.imu_data['imus'][i]['accel'][2] = self.imu_data['imus'][i]['accel'][2][-limit:]
+
+                    self.imu_data['imus'][i]['gyro'][0] = self.imu_data['imus'][i]['gyro'][0][-limit:]
+                    self.imu_data['imus'][i]['gyro'][1] = self.imu_data['imus'][i]['gyro'][1][-limit:]
+                    self.imu_data['imus'][i]['gyro'][2] = self.imu_data['imus'][i]['gyro'][2][-limit:]
+
+                    self.imu_data['imus'][i]['mag'][0] = self.imu_data['imus'][i]['mag'][0][-limit:]
+                    self.imu_data['imus'][i]['mag'][1] = self.imu_data['imus'][i]['mag'][1][-limit:]
+                    self.imu_data['imus'][i]['mag'][2] = self.imu_data['imus'][i]['mag'][2][-limit:]
+
+
+                if (Am_data.USE_ENCODER):
+                    self.imu_data['encoder'] = self.imu_data['encoder'][-limit:]
+
+
+
+
+            self.total_samples += 1
             self.data_lock[0] = False
 
 

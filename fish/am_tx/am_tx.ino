@@ -51,13 +51,11 @@
 //            CONSTANTS                //
 /////////////////////////////////////////
 
-#define DEL                          1 
+#define DEL                                       1 
 
 #define USE_ENCODER
 
-#define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
-//#define SAMPLE_FREQ_HZ                            1            // attempted samples per second
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 #define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
 const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX_CHIP_SELECTS
@@ -747,4 +745,3 @@ void loop() {
         }
     }
 }
-

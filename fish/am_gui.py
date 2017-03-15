@@ -3,6 +3,7 @@
 # USE PYTHON 2.6 OR LATER
 
 import sys
+import datetime
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from fish.am_rx import *
@@ -151,26 +152,32 @@ class Am_gui(QWidget):
 
         # STATUS INFO
 
-        stats_layout = QGridLayout()
-        self.stats_num_samples = QLabel("Samples:")
+        #stats_layout = QGridLayout()
+        stats_layout = QVBoxLayout()
+        self.stats_num_samples_buffer = QLabel("Samples in buffer:")
+        self.stats_num_samples_recorded = QLabel("Total samples recorded:")
         self.stats_true_frequency = QLabel("Frequency:")
         self.stats_time = QLabel("Time:")
 
-        stats_layout.addWidget(self.stats_num_samples, 1, 2)
-        stats_layout.addWidget(self.stats_true_frequency, 1, 3)
-        stats_layout.addWidget(self.stats_time, 1, 4)
-        stats_layout.setColumnMinimumWidth(2, 120)
+        stats_layout.addWidget(self.stats_time)
+        stats_layout.addWidget(self.stats_true_frequency)
+        stats_layout.addWidget(self.stats_num_samples_recorded)
+        stats_layout.addWidget(self.stats_num_samples_buffer)
+
+        # stats_layout.addWidget(self.stats_num_samples_buffer, 1, 2)
+        # stats_layout.addWidget(self.stats_num_samples_recorded, 1, 3)
+        # stats_layout.addWidget(self.stats_true_frequency, 1, 4)
+        # stats_layout.addWidget(self.stats_time, 1, 5)
+        # stats_layout.setColumnMinimumWidth(2, 120)
 
         self.plots_layout = QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
-        top_layout.addLayout(self.plots_layout, 1, 1)
-
-        top_layout.addWidget(self.text_window, 4, 1, 1, 2)
-        top_layout.addLayout(stats_layout, 5, 1, 1, 2)
-
-        top_layout.addWidget(self.button_container, 1, 4, 3, 1)
-        top_layout.addWidget(self.settings, 4, 4)
+        top_layout.addLayout(self.plots_layout, 1, 1, 2, 1)
+        top_layout.addWidget(self.text_window, 3, 1, 1, 1)
+        top_layout.addWidget(self.button_container, 1, 2, 1, 1)
+        top_layout.addWidget(self.settings, 2, 2, 1, 1, QtCore.Qt.AlignTop)
+        top_layout.addLayout(stats_layout, 3, 2, 1, 1, QtCore.Qt.AlignBottom)
 
 
 
@@ -405,18 +412,6 @@ class Am_gui(QWidget):
         #self.buttons['save'].setEnabled(len(self.data.imu_data['timestamps']) > 0)
         #self.buttons['test'].setEnabled(True)
 
-
-
-        # CROP DATA IF PRE-TRIGGER
-#        if (self.data.has_data()):
-#            if (self.receiver.use_trigger):
-#                data_start_time = self.data.imu_data[-1]['time'] - (self.pre_trigger_delay * 1000);
-#                data_start_index = 0
-#                for i in range(0, len(self.data.imu_data)):
-#                    if (self.data.imu_data[i]['time'] > data_start_time):
-#                        self.data.imu_data = self.data.imu_data[i:]
-#                        break
-
         self.message_slot("done recording\n")
 
 
@@ -428,7 +423,9 @@ class Am_gui(QWidget):
             self.stats_time.setText('Time: %.1f' % (timestamps[-1]))
 
         num_samples = len(timestamps)
-        self.stats_num_samples.setText('Samples: %d' % num_samples)
+        self.stats_num_samples_buffer.setText('Samples in buffer: %d' % num_samples)
+        self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
+
 
         if (num_samples > Am_gui.FREQ_AVERAGE_WINDOW):
             window = timestamps[-(Am_gui.FREQ_AVERAGE_WINDOW):]
@@ -459,6 +456,7 @@ class Am_gui(QWidget):
         else:
             self.text_window.setTextColor(QtGui.QColor(200,200,200))
             #self.text_window.setTextColor(QtGui.QColor(0,0,0))
+        #self.text_window.insertPlainText(str(datetime.datetime.today()) + "  " + the_string)
         self.text_window.insertPlainText(the_string)
         sb = self.text_window.verticalScrollBar();
         sb.setValue(sb.maximum());

@@ -9,7 +9,7 @@ class Am_settings(QWidget):
 
         
         self.use_trigger = False
-        self.data_buffer_len = 30
+        self.data_buffer_len = 600
 
 
         ########################################
@@ -29,7 +29,7 @@ class Am_settings(QWidget):
         #              COSNTANTS               #
         ########################################
         self.DATA_BUFFER_MIN = 1
-        self.DATA_BUFFER_MAX = 181
+        self.DATA_BUFFER_MAX = 20000
 
 
         ########################################
@@ -47,7 +47,8 @@ class Am_settings(QWidget):
         buffer_layout = QGridLayout()
 
         # LABEL
-        buffer_label = QLabel("data buffer length (sec.)")
+        #buffer_label = QLabel("data buffer length (sec.)")
+        buffer_label = QLabel("data buffer length (# samples)")
         buffer_layout.addWidget(buffer_label, 1, 1)
 
         # SLIDER
@@ -60,7 +61,8 @@ class Am_settings(QWidget):
 
         # TEXTBOX
         self.buffer_textbox = QLineEdit(str(self.data_buffer_len), self)
-        self.buffer_textbox.setMaximumWidth(50)
+        #self.buffer_textbox.setMaximumWidth(50)
+        self.buffer_textbox.setFixedWidth(60)
         validator = QIntValidator(self.DATA_BUFFER_MIN, self.DATA_BUFFER_MAX)
         self.buffer_textbox.setValidator(validator)
         self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)

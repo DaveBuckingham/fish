@@ -2,13 +2,11 @@ TODO:
 
 better mutex
 
-fix trigger
-
 replot after process
 
 global class:
-last search path
-disable/enable format
+    last search path
+    disable/enable format
 
 cant plot for very long...
 
@@ -30,7 +28,6 @@ clean up imports
 
 better default save directory
 
-still need arduino to stop immedietly on trigger
 
 ASA
 disable record button during test   ( DIFFICULT )
@@ -42,8 +39,6 @@ tests:
 MAYBE:
 auto-detect mag
 bigger record button
-
-
 
 
 
