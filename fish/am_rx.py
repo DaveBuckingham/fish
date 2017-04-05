@@ -89,6 +89,8 @@ class Am_rx(QObject):
         self.data = data
         self.settings = settings
 
+        self.trigger_value = False
+
 
 
 
@@ -170,11 +172,11 @@ class Am_rx(QObject):
         # FIND A PORT CONNECTED TO AN ARDUINO
         arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
-            self.error_signal.emit('No Arduino found\n')
+            self.error_signal.emit('no Arduino found\n')
             return False
         else:
             serial_port = arduino_ports[0]
-            self.message_signal.emit('Using Arduino found on ' + serial_port + "\n")
+            self.message_signal.emit('using Arduino found on ' + serial_port + "\n")
 
         # CONNECT
         try:
@@ -254,7 +256,7 @@ class Am_rx(QObject):
     def run(self):
 
         if (not self.open_connection()):
-            self.error_signal.emit("No connection, aborting.\n")
+            self.error_signal.emit("no connection, aborting\n")
             self.finished_signal.emit()
             return()
 
@@ -264,7 +266,7 @@ class Am_rx(QObject):
         (message, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_NUMIMUS):
             num_imus = message[0];
-            self.message_signal.emit("Detected " + str(num_imus) + " IMUs.\n")
+            self.message_signal.emit("detected " + str(num_imus) + " IMUs.\n")
         else:
             self.error_signal.emit("Unable to determine number of IMUs, aborting.\n")
             self.close_connection()
@@ -274,7 +276,7 @@ class Am_rx(QObject):
         self.data.reset_data(num_imus)
 
         if (num_imus < 1):
-            self.error_signal.emit("No IMUs detected, aborting.\n")
+            self.error_signal.emit("no IMUs detected, aborting\n")
             self.close_connection()
             self.finished_signal.emit()
             return()
@@ -354,7 +356,7 @@ class Am_rx(QObject):
 
                 (id,) = struct.unpack('>L', received[:4])
 
-                trigger_value = False
+                #trigger_value = False
 
 
                 sample = []
@@ -370,7 +372,10 @@ class Am_rx(QObject):
 
                     sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
-                (trigger_value,) = struct.unpack('>?', received[22:23])
+                (self.trigger_state,) = struct.unpack('>?', received[22:23])
+
+                if (self.settings.invert_trigger):
+                    self.trigger_state = not self.trigger_state
 
                 if (Am_rx.USE_ENCODER):
                     (enc,) = struct.unpack('>h', received[23:25])
@@ -379,42 +384,8 @@ class Am_rx(QObject):
 
                 self.data.add_sample(sample)
 
-               
-#                if(self.data.data_lock[0]):
-#                    print("WRITE LOCKED am_rx")
-#                else:
-#                    self.data.data_lock[0] = True
-#
-#                    self.data.imu_data['timestamps'].append(timestamp)
-#                    for i in (range(0, self.data.num_imus)):
-#                        (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
-#                        (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
-#                        (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
-#                        (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
-#
-#                        self.data.imu_data['imus'][i]['accel'][0].append(ax)
-#                        self.data.imu_data['imus'][i]['accel'][1].append(ay)
-#                        self.data.imu_data['imus'][i]['accel'][2].append(az)
-#
-#                        self.data.imu_data['imus'][i]['gyro'][0].append(gx)
-#                        self.data.imu_data['imus'][i]['gyro'][1].append(gy)
-#                        self.data.imu_data['imus'][i]['gyro'][2].append(gz)
-#
-#                        self.data.imu_data['imus'][i]['mag'][0].append(mx)
-#                        self.data.imu_data['imus'][i]['mag'][1].append(my)
-#                        self.data.imu_data['imus'][i]['mag'][2].append(mz)
-#
-#                    (trigger_value,) = struct.unpack('>?', received[22:23])
-#
-#                    if (Am_rx.USE_ENCODER):
-#                        (enc,) = struct.unpack('>h', received[23:25])
-#                        enc *= 0.3515625  # 360/1024
-#                        self.data.imu_data['encoder'].append(enc)
-#
-#
-#                    self.data.data_lock[0] = False
 
-                if (self.settings.use_trigger and trigger_value):
+                if (self.settings.use_trigger and self.trigger_state):
                     self.message_signal.emit("received trigger\n")
                     self.tx_byte(Am_rx.COM_SIGNAL_STOP)
                     self.close_connection()

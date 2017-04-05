@@ -1,0 +1,16 @@
+\BOOKMARK [1][-]{section.0.1}{Copyright and License}{}% 1
+\BOOKMARK [1][-]{section.0.2}{Introduction}{}% 2
+\BOOKMARK [1][-]{section.0.3}{Hardware}{}% 3
+\BOOKMARK [2][-]{subsection.0.3.1}{PC}{section.0.3}% 4
+\BOOKMARK [2][-]{subsection.0.3.2}{Arduino}{section.0.3}% 5
+\BOOKMARK [2][-]{subsection.0.3.3}{IMUs}{section.0.3}% 6
+\BOOKMARK [1][-]{section.0.4}{Installation}{}% 7
+\BOOKMARK [2][-]{subsection.0.4.1}{Arduino code}{section.0.4}% 8
+\BOOKMARK [1][-]{section.0.5}{Equipment setup}{}% 9
+\BOOKMARK [1][-]{section.0.6}{Collecting data}{}% 10
+\BOOKMARK [1][-]{section.0.7}{Processing data}{}% 11
+\BOOKMARK [1][-]{section.0.8}{Saving and loading}{}% 12
+\BOOKMARK [2][-]{subsection.0.8.1}{.csv file format}{section.0.8}% 13
+\BOOKMARK [1][-]{section.0.9}{Settings}{}% 14
+\BOOKMARK [1][-]{section.0.10}{Troubleshooting}{}% 15
+\BOOKMARK [2][-]{subsection.0.10.1}{Error messages}{section.0.10}% 16

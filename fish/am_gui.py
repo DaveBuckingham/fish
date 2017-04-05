@@ -62,8 +62,6 @@ class Am_gui(QWidget):
 
         self.last_data_path = ''
 
-        # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
-        top_layout = QGridLayout()
 
         self.plots = []
 
@@ -117,20 +115,20 @@ class Am_gui(QWidget):
 
         self.buttons['process'] = QPushButton('Process')
         self.buttons['process'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.buttons['process'].setToolTip('Process data')
+        self.buttons['process'].setToolTip('Process the current data by applying a filtering algorithm.')
         self.buttons['process'].clicked.connect(self.process_button_slot)
         button_layout.addWidget(self.buttons['process'])
 
         self.buttons['save'] = QPushButton('Save')
         self.buttons['save'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.buttons['save'].setToolTip('Save recorded data')
+        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file.')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
         self.buttons['load'] = QPushButton('Load')
         self.buttons['load'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.buttons['load'].setToolTip('Load recorded data')
+        self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
@@ -143,6 +141,7 @@ class Am_gui(QWidget):
         # TEXT OUTPUT WINDOW
 
         self.text_window = QTextEdit()
+        self.text_window.setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.text_window.setReadOnly(True)
         #print self.text_window.minimumHeight()
         self.text_window.setMinimumHeight(150)
@@ -152,32 +151,43 @@ class Am_gui(QWidget):
 
         # STATUS INFO
 
-        #stats_layout = QGridLayout()
         stats_layout = QVBoxLayout()
+        self.stats_trigger = QLabel("Trigger signal state:")
         self.stats_num_samples_buffer = QLabel("Samples in buffer:")
         self.stats_num_samples_recorded = QLabel("Total samples recorded:")
-        self.stats_true_frequency = QLabel("Frequency:")
-        self.stats_time = QLabel("Time:")
+        self.stats_true_frequency = QLabel("Sample frequency:")
+        self.stats_time = QLabel("Time (ms):")
 
+        stats_layout.addWidget(self.stats_trigger)
         stats_layout.addWidget(self.stats_time)
         stats_layout.addWidget(self.stats_true_frequency)
         stats_layout.addWidget(self.stats_num_samples_recorded)
         stats_layout.addWidget(self.stats_num_samples_buffer)
 
-        # stats_layout.addWidget(self.stats_num_samples_buffer, 1, 2)
-        # stats_layout.addWidget(self.stats_num_samples_recorded, 1, 3)
-        # stats_layout.addWidget(self.stats_true_frequency, 1, 4)
-        # stats_layout.addWidget(self.stats_time, 1, 5)
-        # stats_layout.setColumnMinimumWidth(2, 120)
-
         self.plots_layout = QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
-        top_layout.addLayout(self.plots_layout, 1, 1, 2, 1)
-        top_layout.addWidget(self.text_window, 3, 1, 1, 1)
-        top_layout.addWidget(self.button_container, 1, 2, 1, 1)
-        top_layout.addWidget(self.settings, 2, 2, 1, 1, QtCore.Qt.AlignTop)
-        top_layout.addLayout(stats_layout, 3, 2, 1, 1, QtCore.Qt.AlignBottom)
+
+        # top_layout.addLayout(self.plots_layout, 1, 1, 2, 1)
+        # top_layout.addWidget(self.text_window, 3, 1, 1, 1)
+        # top_layout.addWidget(self.button_container, 1, 2, 1, 1)
+        # top_layout.addWidget(self.settings, 2, 2, 1, 1, QtCore.Qt.AlignTop)
+        # top_layout.addLayout(stats_layout, 3, 2, 1, 1, QtCore.Qt.AlignBottom)
+
+        panel_layout = QVBoxLayout()
+        panel_layout.addWidget(self.button_container)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addWidget(self.settings)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addLayout(stats_layout)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addWidget(self.text_window)
+
+        top_layout = QHBoxLayout()
+        top_layout.addStretch()
+        top_layout.addLayout(self.plots_layout)
+        top_layout.addLayout(panel_layout)
+
 
 
 
@@ -221,6 +231,12 @@ class Am_gui(QWidget):
         self.data.message_signal.connect(self.message_slot)
         self.data.error_signal.connect(self.error_slot)
 
+
+    def hline(self):
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        return line
 
 
     def print_pass_fail(self, val):
@@ -271,7 +287,7 @@ class Am_gui(QWidget):
             self.plots_layout.addWidget(plot_m, i+1, 3)
 
             label = QtGui.QLabel("IMU " + str(i+1))
-            label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
+            label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
             self.plots_layout.addWidget(label, i+1, 0)
 
 
@@ -409,8 +425,9 @@ class Am_gui(QWidget):
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['save'].setEnabled(self.data.has_data())
-        #self.buttons['save'].setEnabled(len(self.data.imu_data['timestamps']) > 0)
         #self.buttons['test'].setEnabled(True)
+        self.buttons['process'].setEnabled(True)
+        self.buttons['load'].setEnabled(True)
 
         self.message_slot("done recording\n")
 
@@ -420,18 +437,21 @@ class Am_gui(QWidget):
         timestamps = self.data.imu_data['timestamps']
 
         if(len(timestamps) > 0):
-            self.stats_time.setText('Time: %.1f' % (timestamps[-1]))
+            self.stats_time.setText('Time (ms): %.1f' % (timestamps[-1]))
 
         num_samples = len(timestamps)
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
+
+        state = 'ON' if self.receiver.trigger_state else 'OFF'
+        self.stats_trigger.setText("Trigger signal state: " + state)
 
 
         if (num_samples > Am_gui.FREQ_AVERAGE_WINDOW):
             window = timestamps[-(Am_gui.FREQ_AVERAGE_WINDOW):]
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
-            self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
+            self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
 
         for p in self.plots:
             p.plot_slot()
@@ -483,6 +503,9 @@ class Am_gui(QWidget):
         self.buttons['save'].setEnabled(False)
         #self.buttons['test'].setEnabled(False)
 
+        self.buttons['process'].setEnabled(False)
+        self.buttons['load'].setEnabled(False)
+
         self.receiver_thread.start()
 
 
@@ -505,8 +528,7 @@ def main():
     ex = Am_gui()
     atexit.register(ex.stop_recording)
     ex.show()
+    #ex.showMaximized()
     #sys.exit(app.exec_())
     return app.exec_()
           
-if __name__ == '__main__':
-    main()

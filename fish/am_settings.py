@@ -7,9 +7,17 @@ class Am_settings(QWidget):
 
     def __init__(self, parent=None):
 
+
+        ########################################
+        #              COSNTANTS               #
+        ########################################
+        self.DATA_BUFFER_MIN = 1                  # >0
+        self.DATA_BUFFER_MAX = 10000
+
         
         self.use_trigger = False
-        self.data_buffer_len = 600
+        self.invert_trigger = False
+        self.data_buffer_len = int((self.DATA_BUFFER_MAX - self.DATA_BUFFER_MIN + 1) / 2)
 
 
         ########################################
@@ -22,14 +30,8 @@ class Am_settings(QWidget):
 
         self.setMaximumWidth(300)
 
-        top_layout = QGridLayout()
 
         
-        ########################################
-        #              COSNTANTS               #
-        ########################################
-        self.DATA_BUFFER_MIN = 1
-        self.DATA_BUFFER_MAX = 20000
 
 
         ########################################
@@ -37,6 +39,11 @@ class Am_settings(QWidget):
         ########################################
         trigger_checkbox = QCheckBox('use trigger', self)
         trigger_checkbox.stateChanged.connect(self.toggle_trigger)
+
+        self.invert_checkbox = QCheckBox('invert trigger', self)
+        self.invert_checkbox.setToolTip('Trigger activates on pin low')
+        self.invert_checkbox.stateChanged.connect(self.toggle_invert)
+        #self.invert_checkbox.setEnabled(False)
 
 
         ########################################
@@ -53,10 +60,10 @@ class Am_settings(QWidget):
 
         # SLIDER
         self.buffer_slider = QSlider(Qt.Horizontal, self)
-        self.buffer_slider.setValue(self.data_buffer_len)
-        self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
         self.buffer_slider.setMinimum(self.DATA_BUFFER_MIN)
         self.buffer_slider.setMaximum(self.DATA_BUFFER_MAX)
+        self.buffer_slider.setValue(self.data_buffer_len)
+        self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # TEXTBOX
@@ -69,11 +76,17 @@ class Am_settings(QWidget):
         buffer_layout.addWidget(self.buffer_textbox, 2, 2)
 
 
+        trigger_layout = QHBoxLayout()
+        trigger_layout.addWidget(trigger_checkbox)
+        trigger_layout.addWidget(self.invert_checkbox)
+
+
         ########################################
         #      PLACE EVERYTHING IN LAYOUT      #
         ########################################
-        top_layout.addWidget(trigger_checkbox, 1, 1)
-        top_layout.addLayout(buffer_layout, 2, 1)
+        top_layout = QVBoxLayout()
+        top_layout.addLayout(trigger_layout)
+        top_layout.addLayout(buffer_layout)
         self.setLayout(top_layout)
 
 
@@ -82,6 +95,10 @@ class Am_settings(QWidget):
     ########################################
     def toggle_trigger(self, state):
         self.use_trigger = not self.use_trigger
+        #self.invert_checkbox.setEnabled(self.use_trigger)
+
+    def toggle_invert(self, state):
+        self.invert_trigger = not self.invert_trigger
 
           
     ########################################

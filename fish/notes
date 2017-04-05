@@ -1,5 +1,16 @@
 TODO:
 
+can't find arduino on windows
+
+when fail to start due to trigger, tell user why
+
+more tooltips 
+
+JERRY TEST:
+buffer: print seconds too
+legend line colors
+trigger state indicator
+
 better mutex
 
 replot after process
@@ -15,8 +26,6 @@ segfault on exit with python3
 when loading file, check for correctness
 
 slightly different float rounding for python2 and 3
-
-fix trigger
 
 fix behavior on "rx failed"
 
@@ -36,9 +45,6 @@ tests:
     imus self-test
     magnetometer
 
-MAYBE:
-auto-detect mag
-bigger record button
 
 
 
