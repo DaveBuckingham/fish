@@ -1,19 +1,8 @@
-#!/usr/bin/python
-
-import os
-import sys
-import time
-import serial
-import warnings
-import struct
-import random
-import array
 import h5py
 import csv
 
-import serial.tools.list_ports
+import PyQt5.QtCore
 
-from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
 
 try:
     from PyQt5.QtCore import QString
@@ -21,22 +10,22 @@ except ImportError:
     QString = str
 
 
-class Am_data(QObject):
+class Am_data(PyQt5.QtCore.QObject):
 
     USE_ENCODER = True
 
     mag_asas = []
 
 
-    finished_signal = pyqtSignal()
-    message_signal = pyqtSignal(QString)
-    error_signal = pyqtSignal(QString)
-    numimus_signal = pyqtSignal(int)
+    finished_signal = PyQt5.QtCore.pyqtSignal()
+    message_signal = PyQt5.QtCore.pyqtSignal(QString)
+    error_signal = PyQt5.QtCore.pyqtSignal(QString)
+    numimus_signal = PyQt5.QtCore.pyqtSignal(int)
 
-    recording_signal = pyqtSignal()
+    recording_signal = PyQt5.QtCore.pyqtSignal()
 
 
-    timestamp_signal = pyqtSignal(float)
+    timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
 
 
     def __init__(self, settings):

@@ -1,16 +1,9 @@
-#!/usr/bin/python
-
-import collections
 import os
-import sys
 import time
 import serial
-import warnings
 import struct
-import random
-import array
 
-from fish.am_data import *
+from fish.am_data import Am_data
 import serial.tools.list_ports
 
 from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
@@ -76,6 +69,7 @@ class Am_rx(QObject):
 
     recording_signal = pyqtSignal()
 
+    # trigger_state = False
 
     timestamp_signal = pyqtSignal(float)
 

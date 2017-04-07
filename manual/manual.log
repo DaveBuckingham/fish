@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2016.10.25)  5 APR 2017 17:05
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2016.10.25)  5 APR 2017 18:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1010,7 +1010,7 @@ LaTeX Info: Redefining \nameref on input line 67.
 
 ]
 LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <14.4> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 103.
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 102.
  (./manual.toc
 (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
@@ -1023,22 +1023,22 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <6> on input line 1.
 ) [3]
-LaTeX Font Info:    Try loading font information for T1+phv on input line 110.
+LaTeX Font Info:    Try loading font information for T1+phv on input line 109.
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1phv.fd
 File: t1phv.fd 2001/06/04 scalable font definitions for T1/phv.
 )
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <14.4> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 110.
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 109.
 Package microtype Info: Loading generic settings for font family
 (microtype)             `phv' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 140.
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 139.
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <12> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 140.
-LaTeX Font Info:    Try loading font information for T1+pcr on input line 163.
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 139.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 162.
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
@@ -1050,26 +1050,26 @@ Package microtype Info: Loading generic settings for font family
  [4
 
 ]
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 170.
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 169.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10.95> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 170.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 169.
 LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 180.
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 179.
 LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 180.
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 179.
 
-Overfull \hbox (45.25188pt too wide) in paragraph at lines 181--186
+Overfull \hbox (45.25188pt too wide) in paragraph at lines 180--185
 \T1/ptm/m/n/10.95 (-20) Downlaod and in-stall the Ar-duino IDE. The soft-ware c
 an be down-loaded from: https://www.arduino.cc/en/Main/Software.
  []
 
 
-Overfull \hbox (231.25494pt too wide) in paragraph at lines 193--199
+Overfull \hbox (231.25494pt too wide) in paragraph at lines 192--198
 \T1/ptm/m/n/10.95 (-20) mand line: \T1/pcr/m/n/10.95 # arduino upload am_tx/am_
 tx.ino \T1/ptm/m/n/10.95 (-20) For more in-for-ma-tion, see: [][]https://github
 .com/arduino/Arduino/blob/master/build/shared/manpage.adoc[][] 
@@ -1077,30 +1077,35 @@ tx.ino \T1/ptm/m/n/10.95 (-20) For more in-for-ma-tion, see: [][]https://github
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 208.
+               Default added (so using `tbp') on input line 207.
 
 <screenshot_0_imu.png, id=110, 285.065pt x 664.4825pt>
 File: screenshot_0_imu.png Graphic file (type png)
 
 <use screenshot_0_imu.png>
-Package pdftex.def Info: screenshot_0_imu.png used on input line 210.
+Package pdftex.def Info: screenshot_0_imu.png used on input line 209.
 (pdftex.def)             Requested size: 212.41261pt x 495.12625pt.
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 215.
+               Default added (so using `tbp') on input line 214.
 
 <screenshot_1_imu.png, id=112, 1515.6625pt x 638.385pt>
 File: screenshot_1_imu.png Graphic file (type png)
 
 <use screenshot_1_imu.png>
-Package pdftex.def Info: screenshot_1_imu.png used on input line 217.
+Package pdftex.def Info: screenshot_1_imu.png used on input line 216.
 (pdftex.def)             Requested size: 212.41261pt x 89.46095pt.
 
 Underfull \vbox (badness 7116) has occurred while \output is active []
 
  [5]
 [6 <./screenshot_0_imu.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 244--244
+
+ []
+
+
 Underfull \hbox (badness 10000) in paragraph at lines 245--245
 
  []
@@ -1121,37 +1126,47 @@ Underfull \hbox (badness 10000) in paragraph at lines 248--248
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 249--249
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 251--251
+LaTeX Warning: Reference `sec:wiring' on page 7 undefined on input line 254.
+
+
+LaTeX Warning: Reference `sec:wiring' on page 7 undefined on input line 258.
+
+[7 <./screenshot_1_imu.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 263--263
 
  []
 
 
-LaTeX Warning: Reference `sec:wiring' on page 7 undefined on input line 255.
+Underfull \hbox (badness 10000) in paragraph at lines 265--265
+
+ []
 
 
-LaTeX Warning: Reference `sec:wiring' on page 7 undefined on input line 259.
+Underfull \hbox (badness 10000) in paragraph at lines 268--268
 
-[7 <./screenshot_1_imu.png>] [8]
+ []
+
+[8]
 \tf@toc=\write5
 \openout5 = `manual.toc'.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 274.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 274.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 279.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 279.
  (./manual.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 274.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 274.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 279.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 279.
 Package rerunfilecheck Info: File `manual.out' has not changed.
 (rerunfilecheck)             Checksum: 97397590DEB4AC4527352D55BCAF2491;892.
 
 
 LaTeX Warning: There were undefined references.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 274.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 279.
  ) 
 Here is how much of TeX's memory you used:
  11828 strings out of 493029
@@ -1167,7 +1182,7 @@ f-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/
 type1/urw/helvetic/uhvb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/ti
 mes/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb>
 
-Output written on manual.pdf (8 pages, 189450 bytes).
+Output written on manual.pdf (8 pages, 190036 bytes).
 PDF statistics:
  168 PDF objects out of 1000 (max. 8388607)
  147 compressed objects within 2 object streams

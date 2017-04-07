@@ -54,7 +54,7 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \maxsecnumdepth{subsection} % chapters, sections, and subsections are numbered
 \maxtocdepth{subsection} % chapters, sections, and subsections are in the Table of Contents
 
-\newcommand{\name}{imu reader}
+\newcommand{\name}{PROGRAM_NAME}
 \newcommand{\version}{0.1}
 \newcommand{\email}{eric.tytell@tufts.edu}
 
@@ -66,12 +66,6 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 
 \begin{document}
 
-%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%
-%   TITLEPAGE
-%
-%   due to variety of titlepage schemes it is probably better to make titlepage manually
-%
-%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%
 \thispagestyle{empty}
 
 {%%%
@@ -79,22 +73,21 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \centering
 \Large
 
-~\vspace{\fill}
+\vspace*{\fill}
 
-{\huge 
-\name{} \version
+{\huge
+\name{} \version \\
 }
 
-\vspace{2.5cm}
-
 {\LARGE
+User manual \\
+\vspace{2.5cm}
 David Buckingham \\
 Eric Tytell \\
 Cassandra Donatelli \\
 Margo \\
 }
-
-\vspace{3.5cm}
+\vspace*{\fill}
 
 }
 
@@ -104,8 +97,6 @@ Margo \\
 
 \clearpage
 
-%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%
-%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%
 
 \section{Copyright and License}
 
@@ -199,11 +190,40 @@ For more information, see:
 
 \section{Equipment setup}
 
-Wire the IMU's to the Arduino, either directly or via a breadboard. [Wiring diagram???]
+\subsection{IMUs}
+Wiring diagram...
 
-It is recommended to power the Arduino with an external power source instead of relying on the computer's USB port.
+\subsection{Arduino}
+To ensure adequate power for the Arduino and IMUs, it is recommended to power
+the Arduino with an external power source instead of relying on the USB port.
 
 \section{Collecting data}
+
+To begin collecting data, press the ``record'' button.
+
+
+\subsection{Data buffer}
+
+
+\subsection{Trigger}
+
+Optionally, a trigger attached to the Arduino (Section \ref{sec:wiring}) can be
+used to stop recording.  If the ``use trigger'' checkbox is not checked, the
+trigger is ignored. Otherwise, if an ``active'' trigger is detected, recording
+will stop, i.e., the same effect as pressing the ``stop'' button during
+recording. If you attempt to begin recording while the ``use trigger'' checkbox
+is checked and the trigger is ``active'', the recording end as soon as it starts
+with zero data stored.
+
+If the ``invert trigger'' checkbox is not checked, the trigger is considered
+``active'' when the associated Arduino pin is set high. If the ``invert
+trigger'' checkbox is checked, the trigger is considered ``active'' when the
+associated Arduino pin is set low.
+
+If there is nothing setting the current on the Arduino pin associated with the
+trigger (i.e. if no trigger is connected), then the value of the pin is
+undefined.  Thus, to ensure reliable behavior, the ``use trigger'' checkbox
+should not be checked unless there is a trigger connected to the Arduino.
 
 \begin{figure}[]
     \begin{center}

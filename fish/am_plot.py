@@ -1,11 +1,6 @@
-
-import time
-import random
-import sys
-from PyQt5 import QtGui, QtCore
-from collections import deque
-
 import pyqtgraph as pg
+
+import PyQt5.QtGui
 
 
 class Am_plot(pg.PlotWidget):
@@ -22,9 +17,9 @@ class Am_plot(pg.PlotWidget):
         self.first = True
 
 
-        self.colors = [QtGui.QColor(220, 0, 0), \
-                      QtGui.QColor(0, 200, 0), \
-                      QtGui.QColor(30, 30, 255)]
+        self.colors = [PyQt5.QtGui.QColor(220, 0, 0), \
+                       PyQt5.QtGui.QColor(0, 200, 0), \
+                       PyQt5.QtGui.QColor(30, 30, 255)]
 
         self.MAX_SAMPLES = 1000   # approx.
 

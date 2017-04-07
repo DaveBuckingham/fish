@@ -1,24 +1,20 @@
 #!/usr/bin/env python
 
-# USE PYTHON 2.6 OR LATER
-
 import sys
 import datetime
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from fish.am_rx import *
-from fish.am_data import *
-from fish.am_plot import *
-from fish.am_settings import *
-#from fish.am_process import *
-from fish.am_process_dialog import *
-from collections import namedtuple
-import time
 import signal
 import atexit
-from collections import deque
 
-class Am_gui(QWidget):
+import PyQt5.QtCore
+import PyQt5.QtGui
+
+from fish.am_rx import Am_rx
+from fish.am_data import Am_data
+from fish.am_plot import Am_plot
+from fish.am_settings import Am_settings
+from fish.am_process_dialog import Am_process_dialog
+
+class Am_gui(PyQt5.QtGui.QWidget):
 
     # DISPLAYED IN WINDOW HEADER AND SUCH
     APPLICATION_NAME = 'IMU Collect 0.01'
@@ -33,8 +29,6 @@ class Am_gui(QWidget):
         super(Am_gui, self).__init__(parent)
 
 
-        #self.timer = QTimer();
-        #QtCore.QTimer.connect(self.timer, QtCore.SIGNAL("timeout()"), self, QtCore.SLOT("update()"))
 
         ########################
         #       VARIABLES      #
@@ -65,7 +59,7 @@ class Am_gui(QWidget):
 
         self.plots = []
 
-        self.timer = QTimer(self)
+        self.timer = PyQt5.QtCore.QTimer(self)
         self.timer.timeout.connect(self.update)
 
 
@@ -81,7 +75,7 @@ class Am_gui(QWidget):
         #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
         ##################################################
 
-        self.receiver_thread = QThread()
+        self.receiver_thread = PyQt5.QtCore.QThread()
         self.receiver = Am_rx(self.data, self.settings)
         self.receiver.moveToThread(self.receiver_thread)
 
@@ -97,42 +91,42 @@ class Am_gui(QWidget):
 
         # CREATE BUTTONS AND ADD TO BUTTON LAYOUT
 
-        button_layout = QVBoxLayout()
-        self.button_container = QWidget()
+        button_layout = PyQt5.QtGui.QVBoxLayout()
+        self.button_container = PyQt5.QtGui.QWidget()
         self.button_container.setLayout(button_layout)
 
-        self.buttons['record'] = QPushButton('Record')
+        self.buttons['record'] = PyQt5.QtGui.QPushButton('Record')
         self.buttons['record'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
 
 
-        # self.buttons['test'] = QPushButton('Test')
+        # self.buttons['test'] = PyQt5.QtGui.QPushButton('Test')
         # self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
         # self.buttons['test'].clicked.connect(self.test_button_slot)
         # button_layout.addWidget(self.buttons['test'])
 
-        self.buttons['process'] = QPushButton('Process')
+        self.buttons['process'] = PyQt5.QtGui.QPushButton('Process')
         self.buttons['process'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['process'].setToolTip('Process the current data by applying a filtering algorithm.')
         self.buttons['process'].clicked.connect(self.process_button_slot)
         button_layout.addWidget(self.buttons['process'])
 
-        self.buttons['save'] = QPushButton('Save')
+        self.buttons['save'] = PyQt5.QtGui.QPushButton('Save')
         self.buttons['save'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file.')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
-        self.buttons['load'] = QPushButton('Load')
+        self.buttons['load'] = PyQt5.QtGui.QPushButton('Load')
         self.buttons['load'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
-        self.buttons['quit'] = QPushButton('Quit')
+        self.buttons['quit'] = PyQt5.QtGui.QPushButton('Quit')
         self.buttons['quit'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
         button_layout.addWidget(self.buttons['quit'])
@@ -140,7 +134,7 @@ class Am_gui(QWidget):
 
         # TEXT OUTPUT WINDOW
 
-        self.text_window = QTextEdit()
+        self.text_window = PyQt5.QtGui.QTextEdit()
         self.text_window.setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.text_window.setReadOnly(True)
         #print self.text_window.minimumHeight()
@@ -151,12 +145,12 @@ class Am_gui(QWidget):
 
         # STATUS INFO
 
-        stats_layout = QVBoxLayout()
-        self.stats_trigger = QLabel("Trigger signal state:")
-        self.stats_num_samples_buffer = QLabel("Samples in buffer:")
-        self.stats_num_samples_recorded = QLabel("Total samples recorded:")
-        self.stats_true_frequency = QLabel("Sample frequency:")
-        self.stats_time = QLabel("Time (ms):")
+        stats_layout = PyQt5.QtGui.QVBoxLayout()
+        self.stats_trigger = PyQt5.QtGui.QLabel("Trigger signal state:")
+        self.stats_num_samples_buffer = PyQt5.QtGui.QLabel("Samples in buffer:")
+        self.stats_num_samples_recorded = PyQt5.QtGui.QLabel("Total samples recorded:")
+        self.stats_true_frequency = PyQt5.QtGui.QLabel("Sample frequency:")
+        self.stats_time = PyQt5.QtGui.QLabel("Time (ms):")
 
         stats_layout.addWidget(self.stats_trigger)
         stats_layout.addWidget(self.stats_time)
@@ -164,7 +158,7 @@ class Am_gui(QWidget):
         stats_layout.addWidget(self.stats_num_samples_recorded)
         stats_layout.addWidget(self.stats_num_samples_buffer)
 
-        self.plots_layout = QGridLayout()
+        self.plots_layout = PyQt5.QtGui.QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
 
@@ -174,7 +168,7 @@ class Am_gui(QWidget):
         # top_layout.addWidget(self.settings, 2, 2, 1, 1, QtCore.Qt.AlignTop)
         # top_layout.addLayout(stats_layout, 3, 2, 1, 1, QtCore.Qt.AlignBottom)
 
-        panel_layout = QVBoxLayout()
+        panel_layout = PyQt5.QtGui.QVBoxLayout()
         panel_layout.addWidget(self.button_container)
         panel_layout.addWidget(self.hline())
         panel_layout.addWidget(self.settings)
@@ -183,7 +177,7 @@ class Am_gui(QWidget):
         panel_layout.addWidget(self.hline())
         panel_layout.addWidget(self.text_window)
 
-        top_layout = QHBoxLayout()
+        top_layout = PyQt5.QtGui.QHBoxLayout()
         top_layout.addStretch()
         top_layout.addLayout(self.plots_layout)
         top_layout.addLayout(panel_layout)
@@ -233,9 +227,9 @@ class Am_gui(QWidget):
 
 
     def hline(self):
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
+        line = PyQt5.QtGui.QFrame()
+        line.setFrameShape(PyQt5.QtGui.QFrame.HLine)
+        line.setFrameShadow(PyQt5.QtGui.QFrame.Sunken)
         return line
 
 
@@ -262,16 +256,16 @@ class Am_gui(QWidget):
 
         self.clear_layout(self.plots_layout)
 
-        label = QtGui.QLabel("Accel.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        label = PyQt5.QtGui.QLabel("Accel.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
         self.plots_layout.addWidget(label, 0, 1)
 
-        label = QtGui.QLabel("Gyro.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        label = PyQt5.QtGui.QLabel("Gyro.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
         self.plots_layout.addWidget(label, 0, 2)
 
-        label = QtGui.QLabel("Mag.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+        label = PyQt5.QtGui.QLabel("Mag.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
         self.plots_layout.addWidget(label, 0, 3)
 
         self.plots = []
@@ -286,8 +280,8 @@ class Am_gui(QWidget):
             self.plots_layout.addWidget(plot_g, i+1, 2)
             self.plots_layout.addWidget(plot_m, i+1, 3)
 
-            label = QtGui.QLabel("IMU " + str(i+1))
-            label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
+            label = PyQt5.QtGui.QLabel("IMU " + str(i+1))
+            label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
             self.plots_layout.addWidget(label, i+1, 0)
 
 
@@ -296,15 +290,15 @@ class Am_gui(QWidget):
             return True
         else:
 
-            msgBox = QtGui.QMessageBox()
+            msgBox = PyQt5.QtGui.QMessageBox()
             msgBox.setText('Unsaved data will be lost.')
             msgBox.setIcon(QMessageBox.Warning)
-            continue_btn = QtGui.QPushButton('Continue anyway')
-            save_btn = QtGui.QPushButton('Save data')
-            cancel_btn = QtGui.QPushButton('Cancel')
-            msgBox.addButton(continue_btn, QtGui.QMessageBox.YesRole)
-            msgBox.addButton(save_btn, QtGui.QMessageBox.YesRole)
-            msgBox.addButton(cancel_btn, QtGui.QMessageBox.NoRole)
+            continue_btn = PyQt5.QtGui.QPushButton('Continue anyway')
+            save_btn = PyQt5.QtGui.QPushButton('Save data')
+            cancel_btn = PyQt5.QtGui.QPushButton('Cancel')
+            msgBox.addButton(continue_btn, PyQt5.QtGui.QMessageBox.YesRole)
+            msgBox.addButton(save_btn, PyQt5.QtGui.QMessageBox.YesRole)
+            msgBox.addButton(cancel_btn, PyQt5.QtGui.QMessageBox.NoRole)
             msgBox.exec_()
 
             if (msgBox.clickedButton() == save_btn):
@@ -472,10 +466,10 @@ class Am_gui(QWidget):
     # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
     def message_slot(self, the_string, red=False):
         if (red):
-            self.text_window.setTextColor(QtGui.QColor(255,0,0))
+            self.text_window.setTextColor(PyQt5.QtGui.QColor(255,0,0))
         else:
-            self.text_window.setTextColor(QtGui.QColor(200,200,200))
-            #self.text_window.setTextColor(QtGui.QColor(0,0,0))
+            self.text_window.setTextColor(PyQt5.QtGui.QColor(200,200,200))
+            #self.text_window.setTextColor(PyQt5.QtGui.QColor(0,0,0))
         #self.text_window.insertPlainText(str(datetime.datetime.today()) + "  " + the_string)
         self.text_window.insertPlainText(the_string)
         sb = self.text_window.verticalScrollBar();
@@ -524,7 +518,7 @@ class Am_gui(QWidget):
                                           
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt, will leave child process running!
-    app = QApplication(sys.argv)
+    app = PyQt5.QtGui.QApplication(sys.argv)
     ex = Am_gui()
     atexit.register(ex.stop_recording)
     ex.show()

@@ -1,19 +1,18 @@
-#!/usr/bin/python
-
 import os
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+
+import PyQt5.QtCore
+import PyQt5.QtGui
 
 try:
     from PyQt5.QtCore import QString
 except ImportError:
     QString = str
 
-class Am_process_dialog(QWidget):
+class Am_process_dialog(PyQt5.QtGui.QWidget):
 
-    finished_signal = pyqtSignal()
-    message_signal = pyqtSignal(QString)
-    error_signal = pyqtSignal(QString)
+    finished_signal = PyQt5.QtCore.pyqtSignal()
+    message_signal = PyQt5.QtCore.pyqtSignal(QString)
+    error_signal = PyQt5.QtCore.pyqtSignal(QString)
 
     #def __init__(self, current_data=False, parent=None):
     def __init__(self, data):
@@ -25,11 +24,11 @@ class Am_process_dialog(QWidget):
 
         self.data=data
 
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
         #self.setMaximumWidth(300)
 
-        top_layout = QGridLayout()
+        top_layout = PyQt5.QtGui.QGridLayout()
 
         self.batch_process = False
         self.batch_output_filetype = ""
@@ -37,10 +36,9 @@ class Am_process_dialog(QWidget):
 
         self.filename_list = []
 
-
         
 
-        top_layout = QGridLayout()
+        top_layout = PyQt5.QtGui.QGridLayout()
 
 
 
@@ -48,31 +46,31 @@ class Am_process_dialog(QWidget):
         #   BATCH OPTIONS, ACTIVE ONLY WHEN BATCH IS SELECTED   #
         #########################################################
 
-        self.batch_layout = QVBoxLayout()
+        self.batch_layout = PyQt5.QtGui.QVBoxLayout()
 
         # SELECT FILES BUTTON
-        select_files_btn = QPushButton('Select files')
+        select_files_btn = PyQt5.QtGui.QPushButton('Select files')
         select_files_btn.clicked.connect(self.select_files)
         self.batch_layout.addWidget(select_files_btn)
 
         # NUMBER OF FILES SELECTED
-        self.num_files_label = QLabel("0 files selected")
+        self.num_files_label = PyQt5.QtGui.QLabel("0 files selected")
         self.batch_layout.addWidget(self.num_files_label)
 
         # OUTPUT FILE TYPE
-        filetype_box = QGroupBox("Output file type")
-        filetype_layout = QVBoxLayout()
+        filetype_box = PyQt5.QtGui.QGroupBox("Output file type")
+        filetype_layout = PyQt5.QtGui.QVBoxLayout()
 
-        radio = QRadioButton("hdf5")
+        radio = PyQt5.QtGui.QRadioButton("hdf5")
         radio.clicked.connect(self.set_output_hdf5)
         filetype_layout.addWidget(radio)
         radio.click()
 
-        radio = QRadioButton("csv")
+        radio = PyQt5.QtGui.QRadioButton("csv")
         radio.clicked.connect(self.set_output_csv)
         filetype_layout.addWidget(radio)
 
-        radio = QRadioButton("same as input")
+        radio = PyQt5.QtGui.QRadioButton("same as input")
         radio.clicked.connect(self.set_output_input)
         filetype_layout.addWidget(radio)
 
@@ -80,11 +78,11 @@ class Am_process_dialog(QWidget):
         self.batch_layout.addWidget(filetype_box)
 
         # OUTPUT FILENAME POSTFIX
-        postfix_layout = QHBoxLayout()
-        postfix_label = QLabel("output suffix:")
+        postfix_layout = PyQt5.QtGui.QHBoxLayout()
+        postfix_label = PyQt5.QtGui.QLabel("output suffix:")
         postfix_layout.addWidget(postfix_label)
 
-        self.postfix_textbox = QLineEdit("_processed")
+        self.postfix_textbox = PyQt5.QtGui.QLineEdit("_processed")
         postfix_layout.addWidget(self.postfix_textbox)
 
         self.batch_layout.addLayout(postfix_layout)
@@ -96,10 +94,10 @@ class Am_process_dialog(QWidget):
         #   CURRENT DATA OR BATCH MODE, INCLUDES BATCH OPTIONS  #
         #########################################################
 
-        mode_layout = QVBoxLayout()
-        mode_box = QGroupBox("Process mode")
+        mode_layout = PyQt5.QtGui.QVBoxLayout()
+        mode_box = PyQt5.QtGui.QGroupBox("Process mode")
 
-        radio = QRadioButton("Use current data")
+        radio = PyQt5.QtGui.QRadioButton("Use current data")
         radio.clicked.connect(self.set_single_mode)
         mode_layout.addWidget(radio);
         if(self.data.has_data()):
@@ -107,7 +105,7 @@ class Am_process_dialog(QWidget):
         else:
             radio.setEnabled(False)
 
-        radio = QRadioButton("Batch process")
+        radio = PyQt5.QtGui.QRadioButton("Batch process")
         radio.clicked.connect(self.set_batch_mode)
         mode_layout.addWidget(radio)
         if(not self.data.has_data()):
@@ -121,20 +119,20 @@ class Am_process_dialog(QWidget):
         #          PROCESSIING ALGORITHM SELECTION              #
         #########################################################
 
-        algorithm_layout = QVBoxLayout()
-        algorithm_box = QGroupBox("Integration algorithm")
+        algorithm_layout = PyQt5.QtGui.QVBoxLayout()
+        algorithm_box = PyQt5.QtGui.QGroupBox("Integration algorithm")
 
 
-        radio = QRadioButton("Madgwick")
+        radio = PyQt5.QtGui.QRadioButton("Madgwick")
         radio.clicked.connect(lambda: self.set_algorithm('madgwick'))
         algorithm_layout.addWidget(radio)
         radio.click()
 
-        radio = QRadioButton("Simple integration")
+        radio = PyQt5.QtGui.QRadioButton("Simple integration")
         radio.clicked.connect(lambda: self.set_algorithm('integrate'))
         algorithm_layout.addWidget(radio)
 
-        radio = QRadioButton("Extended Kalman")
+        radio = PyQt5.QtGui.QRadioButton("Extended Kalman")
         radio.clicked.connect(lambda: self.set_algorithm('ekf'))
         algorithm_layout.addWidget(radio)
 
@@ -145,13 +143,13 @@ class Am_process_dialog(QWidget):
 
 
         # BUTTONS
-        button_layout = QHBoxLayout()
+        button_layout = PyQt5.QtGui.QHBoxLayout()
 
-        cancel_btn = QPushButton('Cancel')
+        cancel_btn = PyQt5.QtGui.QPushButton('Cancel')
         cancel_btn.clicked.connect(self.close)
         button_layout.addWidget(cancel_btn)
 
-        process_btn = QPushButton('Process')
+        process_btn = PyQt5.QtGui.QPushButton('Process')
         process_btn.clicked.connect(self.run_process)
         button_layout.addWidget(process_btn)
  
@@ -167,7 +165,7 @@ class Am_process_dialog(QWidget):
     def enable_layout(self, layout, state):
         items = (layout.itemAt(i) for i in range(layout.count())) 
         for w in items:
-            if isinstance(w, QLayout):
+            if isinstance(w, PyQt5.QtGui.QLayout):
                 self.enable_layout(w, state)
             else:
                 w.widget().setEnabled(state)

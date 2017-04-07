@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+import PyQt5.QtCore
+import PyQt5.QtGui
 
-class Am_settings(QWidget):
+class Am_settings(PyQt5.QtGui.QWidget):
 
     def __init__(self, parent=None):
 
@@ -26,7 +26,7 @@ class Am_settings(QWidget):
         super(Am_settings, self).__init__(parent)
         self.parent = parent
 
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
         self.setMaximumWidth(300)
 
@@ -37,10 +37,10 @@ class Am_settings(QWidget):
         ########################################
         #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
         ########################################
-        trigger_checkbox = QCheckBox('use trigger', self)
+        trigger_checkbox = PyQt5.QtGui.QCheckBox('use trigger', self)
         trigger_checkbox.stateChanged.connect(self.toggle_trigger)
 
-        self.invert_checkbox = QCheckBox('invert trigger', self)
+        self.invert_checkbox = PyQt5.QtGui.QCheckBox('invert trigger', self)
         self.invert_checkbox.setToolTip('Trigger activates on pin low')
         self.invert_checkbox.stateChanged.connect(self.toggle_invert)
         #self.invert_checkbox.setEnabled(False)
@@ -51,15 +51,15 @@ class Am_settings(QWidget):
         ########################################
 
         # LAYOUT
-        buffer_layout = QGridLayout()
+        buffer_layout = PyQt5.QtGui.QGridLayout()
 
         # LABEL
-        #buffer_label = QLabel("data buffer length (sec.)")
-        buffer_label = QLabel("data buffer length (# samples)")
+        #buffer_label = PyQt5.QtGui.QLabel("data buffer length (sec.)")
+        buffer_label = PyQt5.QtGui.QLabel("data buffer length (# samples)")
         buffer_layout.addWidget(buffer_label, 1, 1)
 
         # SLIDER
-        self.buffer_slider = QSlider(Qt.Horizontal, self)
+        self.buffer_slider = PyQt5.QtGui.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.buffer_slider.setMinimum(self.DATA_BUFFER_MIN)
         self.buffer_slider.setMaximum(self.DATA_BUFFER_MAX)
         self.buffer_slider.setValue(self.data_buffer_len)
@@ -67,16 +67,16 @@ class Am_settings(QWidget):
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # TEXTBOX
-        self.buffer_textbox = QLineEdit(str(self.data_buffer_len), self)
+        self.buffer_textbox = PyQt5.QtGui.QLineEdit(str(self.data_buffer_len), self)
         #self.buffer_textbox.setMaximumWidth(50)
         self.buffer_textbox.setFixedWidth(60)
-        validator = QIntValidator(self.DATA_BUFFER_MIN, self.DATA_BUFFER_MAX)
+        validator = PyQt5.QtGui.QIntValidator(self.DATA_BUFFER_MIN, self.DATA_BUFFER_MAX)
         self.buffer_textbox.setValidator(validator)
         self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)
         buffer_layout.addWidget(self.buffer_textbox, 2, 2)
 
 
-        trigger_layout = QHBoxLayout()
+        trigger_layout = PyQt5.QtGui.QHBoxLayout()
         trigger_layout.addWidget(trigger_checkbox)
         trigger_layout.addWidget(self.invert_checkbox)
 
@@ -84,7 +84,7 @@ class Am_settings(QWidget):
         ########################################
         #      PLACE EVERYTHING IN LAYOUT      #
         ########################################
-        top_layout = QVBoxLayout()
+        top_layout = PyQt5.QtGui.QVBoxLayout()
         top_layout.addLayout(trigger_layout)
         top_layout.addLayout(buffer_layout)
         self.setLayout(top_layout)

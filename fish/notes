@@ -1,5 +1,10 @@
 TODO:
 
+process:
+    calls refreshes on cancel
+    can click 'process' button even if no data loaded
+    breaks (no trigger read) if empty
+
 can't find arduino on windows
 
 when fail to start due to trigger, tell user why
@@ -25,15 +30,11 @@ segfault on exit with python3
 
 when loading file, check for correctness
 
-slightly different float rounding for python2 and 3
-
 fix behavior on "rx failed"
 
 detect mega (or clock speed) and adjust accordingly?
 
 make sure num_imus doesn't change for one dataset
-
-clean up imports
 
 better default save directory
 
@@ -44,7 +45,6 @@ text window breaks when it gets too full
 tests:
     imus self-test
     magnetometer
-
 
 
 
