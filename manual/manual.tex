@@ -139,17 +139,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 \end{enumerate}
 
 \subsection{PC}
-\name{} has been tested on PCs running Linux (Linux Mint 18 Sarah), macOS (Need to test this and
-put version), and Windows (Version??). It uses multi-threading and will perform
-best if multiple processing units (cores) are available.
+\name{} has been tested on PCs running Linux Mint 18 Sarah, OS X El Capitan
+10.11, and Windows 10. It is expected to work with other versions of these
+operating systems and with other Linux distributions.
 
 \subsection{Arduino}
-\name{} has been tested with an Arduino UNO. It is expected to work on other
-models having the same clock speed (16MHz) and sufficient storage.
+\name{} has been tested with an Arduino UNO. It may work on other
+models having a 16MHz clock speed and sufficient storage.
 
 
 \subsection{IMUs}
-The mpu9250 by InvenSense is a nine-axis (gyroscope, accelerometer, compas)
+The mpu9250 by InvenSense is a nine-axis (gyroscope, accelerometer, compass)
 motion tracking device.  For testing purposes, or if the added size and weight
 are acceptable for your application, a mpu9250 mounted on a circuit-board can be
 used with \name{}.
@@ -168,8 +168,8 @@ wiring process. The Arduino communicates with the IMUs using the Serial
 Peripheral Interface bus (SPI) protocol. Each IMU needs a separate \emph{chip
 select} line, but all IMUs share the other lines. Pins 8, 9, and 10 are used for
 \emph{chip select} lines for up to three IMUs. Pin 11 is for data traveling from
-the Arduino to the IMUs, or Master-Out, Slave-In (MOSI). Pin 12 is for data
-traveling from the IMUs to the Arduino, or Master-In, Slave Out (MISO). Pin 13
+the Arduino to the IMUs, i.e. Master-Out, Slave-In (MOSI). Pin 12 is for data
+traveling from the IMUs to the Arduino, i.e. Master-In, Slave Out (MISO). Pin 13
 is for a clock signal, used to regulate timing of the communication protocol. 
 
 If using an optional trigger, wire it to Pin 4.
@@ -179,10 +179,9 @@ Arduino) and each IMU and the trigger should be connected to Ground.
 
 Connect the arduino to the PC with a USB cable.
 
-To ensure adequate power for the Arduino and IMUs, it is recommended to power
-the Arduino with an external power source instead of relying on the USB port.
-
-
+To ensure adequate power, especially if using multiple IMUs, it is recommended
+to power the Arduino with an external power source instead of relying on the USB
+port.
 
 
 
@@ -268,6 +267,8 @@ For more information about the Arduino command line interface, see:
 \section{Collecting data}
 
 To begin collecting data, press the ``record'' button.
+The PC will connect to the Arduino and instruct it to begin collecting data from
+the IMUs at 200Hz. 
 
 
 \subsection{Data buffer}

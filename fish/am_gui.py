@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import datetime
 import signal
 import atexit
+import time
 
 import PyQt5.QtCore
 import PyQt5.QtGui
@@ -350,9 +352,9 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
     def save_button_slot(self):
 
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        dlg = QFileDialog()
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        dlg = PyQt5.QtGui.QFileDialog()
         filename, filetype = dlg.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
 
         if filename:
@@ -381,9 +383,9 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
     def load_button_slot(self):
 
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        filename, filetype = QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
 
         if filename:
             filename = str(filename)
