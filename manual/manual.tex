@@ -29,13 +29,6 @@ left=20mm,right=20mm,
 bindingoffset=10mm, top=25mm,bottom=25mm}
 
 \OnehalfSpacing
-%\linespread{1.3}
-
-%%% CHAPTER'S STYLE
-%\chapterstyle{bianchi}
-%\chapterstyle{ger}
-%\chapterstyle{madsen}
-%\chapterstyle{ell}
 
 %%% STYLE OF SECTIONS, SUBSECTIONS, AND SUBSUBSECTIONS
 \setsecheadstyle{\Large\bfseries\sffamily\raggedright}
@@ -44,9 +37,6 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 
 
 %%% STYLE OF PAGES NUMBERING
-%\pagestyle{companion}\nouppercaseheads 
-%\pagestyle{headings}
-%\pagestyle{Ruled}
 \pagestyle{plain}
 \makepagestyle{plain}
 \makeevenfoot{plain}{\thepage}{}{}
@@ -64,17 +54,17 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \renewcommand{\arraystretch}{1.2}
 
 \setlength{\parindent}{0em}
+\nonzeroparskip
 
 
 
-%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%---%%%
+
 
 \begin{document}
 
 \thispagestyle{empty}
 
 {%%%
-%\sffamily
 \centering
 \Large
 
@@ -213,25 +203,6 @@ trigger &  &  & 4 \\
 
 \section{Installation}
 
-\name{} requires Python3.
-
-We recommend using pip to install \name{}:
-\url{https://pypi.python.org/pypi/pip}
-
-\begin{verbatim}
-# pip install --upgrade pip
-# pip install \name
-\end{verbatim}
-
-Pip will automatically install any of the following dependencies if needed:
-\begin{itemize}
-\item h5py
-\item numpy
-\item pyqtgraph
-\item pyserial
-\item pyqt5
-\end{itemize}
-
 
 \subsection{Arduino code}
 
@@ -264,6 +235,43 @@ the Arduino can be programmed directly from the command line:
 For more information about the Arduino command line interface, see:
 \url{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
+\subsection{PC}
+\name{} requires Python3.
+
+We recommend using pip to install \name{}:
+\url{https://pypi.python.org/pypi/pip}
+
+\begin{verbatim}
+# pip install --upgrade pip
+# pip install \name
+\end{verbatim}
+
+Pip will automatically install any of the following dependencies if needed:
+\begin{itemize}
+\item h5py
+\item numpy
+\item pyqtgraph
+\item pyserial
+\item pyqt5
+\end{itemize}
+
+After install \name{}, it can be started from the command line:\\
+\texttt{
+\# \name{}
+}
+
+
+\section{The data buffer}
+\name{} uses a single data buffer to hold IMU data. When data is recorded from
+the IMUs, the data buffer is first errased. Then each sample is added to the
+buffer as it is recorded. The buffer can be saved to a file, or a file can be
+loaded into the buffer, erasing any previous contents. Data processing
+operations can be performed on the data buffer, altering it irreversibley.
+Therefore, any time the data buffer contains valuable data it is recommended to
+save it to file before collecting new data, loading another file, or executing
+data processing operations.
+
+
 \section{Collecting data}
 
 To begin collecting data, press the ``record'' button.
@@ -274,7 +282,12 @@ the IMUs at 200Hz.
 \subsection{Data buffer}
 
 The ``data buffer length (\# samples)'' slider adjusts the size of the data
-buffer... 
+buffer. When each new sample is received, it is added to the data buffer. If the
+buffer was already full (the number of samples in the buffer was equal to the
+size of the buffer), the oldest sample in the buffer is deleted. If the size of
+the buffer is adjust to be smaller than the number of samples in the buffer, the
+oldest samples in the buffer are deleted until the number of samples in the
+buffer is equal to the buffer size.
 
 
 \subsection{Trigger}
@@ -314,10 +327,21 @@ should not be checked unless there is a trigger connected to the Arduino.
 
 
 
-
 \section{Processing data}
 
+It is possible to apply data processing operations to the data buffer. Clicking
+the \emph{process} button opens the data processing dialog.
+
 \section{Saving and loading}
+
+\subsection{Saving}
+
+When you press the \emph{save} button, a dialog will appear allowing you to
+select a filesystem location, a filename, and a filetype (either .csv or .hdf5).
+The the data buffer is saved to file according to the selections made in the
+dialog.
+
+
 \label{sec:savingloading}
 
 \subsection{.csv file format}
