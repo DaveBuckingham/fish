@@ -271,16 +271,6 @@ Therefore, any time the data buffer contains valuable data it is recommended to
 save it to file before collecting new data, loading another file, or executing
 data processing operations.
 
-
-\section{Collecting data}
-
-To begin collecting data, press the ``record'' button.
-The PC will connect to the Arduino and instruct it to begin collecting data from
-the IMUs at 200Hz. 
-
-
-\subsection{Data buffer}
-
 The ``data buffer length (\# samples)'' slider adjusts the size of the data
 buffer. When each new sample is received, it is added to the data buffer. If the
 buffer was already full (the number of samples in the buffer was equal to the
@@ -288,6 +278,15 @@ size of the buffer), the oldest sample in the buffer is deleted. If the size of
 the buffer is adjust to be smaller than the number of samples in the buffer, the
 oldest samples in the buffer are deleted until the number of samples in the
 buffer is equal to the buffer size.
+
+
+\section{Collecting data}
+
+To begin collecting data, press the ``record'' button.
+The PC will connect to the Arduino and instruct it to begin collecting data from
+the IMUs at 200Hz. It will then save any samples received from the Arduino to
+the data buffer.
+
 
 
 \subsection{Trigger}
@@ -332,7 +331,23 @@ should not be checked unless there is a trigger connected to the Arduino.
 It is possible to apply data processing operations to the data buffer. Clicking
 the \emph{process} button opens the data processing dialog.
 
+
 \section{Saving and loading}
+\label{sec:savingloading}
+
+\subsection{File formats}
+
+\label{sec:fileformats}
+The csv file format stores data in plain text, using newlines to delimit samples 
+and using comas to delimit measurements within each sample.
+\name{} uses the CSV module in the Python Standard Library
+with default formatting parameters:
+\url{https://docs.python.org/3/library/csv.html}
+
+The HDF5 format is designed to store large amounts of data. It is generally more
+compact than csv. \name{} uses the h5py package to read and write HDF5 files:
+\url{http://www.h5py.org/}
+
 
 \subsection{Saving}
 
@@ -341,25 +356,20 @@ select a filesystem location, a filename, and a filetype (either .csv or .hdf5).
 The the data buffer is saved to file according to the selections made in the
 dialog.
 
+\subsection{Loading}
 
-\label{sec:savingloading}
-
-\subsection{.csv file format}
-\label{sec:csv}
-\name{} uses the CSV module in the Python Standard Library
-with default formatting parameters:
-\url{https://docs.python.org/3/library/csv.html}
-
-\section{Settings}
+When you press the \emph{load} button, a dialog will appear allowing you to
+select a filetype (either .csv or .hdf5) and a file to load. The file will be
+loaded into the data buffer, overwriting any data stored there.
 
 \section{Troubleshooting}
 
 \subsection{Error messages}
 
 \begin{description}
-\item[invalid csv file] The program attempted to read a .csv file (Section
-\ref{sec:csv}), but the
-format of the data in the file was not valid.
+\item[invalid csv file]
+The program attempted to read a .csv file (Section \ref{sec:fileformats}), but
+the format of the data in the file was not valid.
 
 \item[invalid file type: ...]
 \item[rx failed, no data read from serial]
@@ -368,20 +378,22 @@ format of the data in the file was not valid.
 \item[handshake failed]
 \item[no connection, aborting]
 
-\item[unable to determine number of IMUs, aborting] The program failed to
-determine how many IMUs are attached to the Arduino. After the Arduino is
-initialized, it attempts to determine the number of IMUs by sending a WHOAMI
-request while signaling each of the three legal chip select pins (Section
-\ref{sec:wiring}). It then sends a message to the PC reporting the number of
-IMUs detected. This error is reported if the PC program sends a command to the
-Arduino to initialize, but does not receive a message reporting the number of
-IMUs detected. Make sure that any IMUs are correctly wired to the Arduino
-(Section \ref{sec:wiring}) and that the correct code is installed on the Arduino
-(Section \ref{sec:installarduinocode}), and try resetting the Arduino.
+\item[unable to determine number of IMUs, aborting]
+The program failed to determine how many IMUs are attached to the Arduino. After
+the Arduino is initialized, it attempts to determine the number of IMUs by
+sending a WHOAMI request while signaling each of the three legal chip select
+pins (Section \ref{sec:wiring}). It then sends a message to the PC reporting the
+number of IMUs detected. This error is reported if the PC program sends a
+command to the Arduino to initialize, but does not receive a message reporting
+the number of IMUs detected. Make sure that any IMUs are correctly wired to the
+Arduino (Section \ref{sec:wiring}) and that the correct code is installed on the
+Arduino (Section \ref{sec:installarduinocode}), and try resetting the Arduino.
 
 \item[no IMUs detected, aborting]
 
 \item[ASA read failed, using 1 adjustment]
+The IMU magnetometers 
+
 
 \item[Sample packet too short: ...]
 
