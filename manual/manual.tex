@@ -1,4 +1,4 @@
-\documentclass[11pt,letterpaper,article]{memoir}
+\documentclass[11pt,letterpaper,article,oneside]{memoir}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{microtype}
@@ -6,8 +6,11 @@
 \usepackage{xcolor}
 \usepackage{times}
 
+\usepackage{booktabs}
+
 \usepackage{enumitem}
 \setlist[description]{style=nextline}
+\setlist[itemize]{nosep}
 
 \usepackage[
 breaklinks=true,colorlinks=true,
@@ -54,9 +57,11 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \maxsecnumdepth{subsection} % chapters, sections, and subsections are numbered
 \maxtocdepth{subsection} % chapters, sections, and subsections are in the Table of Contents
 
-\newcommand{\name}{PROGRAM_NAME}
+\newcommand{\name}{PROGRAM\_NAME}
 \newcommand{\version}{0.1}
 \newcommand{\email}{eric.tytell@tufts.edu}
+
+\renewcommand{\arraystretch}{1.2}
 
 \setlength{\parindent}{0em}
 
@@ -76,7 +81,7 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \vspace*{\fill}
 
 {\huge
-\name{} \version \\
+\name{} \version
 }
 
 {\LARGE
@@ -119,6 +124,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 \section{Introduction}
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%             SECTION: HARDWARE              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Hardware}
 
 \name{} interconnects three pieses of computational hardware:
@@ -134,17 +144,73 @@ put version), and Windows (Version??). It uses multi-threading and will perform
 best if multiple processing units (cores) are available.
 
 \subsection{Arduino}
-\name{} has been tested with an Arduino UNO. It is expected to work on other models having
-the same clock speed (16MHz) and sufficient storage.
+\name{} has been tested with an Arduino UNO. It is expected to work on other
+models having the same clock speed (16MHz) and sufficient storage.
+
 
 \subsection{IMUs}
-The mpu9250 by InvenSense is nine-axis (gyroscope, accelerometer, compas) motion tracking device.
+The mpu9250 by InvenSense is a nine-axis (gyroscope, accelerometer, compas)
+motion tracking device.  For testing purposes, or if the added size and weight
+are acceptable for your application, a mpu9250 mounted on a circuit-board can be
+used with \name{}.
+
+For applications requiring minimum package size and weight, it is possible to
+wire the mpu9250 directly to the arduino. A separate manual, \textbf{name},
+documents the procedure we have used to prepare the mpu9250 for use with
+\name{}.
+
+
+\subsection{Wiring the Arduino}
+\label{sec:wiring}
+Wire each IMU to the Arduino. It may be necessary to use a breadboard,
+especially if multiple IMUs are used. Table \ref{tab:wiring} summarizes the
+wiring process. The Arduino communicates with the IMUs using the Serial
+Peripheral Interface bus (SPI) protocol. Each IMU needs a separate \emph{chip
+select} line, but all IMUs share the other lines. Pins 8, 9, and 10 are used for
+\emph{chip select} lines for up to three IMUs. Pin 11 is for data traveling from
+the Arduino to the IMUs, or Master-Out, Slave-In (MOSI). Pin 12 is for data
+traveling from the IMUs to the Arduino, or Master-In, Slave Out (MISO). Pin 13
+is for a clock signal, used to regulate timing of the communication protocol. 
+
+If using an optional trigger, wire it to Pin 4.
+
+In addition, each IMU should be connected to 3.3V power (available on the
+Arduino) and each IMU and the trigger should be connected to Ground.
+
+Connect the arduino to the PC with a USB cable.
+
+To ensure adequate power for the Arduino and IMUs, it is recommended to power
+the Arduino with an external power source instead of relying on the USB port.
 
 
 
 
 
+\begin{table}
+\centering
+\begin{tabular}{@{}*4l@{}}
+\toprule
+description & label & color & pin \\
+\midrule 
+IMU 1 chip select & NCS / CS & white & 8 \\
+IMU 2 chip select & NCS / CS & white & 9 \\
+IMU 3 chip select & NCS / CS & white & 10 \\
+data from Arduino to IMU & MOSI / SDA & green & 11 \\
+data from IMU to Arduino & MISO / SDO & blue & 12 \\
+clock & SCL / CLK & yellow & 13 \\
+power &  & red & 3.3V \\
+ground &  & black & GND \\
+trigger &  &  & 4 \\
+\bottomrule
+\end{tabular}
+\label{tab:wiring}
+\end{table}
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%          SECTION: INSTALLATION             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Installation}
 
@@ -153,8 +219,10 @@ The mpu9250 by InvenSense is nine-axis (gyroscope, accelerometer, compas) motion
 We recommend using pip to install \name{}:
 \url{https://pypi.python.org/pypi/pip}
 
-\# pip install --upgrade pip
-\# pip install \name
+\begin{verbatim}
+# pip install --upgrade pip
+# pip install \name
+\end{verbatim}
 
 Pip will automatically install any of the following dependencies if needed:
 \begin{itemize}
@@ -169,33 +237,33 @@ Pip will automatically install any of the following dependencies if needed:
 \subsection{Arduino code}
 
 \subsubsection{Arduino IDE}
-Downlaod and install the Arduino IDE.
+While there are many tools for installing program code onto the Arduino, we have
+tested \name{} using the Arduino IDE.
+
 The software can be downloaded from:
-https://www.arduino.cc/en/Main/Software.
-Alternatively, Arduino can be installed on Debian systems with:
-\# apt-get install arduino-core
+url{https://www.arduino.cc/en/Main/Software}
+
+If you'r operating system has a package management system, it might be able
+to install the Arduino IDE. For example, on Debian systems, use:
+\begin{verbatim}
+# apt-get install arduino-core
+\end{verbatim}
 
 \subsubsection{Install \name{} on the Arduino}
 \label{sec:installarduinocode}
 
-Install the file \texttt{am\_tx/am\_tx.ino} on the Arduino.
+Install the file \verb|am_tx/am_tx.ino| on the Arduino.
 This can be accomplished using the Arduino IDE graphical user interface.
 
 Alternatively, using Arduino IDE version 1.5.0 or later,
 the Arduino can be programmed directly from the command line:
-\texttt{\# arduino upload am\_tx/am\_tx.ino}
-For more information, see:
-\href{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
-{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
-\section{Equipment setup}
+\begin{verbatim}
+# arduino --upload am_tx/am_tx.ino
+\end{verbatim}
 
-\subsection{IMUs}
-Wiring diagram...
-
-\subsection{Arduino}
-To ensure adequate power for the Arduino and IMUs, it is recommended to power
-the Arduino with an external power source instead of relying on the USB port.
+For more information about the Arduino command line interface, see:
+\url{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
 \section{Collecting data}
 
@@ -203,6 +271,9 @@ To begin collecting data, press the ``record'' button.
 
 
 \subsection{Data buffer}
+
+The ``data buffer length (\# samples)'' slider adjusts the size of the data
+buffer... 
 
 
 \subsection{Trigger}
@@ -246,8 +317,13 @@ should not be checked unless there is a trigger connected to the Arduino.
 \section{Processing data}
 
 \section{Saving and loading}
-\subsection{.csv file format}
 \label{sec:savingloading}
+
+\subsection{.csv file format}
+\label{sec:csv}
+\name{} uses the CSV module in the Python Standard Library
+with default formatting parameters:
+\url{https://docs.python.org/3/library/csv.html}
 
 \section{Settings}
 
@@ -256,10 +332,9 @@ should not be checked unless there is a trigger connected to the Arduino.
 \subsection{Error messages}
 
 \begin{description}
-\item[invalid csv file] The program attempted to read a .csv file, but the
-format of the data in the file was not valid. See Section
-\ref{sec:savingloading} for a description of the .csv file format used by
-\name{}.
+\item[invalid csv file] The program attempted to read a .csv file (Section
+\ref{sec:csv}), but the
+format of the data in the file was not valid.
 
 \item[invalid file type: ...]
 \item[rx failed, no data read from serial]

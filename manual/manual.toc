@@ -1,18 +1,20 @@
-\contentsline {section}{\numberline {0.1}Copyright and License}{4}{section.0.1}
-\contentsline {section}{\numberline {0.2}Introduction}{4}{section.0.2}
-\contentsline {section}{\numberline {0.3}Hardware}{4}{section.0.3}
-\contentsline {subsection}{\numberline {0.3.1}PC}{4}{subsection.0.3.1}
-\contentsline {subsection}{\numberline {0.3.2}Arduino}{4}{subsection.0.3.2}
-\contentsline {subsection}{\numberline {0.3.3}IMUs}{4}{subsection.0.3.3}
+\contentsline {section}{\numberline {0.1}Copyright and License}{3}{section.0.1}
+\contentsline {section}{\numberline {0.2}Introduction}{3}{section.0.2}
+\contentsline {section}{\numberline {0.3}Hardware}{3}{section.0.3}
+\contentsline {subsection}{\numberline {0.3.1}PC}{3}{subsection.0.3.1}
+\contentsline {subsection}{\numberline {0.3.2}Arduino}{3}{subsection.0.3.2}
+\contentsline {subsection}{\numberline {0.3.3}IMUs}{3}{subsection.0.3.3}
+\contentsline {subsection}{\numberline {0.3.4}Wiring the Arduino}{4}{subsection.0.3.4}
 \contentsline {section}{\numberline {0.4}Installation}{4}{section.0.4}
 \contentsline {subsection}{\numberline {0.4.1}Arduino code}{5}{subsection.0.4.1}
 \contentsline {subsubsection}{Arduino IDE}{5}{section*.1}
-\contentsline {subsubsection}{Install imu reader{} on the Arduino}{5}{section*.2}
-\contentsline {section}{\numberline {0.5}Equipment setup}{5}{section.0.5}
-\contentsline {section}{\numberline {0.6}Collecting data}{7}{section.0.6}
-\contentsline {section}{\numberline {0.7}Processing data}{7}{section.0.7}
-\contentsline {section}{\numberline {0.8}Saving and loading}{7}{section.0.8}
-\contentsline {subsection}{\numberline {0.8.1}.csv file format}{7}{subsection.0.8.1}
-\contentsline {section}{\numberline {0.9}Settings}{7}{section.0.9}
-\contentsline {section}{\numberline {0.10}Troubleshooting}{7}{section.0.10}
-\contentsline {subsection}{\numberline {0.10.1}Error messages}{7}{subsection.0.10.1}
+\contentsline {subsubsection}{Install PROGRAM\_NAME{} on the Arduino}{5}{section*.2}
+\contentsline {section}{\numberline {0.5}Collecting data}{5}{section.0.5}
+\contentsline {subsection}{\numberline {0.5.1}Data buffer}{5}{subsection.0.5.1}
+\contentsline {subsection}{\numberline {0.5.2}Trigger}{5}{subsection.0.5.2}
+\contentsline {section}{\numberline {0.6}Processing data}{7}{section.0.6}
+\contentsline {section}{\numberline {0.7}Saving and loading}{7}{section.0.7}
+\contentsline {subsection}{\numberline {0.7.1}.csv file format}{7}{subsection.0.7.1}
+\contentsline {section}{\numberline {0.8}Settings}{7}{section.0.8}
+\contentsline {section}{\numberline {0.9}Troubleshooting}{7}{section.0.9}
+\contentsline {subsection}{\numberline {0.9.1}Error messages}{7}{subsection.0.9.1}
