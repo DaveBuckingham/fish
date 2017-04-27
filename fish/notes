@@ -1,5 +1,9 @@
 TODO:
 
+downsample plotting data when it gets big so no slowdown
+
+test port detection on windows
+
 process:
     calls refreshes on cancel
     can click 'process' button even if no data loaded

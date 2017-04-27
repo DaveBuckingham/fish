@@ -1,21 +1,22 @@
-\BOOKMARK [1][-]{section.0.1}{Copyright and License}{}% 1
-\BOOKMARK [1][-]{section.0.2}{Introduction}{}% 2
-\BOOKMARK [1][-]{section.0.3}{Hardware}{}% 3
-\BOOKMARK [2][-]{subsection.0.3.1}{PC}{section.0.3}% 4
-\BOOKMARK [2][-]{subsection.0.3.2}{Arduino}{section.0.3}% 5
-\BOOKMARK [2][-]{subsection.0.3.3}{IMUs}{section.0.3}% 6
-\BOOKMARK [2][-]{subsection.0.3.4}{Wiring the Arduino}{section.0.3}% 7
-\BOOKMARK [1][-]{section.0.4}{Installation}{}% 8
-\BOOKMARK [2][-]{subsection.0.4.1}{Arduino code}{section.0.4}% 9
-\BOOKMARK [2][-]{subsection.0.4.2}{PC}{section.0.4}% 10
-\BOOKMARK [1][-]{section.0.5}{The data buffer}{}% 11
-\BOOKMARK [1][-]{section.0.6}{Collecting data}{}% 12
-\BOOKMARK [2][-]{subsection.0.6.1}{Data buffer}{section.0.6}% 13
-\BOOKMARK [2][-]{subsection.0.6.2}{Trigger}{section.0.6}% 14
-\BOOKMARK [1][-]{section.0.7}{Processing data}{}% 15
-\BOOKMARK [1][-]{section.0.8}{Saving and loading}{}% 16
-\BOOKMARK [2][-]{subsection.0.8.1}{Saving}{section.0.8}% 17
-\BOOKMARK [2][-]{subsection.0.8.2}{.csv file format}{section.0.8}% 18
-\BOOKMARK [1][-]{section.0.9}{Settings}{}% 19
-\BOOKMARK [1][-]{section.0.10}{Troubleshooting}{}% 20
-\BOOKMARK [2][-]{subsection.0.10.1}{Error messages}{section.0.10}% 21
+\BOOKMARK [0][-]{chapter.1}{Copyright and License}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Introduction}{}% 2
+\BOOKMARK [0][-]{chapter.3}{Hardware}{}% 3
+\BOOKMARK [1][-]{section.3.1}{PC}{chapter.3}% 4
+\BOOKMARK [1][-]{section.3.2}{Arduino}{chapter.3}% 5
+\BOOKMARK [1][-]{section.3.3}{IMUs}{chapter.3}% 6
+\BOOKMARK [1][-]{section.3.4}{Wiring the Arduino}{chapter.3}% 7
+\BOOKMARK [0][-]{chapter.4}{Installation}{}% 8
+\BOOKMARK [1][-]{section.4.1}{Arduino IDE}{chapter.4}% 9
+\BOOKMARK [1][-]{section.4.2}{Install PROGRAM\137NAME on the Arduino}{chapter.4}% 10
+\BOOKMARK [1][-]{section.4.3}{PC}{chapter.4}% 11
+\BOOKMARK [0][-]{chapter.5}{The data buffer}{}% 12
+\BOOKMARK [0][-]{chapter.6}{Collecting data}{}% 13
+\BOOKMARK [1][-]{section.6.1}{Trigger}{chapter.6}% 14
+\BOOKMARK [0][-]{chapter.7}{Saving and loading}{}% 15
+\BOOKMARK [1][-]{section.7.1}{File formats}{chapter.7}% 16
+\BOOKMARK [1][-]{section.7.2}{Saving}{chapter.7}% 17
+\BOOKMARK [1][-]{section.7.3}{Loading}{chapter.7}% 18
+\BOOKMARK [0][-]{chapter.8}{Processing data}{}% 19
+\BOOKMARK [1][-]{section.8.1}{Process mode}{chapter.8}% 20
+\BOOKMARK [1][-]{section.8.2}{Integration algorithm}{chapter.8}% 21
+\BOOKMARK [0][-]{chapter.9}{Troubleshooting}{}% 22

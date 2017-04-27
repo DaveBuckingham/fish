@@ -69,7 +69,7 @@ class Am_rx(QObject):
 
     recording_signal = pyqtSignal()
 
-    # trigger_state = False
+    trigger_state = None
 
     timestamp_signal = pyqtSignal(float)
 
@@ -188,7 +188,6 @@ class Am_rx(QObject):
             self.message_signal.emit("serial connection established\n")
 
         except serial.serialutil.SerialException:
-            self.error_signal.emit("failed to create connection\n")
             return False
 
 
@@ -250,7 +249,7 @@ class Am_rx(QObject):
     def run(self):
 
         if (not self.open_connection()):
-            self.error_signal.emit("no connection, aborting\n")
+            self.error_signal.emit("failed to create connection, aborting\n")
             self.finished_signal.emit()
             return()
 
@@ -262,7 +261,7 @@ class Am_rx(QObject):
             num_imus = message[0];
             self.message_signal.emit("detected " + str(num_imus) + " IMUs.\n")
         else:
-            self.error_signal.emit("Unable to determine number of IMUs, aborting.\n")
+            self.error_signal.emit("unable to determine number of IMUs, aborting.\n")
             self.close_connection()
             self.finished_signal.emit()
             return()
@@ -336,9 +335,6 @@ class Am_rx(QObject):
 
             (received, message_type) = self.rx_packet()
 
-            if ((Am_rx.USE_ENCODER and len(received) < (18*self.data.num_imus) + 7) or (len(received) < (18*self.data.num_imus) + 5)):
-                self.error_signal.emit("Sample packet too short: " + str(len(received)) + "\n")
-
 
             if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
@@ -349,8 +345,6 @@ class Am_rx(QObject):
                
 
                 (id,) = struct.unpack('>L', received[:4])
-
-                #trigger_value = False
 
 
                 sample = []
@@ -385,7 +379,6 @@ class Am_rx(QObject):
                     self.close_connection()
                     self.finished_signal.emit()
                     return()
-
 
             else:
                 print("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))

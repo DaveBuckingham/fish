@@ -193,10 +193,9 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
 
     def select_files(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        (self.filename_list, types) = QFileDialog.getOpenFileNames(self, "Select files to process", "", "*.hdf5 *.csv", options=options)
-        #(filename_list, types) = QFileDialog.getOpenFileNames(self, "Select files to process", self.last_data_path, "*.hdf5 *.csv", options=options)
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        (self.filename_list, types) = PyQt5.QtGui.QFileDialog.getOpenFileNames(self, "Select files to process", "", "*.hdf5 *.csv", options=options)
         self.num_files_label.setText('%d files selected' % len(self.filename_list))
 
 

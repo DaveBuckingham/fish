@@ -31,9 +31,8 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \OnehalfSpacing
 
 %%% STYLE OF SECTIONS, SUBSECTIONS, AND SUBSUBSECTIONS
-\setsecheadstyle{\Large\bfseries\sffamily\raggedright}
-\setsubsecheadstyle{\large\bfseries\sffamily\raggedright}
-\setsubsubsecheadstyle{\bfseries\sffamily\raggedright}
+\setsecheadstyle{\large\bfseries\raggedright}
+\setsubsecheadstyle{\bfseries\raggedright}
 
 
 %%% STYLE OF PAGES NUMBERING
@@ -44,12 +43,19 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \makeevenhead{plain}{}{}{}
 \makeoddhead{plain}{}{}{}
 
-\maxsecnumdepth{subsection} % chapters, sections, and subsections are numbered
-\maxtocdepth{subsection} % chapters, sections, and subsections are in the Table of Contents
+\maxsecnumdepth{section}
+\maxtocdepth{section}
+
+
 
 \newcommand{\name}{PROGRAM\_NAME}
-\newcommand{\version}{0.1}
+\newcommand{\programVersion}{0.1}
+\newcommand{\manualVersion}{0.1}
 \newcommand{\email}{eric.tytell@tufts.edu}
+
+\newcommand{\csv}{\texttt{.csv}}
+\newcommand{\hdf}{\texttt{.hdf5}}
+
 
 \renewcommand{\arraystretch}{1.2}
 
@@ -71,16 +77,16 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 \vspace*{\fill}
 
 {\huge
-\name{} \version
+\name{} \programVersion{}
 }
 
 {\LARGE
+%User manual version \manualVersion{} \\
 User manual \\
 \vspace{2.5cm}
-David Buckingham \\
-Eric Tytell \\
-Cassandra Donatelli \\
-Margo \\
+First Author \\
+Second Author \\
+Another Author \\
 }
 \vspace*{\fill}
 
@@ -93,7 +99,12 @@ Margo \\
 \clearpage
 
 
-\section{Copyright and License}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                 LICENSE                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Copyright and License}
 
 \name{}: a tool for collecting IMU measurements.
 Copyright (C) 2017 Author(s)????????/
@@ -111,7 +122,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-\section{Introduction}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%               INTRODUCTION                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Introduction}
+
+\name{} is an application for recording and processing data from Inertial Measurement
+Units (IMUs). It has two parts. Microcontroller code running on an Arduino
+board collects data from the IMUs and transmits it to a PC. A Python program
+running on the PC receives data from the Arduino and provides users with a
+graphical interface. This interface allows users to interact with the Arduino
+and to view and manipulate IMU data.
 
 
 
@@ -119,61 +143,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %             SECTION: HARDWARE              %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Hardware}
+\chapter{Hardware}
 
-\name{} interconnects three pieses of computational hardware:
-\begin{enumerate}
-  \item a PC
-  \item an Arduino
-  \item between 1 and 3 Inertial Measurement Units (IMUs)
-\end{enumerate}
+\name{} interconnects three pieces of computational hardware: a PC, an Arduino,
+between 1 and 3 IMUs.
 
-\subsection{PC}
+\section{PC}
 \name{} has been tested on PCs running Linux Mint 18 Sarah, OS X El Capitan
 10.11, and Windows 10. It is expected to work with other versions of these
 operating systems and with other Linux distributions.
 
-\subsection{Arduino}
+\section{Arduino}
 \name{} has been tested with an Arduino UNO. It may work on other
 models having a 16MHz clock speed and sufficient storage.
 
-
-\subsection{IMUs}
+\section{IMUs}
 The mpu9250 by InvenSense is a nine-axis (gyroscope, accelerometer, compass)
 motion tracking device.  For testing purposes, or if the added size and weight
-are acceptable for your application, a mpu9250 mounted on a circuit-board can be
+are acceptable for an application, an mpu9250 mounted on a circuit-board can be
 used with \name{}.
 
 For applications requiring minimum package size and weight, it is possible to
-wire the mpu9250 directly to the arduino. A separate manual, \textbf{name},
+wire the mpu9250 directly to the Arduino. A separate manual, \textbf{name},
 documents the procedure we have used to prepare the mpu9250 for use with
 \name{}.
 
-
-\subsection{Wiring the Arduino}
+\section{Wiring the Arduino}
 \label{sec:wiring}
-Wire each IMU to the Arduino. It may be necessary to use a breadboard,
-especially if multiple IMUs are used. Table \ref{tab:wiring} summarizes the
-wiring process. The Arduino communicates with the IMUs using the Serial
-Peripheral Interface bus (SPI) protocol. Each IMU needs a separate \emph{chip
-select} line, but all IMUs share the other lines. Pins 8, 9, and 10 are used for
-\emph{chip select} lines for up to three IMUs. Pin 11 is for data traveling from
-the Arduino to the IMUs, i.e. Master-Out, Slave-In (MOSI). Pin 12 is for data
-traveling from the IMUs to the Arduino, i.e. Master-In, Slave Out (MISO). Pin 13
-is for a clock signal, used to regulate timing of the communication protocol. 
+Table \ref{tab:wiring} summarizes the process of connecting IMUs to the
+Arduino. It may be necessary to use a breadboard, especially if multiple IMUs
+are used. Figure \ref{fig:wiring} shows an Arduino wired to a single IMU.
 
-If using an optional trigger, wire it to Pin 4.
+The Arduino communicates with the IMUs using the Serial Peripheral Interface bus
+(SPI) protocol. Each IMU needs a separate \emph{chip select} line, but all IMUs
+share the other lines. Pins 8, 9, and 10 are used for \emph{chip select} lines
+for up to three IMUs. Pin 11 carries data traveling from the Arduino to the IMUs,
+i.e. Master-Out, Slave-In (MOSI). Pin 12 carries data traveling from the IMUs to
+the Arduino, i.e. Master-In, Slave Out (MISO). Pin 13 carries a clock signal
+which regulates timing of the communication protocol.  Each IMU should be
+connected to 3.3V power (available on the Arduino) and to ground.
 
-In addition, each IMU should be connected to 3.3V power (available on the
-Arduino) and each IMU and the trigger should be connected to Ground.
+If using an optional trigger, connect it to Pin 4 and to Ground.
 
-Connect the arduino to the PC with a USB cable.
-
-To ensure adequate power, especially if using multiple IMUs, it is recommended
-to power the Arduino with an external power source instead of relying on the USB
-port.
-
-
+Connect the Arduino to the PC with a USB cable.  To ensure adequate power,
+especially if using multiple IMUs, it is recommended to power the Arduino with
+an external power source instead of relying on the USB port.
 
 \begin{table}
 \centering
@@ -195,31 +209,36 @@ trigger &  &  & 4 \\
 \label{tab:wiring}
 \end{table}
 
+\begin{figure}[]
+    \begin{center}
+        \includegraphics[height=3in]{wiring2}
+    \end{center}
+    \caption{Wiring a single IMU to the Arduino}
+\end{figure}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          SECTION: INSTALLATION             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Installation}
+\chapter{Installation}
 
-
-\subsection{Arduino code}
-
-\subsubsection{Arduino IDE}
+\section{Arduino IDE}
 While there are many tools for installing program code onto the Arduino, we have
 tested \name{} using the Arduino IDE.
 
 The software can be downloaded from:
-url{https://www.arduino.cc/en/Main/Software}
+\url{https://www.arduino.cc/en/Main/Software}
 
-If you'r operating system has a package management system, it might be able
-to install the Arduino IDE. For example, on Debian systems, use:
+If your operating system has a package management system, it might be able
+to install the Arduino IDE. For example, on a Debian-based system you can use
+\texttt{apt}:
 \begin{verbatim}
-# apt-get install arduino-core
+# apt install Arduino-core
 \end{verbatim}
 
-\subsubsection{Install \name{} on the Arduino}
+\section{Install \name{} on the Arduino}
 \label{sec:installarduinocode}
 
 Install the file \verb|am_tx/am_tx.ino| on the Arduino.
@@ -235,7 +254,7 @@ the Arduino can be programmed directly from the command line:
 For more information about the Arduino command line interface, see:
 \url{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
-\subsection{PC}
+\section{PC}
 \name{} requires Python3.
 
 We recommend using pip to install \name{}:
@@ -255,18 +274,25 @@ Pip will automatically install any of the following dependencies if needed:
 \item pyqt5
 \end{itemize}
 
-After install \name{}, it can be started from the command line:\\
+Once \name{} has been installed, it can be started from the command line:\\
 \texttt{
 \# \name{}
 }
 
+\begin{figure}[]
+    \begin{center}
+        \includegraphics[height=3in]{screenshot_panel}
+    \end{center}
+    \caption{Control panel} 
+\end{figure}
 
-\section{The data buffer}
+
+\chapter{The data buffer}
 \name{} uses a single data buffer to hold IMU data. When data is recorded from
-the IMUs, the data buffer is first errased. Then each sample is added to the
+the IMUs, the data buffer is first erased. Then each sample is added to the
 buffer as it is recorded. The buffer can be saved to a file, or a file can be
 loaded into the buffer, erasing any previous contents. Data processing
-operations can be performed on the data buffer, altering it irreversibley.
+operations can be performed on the data buffer, altering it irreversibly.
 Therefore, any time the data buffer contains valuable data it is recommended to
 save it to file before collecting new data, loading another file, or executing
 data processing operations.
@@ -280,123 +306,133 @@ oldest samples in the buffer are deleted until the number of samples in the
 buffer is equal to the buffer size.
 
 
-\section{Collecting data}
+\chapter{Collecting data}
 
-To begin collecting data, press the ``record'' button.
-The PC will connect to the Arduino and instruct it to begin collecting data from
-the IMUs at 200Hz. It will then save any samples received from the Arduino to
-the data buffer.
+To begin collecting data, press the \emph{record} button.  The \emph{record} button
+will change into a \emph{stop} button.  The PC will establish communication with to the
+Arduino and instruct it to begin collecting data from the IMUs at 200Hz.
 
+Any samples received from the Arduino are stored in the data buffer. As
+samples are recorded in the data buffer, they become visible in the data
+visualization plots. For each IMU, one row of three plots is displayed. The
+left-most plot shows accelerometer data, the center plot shows gyroscope data,
+and the right-most plot shows magnetometer data. For each plot, red, green, and
+blue lines show x, y, and z axis measurements, respectively.
 
-
-\subsection{Trigger}
-
-Optionally, a trigger attached to the Arduino (Section \ref{sec:wiring}) can be
-used to stop recording.  If the ``use trigger'' checkbox is not checked, the
-trigger is ignored. Otherwise, if an ``active'' trigger is detected, recording
-will stop, i.e., the same effect as pressing the ``stop'' button during
-recording. If you attempt to begin recording while the ``use trigger'' checkbox
-is checked and the trigger is ``active'', the recording end as soon as it starts
-with zero data stored.
-
-If the ``invert trigger'' checkbox is not checked, the trigger is considered
-``active'' when the associated Arduino pin is set high. If the ``invert
-trigger'' checkbox is checked, the trigger is considered ``active'' when the
-associated Arduino pin is set low.
-
-If there is nothing setting the current on the Arduino pin associated with the
-trigger (i.e. if no trigger is connected), then the value of the pin is
-undefined.  Thus, to ensure reliable behavior, the ``use trigger'' checkbox
-should not be checked unless there is a trigger connected to the Arduino.
+The \emph{stop} button (or the trigger, as described in Section \ref{sec:trigger}),
+causes the PC first to instruct the Arduino to stop collecting data and then to
+halt communication with the Arduino. The \emph{stop} button will change back into the
+\emph{record} button.
 
 \begin{figure}[]
     \begin{center}
-        \includegraphics[width=.45\textwidth]{screenshot_0_imu}
-    \end{center}
-    \caption{Control panel} 
-\end{figure}
-
-\begin{figure}[]
-    \begin{center}
-        \includegraphics[width=.45\textwidth]{screenshot_1_imu}
+        \includegraphics[width=\textwidth]{screenshot_plots}
     \end{center}
     \caption{Collecting data from a single IMU} 
 \end{figure}
 
 
 
+\section{Trigger}
+\label{sec:trigger}
 
-\section{Processing data}
+Optionally, a trigger attached to the Arduino (Section \ref{sec:wiring}) can be
+used to stop recording.  If the \emph{use trigger} checkbox is not checked, the
+trigger is ignored. Otherwise, if an active trigger is detected, recording
+will stop, i.e., the same effect as pressing the \emph{stop} button during
+recording. If you attempt to begin recording while the \emph{use trigger} checkbox
+is checked and the trigger is active, the recording end as soon as it starts
+with zero data stored.
 
-It is possible to apply data processing operations to the data buffer. Clicking
-the \emph{process} button opens the data processing dialog.
+If the \emph{invert trigger} checkbox is not checked, the trigger is considered
+``active'' when the associated Arduino pin is set high. If the \emph{invert
+trigger} checkbox is checked, the trigger is considered active when the
+associated Arduino pin is set low.
+
+If there is nothing setting the current on the Arduino pin associated with the
+trigger (i.e. if no trigger is connected), then the value of the pin is
+undefined.  Thus, to ensure reliable behavior, the \emph{use trigger} checkbox
+should not be checked unless there is a trigger connected to the Arduino.
 
 
-\section{Saving and loading}
+
+
+\chapter{Saving and loading}
 \label{sec:savingloading}
 
-\subsection{File formats}
+\section{File formats}
 
 \label{sec:fileformats}
-The csv file format stores data in plain text, using newlines to delimit samples 
-and using comas to delimit measurements within each sample.
-\name{} uses the CSV module in the Python Standard Library
-with default formatting parameters:
+The \csv{} file format stores data in plain text, using newlines to delimit
+samples and comas to delimit measurements within each sample.  \name{} uses the
+CSV module in the Python Standard Library with default formatting parameters:
 \url{https://docs.python.org/3/library/csv.html}
 
-The HDF5 format is designed to store large amounts of data. It is generally more
-compact than csv. \name{} uses the h5py package to read and write HDF5 files:
+The \hdf{} format is designed to store large amounts of data. It is generally more
+compact than \csv{}. \name{} uses the h5py package to read and write \hdf{} files:
 \url{http://www.h5py.org/}
 
 
-\subsection{Saving}
+\section{Saving}
 
 When you press the \emph{save} button, a dialog will appear allowing you to
-select a filesystem location, a filename, and a filetype (either .csv or .hdf5).
-The the data buffer is saved to file according to the selections made in the
-dialog.
+select a filesystem location, a filename, and a filetype (either \csv{} or
+\hdf{}).  The the data buffer is saved to file according to the selections made
+in the dialog. The \emph{save} button is disabled when the data buffer is empty
+and while data is being recorded.
 
-\subsection{Loading}
+\section{Loading}
 
 When you press the \emph{load} button, a dialog will appear allowing you to
-select a filetype (either .csv or .hdf5) and a file to load. The file will be
+select a filetype (either \csv{} or \hdf{}) and a file to load. The file will be
 loaded into the data buffer, overwriting any data stored there.
+The \emph{load} button is disabled while data is being recorded.
 
-\section{Troubleshooting}
 
-\subsection{Error messages}
+\chapter{Processing data}
+
+\begin{figure}[]
+    \begin{center}
+        \includegraphics[height=3in]{screenshot_process}
+    \end{center}
+    \caption{Data processing control panel} 
+\end{figure}
+
+The \emph{process} button opens the data processing control panel.
+
+\section{Process mode}
+All data transformation algorithms are applied to the data buffer. If the \emph{use
+current data} radio button is selected, the current contents of the data buffer
+are used. This option is not available when the data buffer is empty.
+
+Alternatively, if the \emph{Batch process} radio button is selected,
+the contents of the data buffer are ignored. Instead, batch processing iterates
+over a list of one or more input files, loading each file into the data buffer,
+applying a transformation algorithm, and saving the result to a new output file
+before proceeding to the next input file in the list. The \emph{Select files}
+button launches a dialog for selecting input files for batch processing.
+The batch processing output filetype can be set to \hdf{}, \csv{}, or can vary to
+match the filetype of each input file. The output suffix string is appended to
+the filename of each input file (before the file extension) to compose the
+output filename. If the output suffix string is empty and the output
+filetype matches the input filetype, then the input file is overwritten.
+
+With either processing mode, the contents of the data buffer are overwritten by
+any data processing.
+
+\section{Integration algorithm}
+
+The \emph{Integration algorithm} radio buttons select the data transformation
+algorithm.
 
 \begin{description}
-\item[invalid csv file]
-The program attempted to read a .csv file (Section \ref{sec:fileformats}), but
-the format of the data in the file was not valid.
 
-\item[invalid file type: ...]
-\item[rx failed, no data read from serial]
-\item[no Arduino found]
-\item[failed to create connection]
-\item[handshake failed]
-\item[no connection, aborting]
-
-\item[unable to determine number of IMUs, aborting]
-The program failed to determine how many IMUs are attached to the Arduino. After
-the Arduino is initialized, it attempts to determine the number of IMUs by
-sending a WHOAMI request while signaling each of the three legal chip select
-pins (Section \ref{sec:wiring}). It then sends a message to the PC reporting the
-number of IMUs detected. This error is reported if the PC program sends a
-command to the Arduino to initialize, but does not receive a message reporting
-the number of IMUs detected. Make sure that any IMUs are correctly wired to the
-Arduino (Section \ref{sec:wiring}) and that the correct code is installed on the
-Arduino (Section \ref{sec:installarduinocode}), and try resetting the Arduino.
-
-\item[no IMUs detected, aborting]
-
-\item[ASA read failed, using 1 adjustment]
-The IMU magnetometers 
-
-
-\item[Sample packet too short: ...]
-
+\item[Madgwick]
+We need to write about what this does.
+\item[Simple integration]
+We need to write about what this does.
+\item[Extended Kalman]
+We need to write about what this does.
 
 \end{description}
 
@@ -404,10 +440,87 @@ The IMU magnetometers
 
 
 
+\chapter{Troubleshooting}
+
+This section provides explanation and troubleshooting tips for each error
+message produced by \name{}.
+
+\begin{description}
+
+\item[ASA read failed, using 1 adjustment]
+\textbf{expand this}
+The IMU magnetometers 
+This error message is likely an indication that the Arduino code is not
+communicating correctly with the magnetometer. It may be necessary to reset the
+Arduino.
+
+\item[failed to create connection, aborting]
+The program failed to establish a serial connection with the Arduino.  Try
+resetting the Arduino.  Make sure that the Arduino is correctly powered and
+connected to the PC (Section \ref{sec:wiring}), and that the correct code is
+installed on the Arduino (Section \ref{sec:installarduinocode}).
+
+\item[handshake failed]
+Even though the PC may have established a valid serial connection to the
+Arduino, the data exchange protocol used by \name{} failed to establish a
+communication handshake with the Arduino.  Try resetting the Arduino.  Make sure
+that the Arduino is correctly powered and connected to the PC (Section
+\ref{sec:wiring}), and that the correct code is installed on the Arduino
+(Section \ref{sec:installarduinocode}).
+
+\item[invalid csv file]
+The program attempted to read a .csv file (Section \ref{sec:fileformats}), but
+the format of the data in the file was not valid.
+
+\item[invalid file type:\ldots]
+There was an attempt either to save or to load a filetype other than
+\csv{} and \hdf{}. As discussed in Section \ref{sec:fileformats},
+\csv{} and \hdf{} are the only file formats supported by \name.
+
+\item[no Arduino found]
+The program searched for Arduinos on all serial ports but didn't find any.
+\name{} uses \texttt{serial.tools.list\_ports} (
+\url{http://pyserial.readthedocs.io/en/latest/tools.html}) for this scan.
+
+\item[no IMUs detected, aborting]
+The Arduino did not detect any attached IMUs.  After the Arduino is initialized,
+it attempts to determine the number of IMUs by sending a WHOAMI request while
+signaling each of the three legal chip select lines (Section \ref{sec:wiring}).
+It then sends a message to the PC reporting the number of IMUs detected. This
+error is reported if the Arduino does not receive a WHOAMI response on any of
+the chip select lines.  Make sure that any IMUs are correctly wired to the
+Arduino (Section \ref{sec:wiring}) and that the correct code is installed on the
+Arduino (Section \ref{sec:installarduinocode}). Try resetting the Arduino.
+
+\item[rx failed, no data read from serial]
+The PC tried to receive data from the Arduino but failed. Perhaps no data was
+transmitted, or perhaps only data that violates the communication protocol used
+by \name{} was received. Try resetting the Arduino and make sure that the
+correct code is installed on the Arduino (Section \ref{sec:installarduinocode}).
+
+\item[unknown sample received:\dots]
+The PC expected to receive a packet containing a data sample, but the packet
+either had the wrong type or the wrong length. If this occurs only briefly at
+the beginning of recording, it can probably be ignored. Otherwise, try resetting
+the Arduino.
+
+\item[unable to determine number of IMUs, aborting]
+The program failed to determine how many IMUs are attached to the Arduino. After
+the Arduino is initialized, it attempts to determine the number of IMUs by
+sending a WHOAMI request while signaling each of the three legal chip select
+lines (Section \ref{sec:wiring}). It then sends a message to the PC reporting the
+number of IMUs detected. This error is reported if the PC program sends a
+command to the Arduino to initialize, but does not receive a message reporting
+the number of IMUs detected. Make sure that any IMUs are correctly wired to the
+Arduino (Section \ref{sec:wiring}) and that the correct code is installed on the
+Arduino (Section \ref{sec:installarduinocode}). Try resetting the Arduino.
 
 
-%\bibliographystyle{unsrt}
-%\bibliography{sample}
+
+\end{description}
+
+
+
 
 \end{document}
 

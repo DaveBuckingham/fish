@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2016.10.25)  18 APR 2017 16:05
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2016.10.25)  27 APR 2017 16:35
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -885,25 +885,25 @@ Package geometry Warning: Over-specification in `v'-direction.
 (./manual.aux)
 \openout1 = `manual.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 73.
-LaTeX Font Info:    ... okay on input line 73.
-LaTeX Font Info:    Try loading font information for T1+ptm on input line 73.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 69.
+LaTeX Font Info:    ... okay on input line 69.
+LaTeX Font Info:    Try loading font information for T1+ptm on input line 69.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1ptm.fd
 File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
 )
-LaTeX Info: Redefining \microtypecontext on input line 73.
+LaTeX Info: Redefining \microtypecontext on input line 69.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
@@ -949,7 +949,7 @@ e
 \everyMPtoPDFconversion=\toks29
 )
 \AtBeginShipoutBox=\box31
-Package hyperref Info: Link coloring ON on input line 73.
+Package hyperref Info: Link coloring ON on input line 69.
  (/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2012/10/27 v2.43 Cross-referencing by name of section
 
@@ -960,10 +960,10 @@ Package: gettitlestring 2010/12/03 v1.4 Cleanup title references (HO)
 )
 Redoing nameref's sectioning
 Redoing nameref's label
-LaTeX Info: Redefining \nameref on input line 73.
-LaTeX Info: Redefining \ref on input line 73.
-LaTeX Info: Redefining \pageref on input line 73.
-LaTeX Info: Redefining \nameref on input line 73.
+LaTeX Info: Redefining \nameref on input line 69.
+LaTeX Info: Redefining \ref on input line 69.
+LaTeX Info: Redefining \pageref on input line 69.
+LaTeX Info: Redefining \nameref on input line 69.
 (./manual.out) (./manual.out)
 \@outlinefile=\write4
 \openout4 = `manual.out'.
@@ -1008,8 +1008,11 @@ LaTeX Info: Redefining \nameref on input line 73.
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
 LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <14.4> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 102.
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 97.
  (./manual.toc
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 1.
+
 (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
@@ -1023,30 +1026,25 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 ) [2
 
 ]
-LaTeX Font Info:    Try loading font information for T1+phv on input line 107.
-
-(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1phv.fd
-File: t1phv.fd 2001/06/04 scalable font definitions for T1/phv.
-)
-LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <14.4> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 107.
-Package microtype Info: Loading generic settings for font family
-(microtype)             `phv' (encoding: T1).
-(microtype)             For optimal results, create family-specific settings.
-(microtype)             See the microtype manual for details.
 LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 142.
-LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <12> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 142.
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 159.
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 151.
  [3
 
 ]
-LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/phv/b/n' tried instead on input line 220.
+
+LaTeX Warning: Reference `fig:wiring' on page 4 undefined on input line 175.
+
+
+LaTeX Warning: No positions in optional float specifier.
+               Default added (so using `tbp') on input line 212.
+
+<wiring2.png, id=130, 1003.75pt x 752.8125pt>
+File: wiring2.png Graphic file (type png)
+ <use wiring2.png>
+Package pdftex.def Info: wiring2.png used on input line 214.
+(pdftex.def)             Requested size: 289.07365pt x 216.81pt.
  [4]
-LaTeX Font Info:    Try loading font information for T1+pcr on input line 229.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 232.
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
@@ -1056,117 +1054,94 @@ Package microtype Info: Loading generic settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-Overfull \hbox (1.369pt too wide) in paragraph at lines 246--248
+Overfull \hbox (1.369pt too wide) in paragraph at lines 254--256
 []\T1/ptm/m/n/10.95 (-20) For more in-for-ma-tion about the Ar-duino com-mand l
 ine in-ter-face, see: [][]$\T1/pcr/m/n/10.95 https : / / github . com / arduino
  /
  []
 
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 262.
+[5 <./wiring2.png (PNG copy)>]
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 270.
+
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10.95> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 262.
- [5]
-
-LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 324.
-
-<screenshot_0_imu.png, id=146, 285.065pt x 664.4825pt>
-File: screenshot_0_imu.png Graphic file (type png)
-
-<use screenshot_0_imu.png>
-Package pdftex.def Info: screenshot_0_imu.png used on input line 326.
-(pdftex.def)             Requested size: 212.41261pt x 495.12625pt.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 270.
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 331.
+               Default added (so using `tbp') on input line 282.
 
-<screenshot_1_imu.png, id=148, 1515.6625pt x 638.385pt>
-File: screenshot_1_imu.png Graphic file (type png)
+<screenshot_panel.png, id=145, 285.065pt x 664.4825pt>
+File: screenshot_panel.png Graphic file (type png)
 
-<use screenshot_1_imu.png>
-Package pdftex.def Info: screenshot_1_imu.png used on input line 333.
-(pdftex.def)             Requested size: 212.41261pt x 89.46095pt.
- [6] [7 <./screenshot_0_imu.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 376--376
+<use screenshot_panel.png>
+Package pdftex.def Info: screenshot_panel.png used on input line 284.
+(pdftex.def)             Requested size: 93.01039pt x 216.81pt.
+ [6 <./screenshot_panel.png>]
 
+LaTeX Warning: No positions in optional float specifier.
+               Default added (so using `tbp') on input line 327.
+
+<screenshot_plots.png, id=157, 1515.6625pt x 638.385pt>
+File: screenshot_plots.png Graphic file (type png)
+
+<use screenshot_plots.png>
+Package pdftex.def Info: screenshot_plots.png used on input line 329.
+(pdftex.def)             Requested size: 472.03125pt x 198.81294pt.
+ [7]
+
+LaTeX Warning: No positions in optional float specifier.
+               Default added (so using `tbp') on input line 394.
+
+<screenshot_process.png, id=166, 378.41376pt x 427.5975pt>
+File: screenshot_process.png Graphic file (type png)
+
+<use screenshot_process.png>
+Package pdftex.def Info: screenshot_process.png used on input line 396.
+(pdftex.def)             Requested size: 191.86827pt x 216.81pt.
+ [8 <./screenshot_plots.png>] [9 <./screenshot_process.png>]
+Overfull \hbox (18.37865pt too wide) in paragraph at lines 481--484
+\T1/pcr/m/n/10.95 serial.tools.list_ports \T1/ptm/m/n/10.95 (-20) ( [][]$\T1/pc
+r/m/n/10.95 http : / / pyserial . readthedocs . io / en / latest / tools .
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 377--377
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 378--378
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 379--379
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 380--380
-
- []
-
-[8 <./screenshot_1_imu.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 382--382
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 395--395
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 397--397
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 400--400
-
- []
-
-[9]
+[10] [11]
 \tf@toc=\write5
 \openout5 = `manual.toc'.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 411.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 411.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 525.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 525.
  (./manual.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 411.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 411.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 525.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 525.
 Package rerunfilecheck Info: File `manual.out' has not changed.
-(rerunfilecheck)             Checksum: C8E5BAF201DCBB57AB1A2D5081E1C8AC;1206.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 411.
+(rerunfilecheck)             Checksum: 66EF46DFD193D53AC42635BC1C9D1A57;1204.
+
+
+LaTeX Warning: There were undefined references.
+
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 525.
  ) 
 Here is how much of TeX's memory you used:
- 11904 strings out of 493029
- 173515 string characters out of 6136233
- 326730 words of memory out of 5000000
- 15198 multiletter control sequences out of 15000+600000
- 41833 words of font info for 101 fonts, out of 8000000 for 9000
+ 11916 strings out of 493029
+ 173306 string characters out of 6136233
+ 326779 words of memory out of 5000000
+ 15154 multiletter control sequences out of 15000+600000
+ 38321 words of font info for 137 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  34i,12n,35p,211b,448s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
 e/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texm
 f-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/urw/helvetic/uhvb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/ti
-mes/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb>
-</usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on manual.pdf (9 pages, 206399 bytes).
+type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times
+/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on manual.pdf (11 pages, 1217562 bytes).
 PDF statistics:
- 210 PDF objects out of 1000 (max. 8388607)
- 187 compressed objects within 2 object streams
+ 234 PDF objects out of 1000 (max. 8388607)
+ 206 compressed objects within 3 object streams
  38 named destinations out of 1000 (max. 500000)
- 17075 words of extra memory for PDF output out of 17280 (max. 10000000)
+ 15557 words of extra memory for PDF output out of 17280 (max. 10000000)
 

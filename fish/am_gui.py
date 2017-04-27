@@ -439,7 +439,13 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
 
-        state = 'ON' if self.receiver.trigger_state else 'OFF'
+        if (self.receiver.trigger_state == True):
+            state = 'ON'
+        elif (self.receiver.trigger_state == False):
+            state = 'OFF'
+        else:
+            state = ''
+
         self.stats_trigger.setText("Trigger signal state: " + state)
 
 
