@@ -54,7 +54,6 @@ class Am_settings(PyQt5.QtGui.QWidget):
         buffer_layout = PyQt5.QtGui.QGridLayout()
 
         # LABEL
-        #buffer_label = PyQt5.QtGui.QLabel("data buffer length (sec.)")
         buffer_label = PyQt5.QtGui.QLabel("data buffer length (# samples)")
         buffer_layout.addWidget(buffer_label, 1, 1)
 
@@ -65,6 +64,10 @@ class Am_settings(PyQt5.QtGui.QWidget):
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
+
+        # SECONDS
+        self.buffer_label_sec = PyQt5.QtGui.QLabel("= approx. " + str(self.data_buffer_len * 5) + " ms")
+        buffer_layout.addWidget(self.buffer_label_sec, 3, 1)
 
         # TEXTBOX
         self.buffer_textbox = PyQt5.QtGui.QLineEdit(str(self.data_buffer_len), self)
@@ -107,6 +110,7 @@ class Am_settings(PyQt5.QtGui.QWidget):
     def read_buffer_slider_slot(self, val):
         self.data_buffer_len = val
         self.buffer_textbox.setText(str(self.data_buffer_len))
+        self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
 
 
     ########################################
@@ -116,5 +120,6 @@ class Am_settings(PyQt5.QtGui.QWidget):
         val = int(self.buffer_textbox.text())
         self.data_buffer_len = val
         self.buffer_slider.setValue(self.data_buffer_len)
+        self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
 
 

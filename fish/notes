@@ -15,14 +15,7 @@ when fail to start due to trigger, tell user why
 
 more tooltips 
 
-JERRY TEST:
-buffer: print seconds too
-legend line colors
-trigger state indicator
-
 better mutex
-
-replot after process
 
 global class:
     last search path
@@ -42,7 +35,6 @@ make sure num_imus doesn't change for one dataset
 
 better default save directory
 
-
 ASA
 disable record button during test   ( DIFFICULT )
 text window breaks when it gets too full
@@ -52,5 +44,16 @@ tests:
 
 
 
-NEED TO INCLUDE IN DOCUMENTATION:
-random trigger values if unplugged.
+
+
+
+DONE
+
+need to include in documentation: random trigger values if unplugged.
+
+JERRY TEST:
+buffer: print seconds too
+legend line colors
+trigger state indicator
+
+replot after process

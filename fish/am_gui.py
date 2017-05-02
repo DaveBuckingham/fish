@@ -149,10 +149,10 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         stats_layout = PyQt5.QtGui.QVBoxLayout()
         self.stats_trigger = PyQt5.QtGui.QLabel("Trigger signal state:")
-        self.stats_num_samples_buffer = PyQt5.QtGui.QLabel("Samples in buffer:")
-        self.stats_num_samples_recorded = PyQt5.QtGui.QLabel("Total samples recorded:")
-        self.stats_true_frequency = PyQt5.QtGui.QLabel("Sample frequency:")
         self.stats_time = PyQt5.QtGui.QLabel("Time (ms):")
+        self.stats_true_frequency = PyQt5.QtGui.QLabel("Sample frequency:")
+        self.stats_num_samples_recorded = PyQt5.QtGui.QLabel("Total samples recorded:")
+        self.stats_num_samples_buffer = PyQt5.QtGui.QLabel("Samples in buffer:")
 
         stats_layout.addWidget(self.stats_trigger)
         stats_layout.addWidget(self.stats_time)
@@ -163,12 +163,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.plots_layout = PyQt5.QtGui.QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
-
-        # top_layout.addLayout(self.plots_layout, 1, 1, 2, 1)
-        # top_layout.addWidget(self.text_window, 3, 1, 1, 1)
-        # top_layout.addWidget(self.button_container, 1, 2, 1, 1)
-        # top_layout.addWidget(self.settings, 2, 2, 1, 1, QtCore.Qt.AlignTop)
-        # top_layout.addLayout(stats_layout, 3, 2, 1, 1, QtCore.Qt.AlignBottom)
 
         panel_layout = PyQt5.QtGui.QVBoxLayout()
         panel_layout.addWidget(self.button_container)
