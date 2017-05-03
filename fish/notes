@@ -1,12 +1,39 @@
 TODO:
 
+downsample plotting data when it gets big so no slowdown
+
+test port detection on windows
+
+process:
+    calls refreshes on cancel
+    can click 'process' button even if no data loaded
+    breaks (no trigger read) if empty
+
+can't find arduino on windows
+
+when fail to start due to trigger, tell user why
+
+more tooltips 
+
+better mutex
+
+global class:
+    last search path
+    disable/enable format
+
+cant plot for very long...
+
+segfault on exit with python3
+
+when loading file, check for correctness
+
+fix behavior on "rx failed"
+
+detect mega (or clock speed) and adjust accordingly?
+
 make sure num_imus doesn't change for one dataset
 
-clean up imports
-
 better default save directory
-
-still need arduino to stop immedietly on trigger
 
 ASA
 disable record button during test   ( DIFFICULT )
@@ -15,13 +42,18 @@ tests:
     imus self-test
     magnetometer
 
-MAYBE:
-auto-detect mag
-bigger record button
 
 
 
 
 
-NEED TO INCLUDE IN DOCUMENTATION:
-random trigger values if unplugged.
+DONE
+
+need to include in documentation: random trigger values if unplugged.
+
+JERRY TEST:
+buffer: print seconds too
+legend line colors
+trigger state indicator
+
+replot after process

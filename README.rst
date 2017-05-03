@@ -2,33 +2,33 @@
 INSTALLATION
 ============
 
-PyQt4
+PyQt5
 -----
 
-It is first necessary to install PyQt4. It is not possible to use
-pip to install PyQt4.
+It is first necessary to install PyQt5. It is not possible to use
+pip to install PyQt5.
 
 Windows
     Binaries can be download from riverbankcomputing:
-        https://www.riverbankcomputing.com/software/pyqt/download
+        https://www.riverbankcomputing.com/software/pyqt/download5
 
 Debian
     Python2
-        ``# apt-get install python-qt4``
+        ``# apt-get install python-qt5``
     Python3
-        ``# apt-get install python3-qt4``
+        ``# apt-get install python3-qt5``
 
 Source
     You can build PyQt yourself.
         First you need SIP:
             http://www.riverbankcomputing.com/software/sip/download
-        Then PyQt4:
-            http://www.riverbankcomputing.com/software/pyqt/download
+        Then PyQt5:
+            https://www.riverbankcomputing.com/software/pyqt/download5
 
 pip
 ---
 
-Once PyQt4 is installed, use pip to install *program_name*.
+Once PyQt5 is installed, use pip to install *program_name*.
 
 It may be necessary to update pip:
     ``# pip install --upgrade pip``
@@ -36,7 +36,7 @@ It may be necessary to update pip:
 Then:
     ``# pip install`` *program_name*
 
-Pip will automatically install dependencies other than PyQt4, which are listed in  ``requirements.txt``.
+Pip will automatically install dependencies other than PyQt5, which are listed in  ``requirements.txt``.
 
 
 OPERATION

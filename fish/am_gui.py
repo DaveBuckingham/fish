@@ -1,33 +1,34 @@
 #!/usr/bin/env python
 
-# USE PYTHON 2.6 OR LATER
-
 import sys
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from fish.am_rx import *
-from fish.am_plot import *
-from fish.am_settings import *
-#from fish.am_process import *
-from collections import namedtuple
-import time
-import h5py
+import os
+import datetime
 import signal
 import atexit
-from collections import deque
+import time
 
-class Am_ui(QWidget):
+import PyQt5.QtCore
+import PyQt5.QtGui
+
+from fish.am_rx import Am_rx
+from fish.am_data import Am_data
+from fish.am_plot import Am_plot
+from fish.am_settings import Am_settings
+from fish.am_process_dialog import Am_process_dialog
+
+class Am_gui(PyQt5.QtGui.QWidget):
 
     # DISPLAYED IN WINDOW HEADER AND SUCH
     APPLICATION_NAME = 'IMU Collect 0.01'
 
     FREQ_AVERAGE_WINDOW = 100
 
-    # SIGNAL TO RESETS ALL THE PLOTS
-    clear_plots_signal = pyqtSignal()
+    PLOT_DELAY_MS = 50
+
+    BUTTON_WIDTH = 300
 
     def __init__(self, parent = None):
-        super(Am_ui, self).__init__(parent)
+        super(Am_gui, self).__init__(parent)
 
 
 
@@ -35,25 +36,19 @@ class Am_ui(QWidget):
         #       VARIABLES      #
         ########################
 
-        # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
-        self.data_saved = True
 
         # CURRENTLY RECORDING DATA?
         self.recording = False
 
-        # IF FALSE, RECORD BUTTON TO START AND STOP RECORDING, IGNORE PIN
-        # IF TRUE, SECOND CLICK CAPTURES DATA IN RANGE FROM PRE TO POST DELAY, HALT ON PIN
-        self.pre_trigger_delay = 3
-        self.post_trigger_delay = 3
 
         # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
 
 
         # TIMESTAMPS OF COLLECTED DATA.
-        self.timestamps   = []
+        #self.timestamps   = []
 
-        self.num_imus = 0
+        #self.num_imus = 0
 
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
@@ -63,11 +58,18 @@ class Am_ui(QWidget):
 
         self.last_data_path = ''
 
-        # HOLD ALL VISUAL ELEMENTS IN GUI MAIN WINDOW
-        top_layout = QGridLayout()
+
+        self.plots = []
+
+        self.timer = PyQt5.QtCore.QTimer(self)
+        self.timer.timeout.connect(self.update)
 
 
+        self.settings = Am_settings(self)
 
+        self.data = Am_data(self.settings)
+        # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
+        self.data.saved = True
 
 
 
@@ -75,10 +77,9 @@ class Am_ui(QWidget):
         #   SET UP SEPARATE THREAD FOR RECEIVING DATA    #
         ##################################################
 
-        self.receiver_thread = QThread()
-        self.receiver = Am_rx()
+        self.receiver_thread = PyQt5.QtCore.QThread()
+        self.receiver = Am_rx(self.data, self.settings)
         self.receiver.moveToThread(self.receiver_thread)
-
 
 
 
@@ -92,113 +93,92 @@ class Am_ui(QWidget):
 
         # CREATE BUTTONS AND ADD TO BUTTON LAYOUT
 
-        button_layout = QVBoxLayout()
-        self.button_container = QWidget()
+        button_layout = PyQt5.QtGui.QVBoxLayout()
+        self.button_container = PyQt5.QtGui.QWidget()
         self.button_container.setLayout(button_layout)
 
-        self.buttons['record'] = QPushButton('Record')
+        self.buttons['record'] = PyQt5.QtGui.QPushButton('Record')
+        self.buttons['record'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
 
 
-        self.buttons['test'] = QPushButton('Test')
-        self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
-        self.buttons['test'].clicked.connect(self.test_button_slot)
-        button_layout.addWidget(self.buttons['test'])
+        # self.buttons['test'] = PyQt5.QtGui.QPushButton('Test')
+        # self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
+        # self.buttons['test'].clicked.connect(self.test_button_slot)
+        # button_layout.addWidget(self.buttons['test'])
 
-        self.buttons['save'] = QPushButton('Save')
-        self.buttons['save'].setToolTip('Save recorded data')
+        self.buttons['process'] = PyQt5.QtGui.QPushButton('Process')
+        self.buttons['process'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
+        self.buttons['process'].setToolTip('Process the current data by applying a filtering algorithm.')
+        self.buttons['process'].clicked.connect(self.process_button_slot)
+        button_layout.addWidget(self.buttons['process'])
+
+        self.buttons['save'] = PyQt5.QtGui.QPushButton('Save')
+        self.buttons['save'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
+        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file.')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
 
-        self.buttons['load'] = QPushButton('Load')
-        self.buttons['load'].setToolTip('Load recorded data')
+        self.buttons['load'] = PyQt5.QtGui.QPushButton('Load')
+        self.buttons['load'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
+        self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
-        self.buttons['quit'] = QPushButton('Quit')
+        self.buttons['quit'] = PyQt5.QtGui.QPushButton('Quit')
+        self.buttons['quit'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
         button_layout.addWidget(self.buttons['quit'])
 
 
         # TEXT OUTPUT WINDOW
 
-        self.text_window = QTextEdit()
+        self.text_window = PyQt5.QtGui.QTextEdit()
+        self.text_window.setMaximumWidth(Am_gui.BUTTON_WIDTH)
         self.text_window.setReadOnly(True)
         #print self.text_window.minimumHeight()
         self.text_window.setMinimumHeight(150)
 
 
 
-        # GRAPHS
-
-        #self.plot_a0 = Am_plot()
-        #self.plot_a1 = Am_plot()
-        #self.plot_g0 = Am_plot()
-        #self.plot_g1 = Am_plot()
-        #self.plot_m0 = Am_plot()
-        #self.plot_m1 = Am_plot()
-
-
-        # SETTINGS (AFTER RECEIVER, NEEDS ACCESS TO use_trigger)
-
-        self.settings = Am_settings(self)
-
 
         # STATUS INFO
 
-        stats_layout = QGridLayout()
-        self.stats_num_samples = QLabel("Samples:")
-        self.stats_true_frequency = QLabel("Frequency:")
-        self.stats_time = QLabel("Time:")
+        stats_layout = PyQt5.QtGui.QVBoxLayout()
+        self.stats_trigger = PyQt5.QtGui.QLabel("Trigger signal state:")
+        self.stats_time = PyQt5.QtGui.QLabel("Time (ms):")
+        self.stats_true_frequency = PyQt5.QtGui.QLabel("Sample frequency:")
+        self.stats_num_samples_recorded = PyQt5.QtGui.QLabel("Total samples recorded:")
+        self.stats_num_samples_buffer = PyQt5.QtGui.QLabel("Samples in buffer:")
 
-        stats_layout.addWidget(self.stats_num_samples, 1, 2)
-        stats_layout.addWidget(self.stats_true_frequency, 1, 3)
-        stats_layout.addWidget(self.stats_time, 1, 4)
-        stats_layout.setColumnMinimumWidth(2, 120)
+        stats_layout.addWidget(self.stats_trigger)
+        stats_layout.addWidget(self.stats_time)
+        stats_layout.addWidget(self.stats_true_frequency)
+        stats_layout.addWidget(self.stats_num_samples_recorded)
+        stats_layout.addWidget(self.stats_num_samples_buffer)
 
-        plots_layout = QGridLayout()
+        self.plots_layout = PyQt5.QtGui.QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
-        top_layout.addLayout(plots_layout, 1, 1)
 
-        # top_layout.addWidget(self.plot_a0, 1, 1)
-        # top_layout.addWidget(self.plot_a1, 1, 2)
-        # top_layout.addWidget(self.plot_g0, 2, 1)
-        # top_layout.addWidget(self.plot_g1, 2, 2)
-        # top_layout.addWidget(self.plot_m0, 3, 1)
-        # top_layout.addWidget(self.plot_m1, 3, 2)
+        panel_layout = PyQt5.QtGui.QVBoxLayout()
+        panel_layout.addWidget(self.button_container)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addWidget(self.settings)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addLayout(stats_layout)
+        panel_layout.addWidget(self.hline())
+        panel_layout.addWidget(self.text_window)
 
-        top_layout.addWidget(self.text_window, 4, 1, 1, 2)
-        top_layout.addLayout(stats_layout, 5, 1, 1, 2)
+        top_layout = PyQt5.QtGui.QHBoxLayout()
+        top_layout.addStretch()
+        top_layout.addLayout(self.plots_layout)
+        top_layout.addLayout(panel_layout)
 
-        top_layout.addWidget(self.button_container, 1, 3, 3, 1)
-        top_layout.addWidget(self.settings, 4, 3)
 
-
-        # GRAPH LABELS
-
-        label = QtGui.QLabel("IMU 1")
-        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 0, 1)
-
-        label = QtGui.QLabel("IMU 2")
-        label.setAlignment(QtCore.Qt.AlignBottom | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 0, 2)
-
-        label = QtGui.QLabel("Accel.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 1, 0)
-
-        label = QtGui.QLabel("Gyro.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 2, 0)
-
-        label = QtGui.QLabel("Mag.")
-        label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignCenter)
-        top_layout.addWidget(label, 3, 0)
 
 
         # ADD TOP LEVEL LAYOUT
@@ -209,7 +189,7 @@ class Am_ui(QWidget):
 
 
         # SET WINDOW TITLE
-        self.setWindowTitle(Am_ui.APPLICATION_NAME) 
+        self.setWindowTitle(Am_gui.APPLICATION_NAME) 
 
 
 
@@ -218,14 +198,10 @@ class Am_ui(QWidget):
         #    QT CONNECTIONS    #
         ########################
 
-        #self.clear_plots_signal.connect(self.plot_a0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_a1.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_g0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_g1.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_m0.clear_slot)
-        #self.clear_plots_signal.connect(self.plot_m1.clear_slot)
 
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
+
+        self.receiver.recording_signal.connect(self.start_plot_slot)
 
         # USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
         # self.receiver_thread.started.connect(self.receiver.run_fake)
@@ -235,18 +211,22 @@ class Am_ui(QWidget):
 
         self.receiver_thread.finished.connect(self.receiver_done)
 
-        self.receiver.timestamp_signal.connect(self.timestamp_slot)
-        # self.receiver.plot_a0_signal.connect(self.plot_a0.data_slot)
-        # self.receiver.plot_a1_signal.connect(self.plot_a1.data_slot)
-        # self.receiver.plot_g0_signal.connect(self.plot_g0.data_slot)
-        # self.receiver.plot_g1_signal.connect(self.plot_g1.data_slot)
-        # self.receiver.plot_m0_signal.connect(self.plot_m0.data_slot)
-        # self.receiver.plot_m1_signal.connect(self.plot_m1.data_slot)
+
+
 
         self.receiver.message_signal.connect(self.message_slot)
         self.receiver.error_signal.connect(self.error_slot)
         self.receiver.numimus_signal.connect(self.numimus_slot)
 
+        self.data.message_signal.connect(self.message_slot)
+        self.data.error_signal.connect(self.error_slot)
+
+
+    def hline(self):
+        line = PyQt5.QtGui.QFrame()
+        line.setFrameShape(PyQt5.QtGui.QFrame.HLine)
+        line.setFrameShadow(PyQt5.QtGui.QFrame.Sunken)
+        return line
 
 
     def print_pass_fail(self, val):
@@ -255,19 +235,77 @@ class Am_ui(QWidget):
         else:
             self.error_slot("FAIL\n")
 
+    # thanks to ekhumoro for this function
+    # http://stackoverflow.com/questions/9374063/remove-widgets-and-layout-as-well
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clearLayout(item.layout())
+
 
     def make_plots(self):
+
+        self.clear_layout(self.plots_layout)
+
+        label = PyQt5.QtGui.QLabel("Accel.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 1)
+
+        label = PyQt5.QtGui.QLabel("Gyro.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 2)
+
+        label = PyQt5.QtGui.QLabel("Mag.")
+        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
+        self.plots_layout.addWidget(label, 0, 3)
+
         self.plots = []
-        for i in (range(0, receiver.num_imus)):
-            plot_a = Am_plot(receiver.imu_data['imus'][i]['accel'])
-            plot_g = Am_plot(receiver.imu_data['imus'][i]['gyro'])
-            plot_m = Am_plot(receiver.imu_data['imus'][i]['mag'])
+        for i in (range(0, self.data.num_imus)):
+            plot_a = Am_plot(self.data.imu_data['imus'][i]['accel'], self.data.data_lock, self)
+            plot_g = Am_plot(self.data.imu_data['imus'][i]['gyro'], self.data.data_lock, self)
+            plot_m = Am_plot(self.data.imu_data['imus'][i]['mag'], self.data.data_lock, self)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
-            plots_layout.addWidget(plot_a, i, 1)
-            plots_layout.addWidget(plot_g, i, 2)
-            plots_layout.addWidget(plot_m, i, 3)
+            self.plots_layout.addWidget(plot_a, i+1, 1)
+            self.plots_layout.addWidget(plot_g, i+1, 2)
+            self.plots_layout.addWidget(plot_m, i+1, 3)
+
+            label = PyQt5.QtGui.QLabel("IMU " + str(i+1))
+            label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
+            self.plots_layout.addWidget(label, i+1, 0)
+
+
+    def check_saved(self):
+        if (self.data.saved):
+            return True
+        else:
+
+            msgBox = PyQt5.QtGui.QMessageBox()
+            msgBox.setText('Unsaved data will be lost.')
+            msgBox.setIcon(QMessageBox.Warning)
+            continue_btn = PyQt5.QtGui.QPushButton('Continue anyway')
+            save_btn = PyQt5.QtGui.QPushButton('Save data')
+            cancel_btn = PyQt5.QtGui.QPushButton('Cancel')
+            msgBox.addButton(continue_btn, PyQt5.QtGui.QMessageBox.YesRole)
+            msgBox.addButton(save_btn, PyQt5.QtGui.QMessageBox.YesRole)
+            msgBox.addButton(cancel_btn, PyQt5.QtGui.QMessageBox.NoRole)
+            msgBox.exec_()
+
+            if (msgBox.clickedButton() == save_btn):
+                return(self.save_button_slot())
+            elif (msgBox.clickedButton() == continue_btn):
+                return True
+            else:
+                return False
+
+
+
 
 
 
@@ -277,48 +315,24 @@ class Am_ui(QWidget):
 ############################################
 
 
-    def test_button_slot(self):
+    def process_button_slot(self):
 
+        self.w = Am_process_dialog(self.data)
+        #self.w.setGeometry(QRect(100, 100, 400, 200))
+        
+        self.w.finished_signal.connect(self.update)
+        self.w.message_signal.connect(self.message_slot)
+        self.w.error_signal.connect(self.error_slot)
 
-        results = self.receiver.test()
-
-        if (not results):
-            self.error_slot("Arduino com error.\n")
-
-        else:
-
-            self.message_slot("imu1 communication test...")
-            self.print_pass_fail(results[0])
-
-            self.message_slot("imu2 communication test...")
-            self.print_pass_fail(results[1])
-
-            self.message_slot("imu1 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("imu2 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("mag1 self test...")
-            self.message_slot("not implemented\n")
-
-            self.message_slot("mag2 self test...")
-            self.message_slot("not implemented\n")
-
+        self.w.show()
 
 
     def quit_button_slot(self):
-        result = (QMessageBox.question(self,
-                                       Am_ui.APPLICATION_NAME,
-                                       'Really quit?',
-                                       QMessageBox.Yes | QMessageBox.No,
-                                       QMessageBox.Yes))
-
-        if (result == QMessageBox.Yes):
-            self.stop_recording()
-            time.sleep(.2)  # let thread finish
-            self.message_slot("exiting")
-            self.close()
+        #if (self.check_saved()):
+        self.stop_recording()
+        time.sleep(.2)  # let thread finish
+        self.message_slot("exiting")
+        self.close()
 
 
     # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
@@ -326,72 +340,65 @@ class Am_ui(QWidget):
         if (self.recording):
             self.stop_recording()
         else:
-            if (not self.data_saved):
-                result = (QMessageBox.question(self,
-                                               'Message',
-                                               'Overwrite recorded data without saving?',
-                                               QMessageBox.Yes | QMessageBox.No,
-                                               QMessageBox.No))
-
-            if (self.data_saved or (result == QMessageBox.Yes)):
-                self.num_samples = 0
-                self.record()
-
+            #if (self.check_saved()):
+            self.num_samples = 0
+            self.record()
 
     def save_button_slot(self):
-        filename = QFileDialog.getSaveFileName(self, 'Save recorded data', self.last_data_path, '*.hdf5')
-        self.last_data_path = os.path.dirname(filename)
+
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        dlg = PyQt5.QtGui.QFileDialog()
+        filename, filetype = dlg.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
+
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
-                filename += '.hdf5'
+            filename = str(filename)
+            self.last_data_path = os.path.dirname(filename)
 
-            with h5py.File(str(filename), 'w') as datafile:
-                save_data = datafile.create_group("data")
+            if (filetype == "*.hdf5"):
+                if '.' not in filename:
+                    filename += '.hdf5'
+                self.data.save_hdf5_file(filename)
 
-                save_data.create_dataset('t', data=self.receiver.data['timestamps'])
-                for i in range(0, len(self.receiver.data['imus'])):
-                    imu = self.receiver.data['imus'][i]
-                    extension = "" if i < 1 else str(i + 1)
-                    save_data.create_dataset('Accel' + extension, data=self.receiver.data['imus'][i]['accel'])
-                    save_data.create_dataset('Gyro'  + extension, data=self.receiver.data['imus'][i]['gyro'])
-                    save_data.create_dataset('Mag'   + extension, data=self.receiver.data['imus'][i]['mag'])
+            elif (filetype == "*.csv"):
+                if '.' not in filename:
+                    filename += '.csv'
+                self.data.save_csv_file(filename)
+            else:
+                self.error_slot("invalid file type: " + filetype + "\n")
+                return False
 
-                if (self.receiver.USE_ENCODER):
-                    save_data.create_dataset('Encoder', data=self.receiver.data['encoder'])
+            #self.message_slot("data saved to  " + filename + "\n")
+            self.data.saved = True
+            return True
 
-            self.message_slot("data saved to  " + filename + "\n")
-            self.data_saved = True
+
 
 
     def load_button_slot(self):
 
-        filename = QFileDialog.getOpenFileName(self, 'Load recorded data', self.last_data_path, '*.hdf5')
-        self.last_data_path = os.path.dirname(filename)
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
+
         if filename:
-            if ( (len(filename) < 5) or (filename[-5:].lower() != '.hdf5') ):
-                filename += '.hdf5'
+            filename = str(filename)
+            self.last_data_path = os.path.dirname(filename)
 
-            with h5py.File(str(filename), 'r') as datafile:
-                self.receiver.d
-                self.receiver.imu_data['timestamps'] = datafile.get('data/t')[()]
+            if (filetype == "*.hdf5"):
+                self.data.load_hdf5_file(filename)
+            elif (filetype == "*.csv"):
+                self.data.load_csv_file(filename)
+            else:
+                self.error_slot("invalid file type: " + filetype + "\n")
+                return
 
-                self.receiver.imu_data['imus'] = []
+            self.make_plots()
+            for p in self.plots:
+                p.plot_slot()
 
-                i = 0
-                ext = ""
-                while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/mag' + ext in datafile):
-                    self.receiver.data['imus'].append([])
-                    self.receiver.imu_data['imus'][i]['accel'] = datafile.get('data/Accel' + ext)[()]
-                    self.receiver.imu_data['imus'][i]['gyro'] = datafile.get('data/Gyro' + ext)[()]
-                    self.receiver.imu_data['imus'][i]['mag'] = datafile.get('data/Mag' + ext)[()]
-                    i += 1
-                    ext = str(i + 1)
-
-                if (self.receiver.USE_ENCODER):
-                    self.receiver.data['encoder'] = datafile.get('data/Encoder')[()]
-
-            self.message_slot(filename + " loaded\n")
-            self.data_saved = True
+            #self.message_slot(filename + " loaded\n")
+            self.data.saved = True
             self.buttons['save'].setEnabled(True)
 
 
@@ -407,41 +414,45 @@ class Am_ui(QWidget):
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
-        self.buttons['save'].setEnabled(len(self.timestamps) > 0)
-        self.buttons['test'].setEnabled(True)
-
-
-        # CROP DATA IF PRE-TRIGGER
-        if (len(self.timestamps) > 0):
-            if (self.receiver.use_trigger):
-                data_start_time = self.receiver.data[-1]['time'] - (self.pre_trigger_delay * 1000);
-                data_start_index = 0
-                for i in range(0, len(self.receiver.data)):
-                    if (self.receiver.data[i]['time'] > data_start_time):
-                        self.receiver.data = self.receiver.data[i:]
-                        break
+        self.buttons['save'].setEnabled(self.data.has_data())
+        #self.buttons['test'].setEnabled(True)
+        self.buttons['process'].setEnabled(True)
+        self.buttons['load'].setEnabled(True)
 
         self.message_slot("done recording\n")
 
 
+    def update(self):
+ 
+        timestamps = self.data.imu_data['timestamps']
+
+        if(len(timestamps) > 0):
+            self.stats_time.setText('Time (ms): %.1f' % (timestamps[-1]))
+
+        num_samples = len(timestamps)
+        self.stats_num_samples_buffer.setText('Samples in buffer: %d' % num_samples)
+        self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
+
+        if (self.receiver.trigger_state == True):
+            state = 'ON'
+        elif (self.receiver.trigger_state == False):
+            state = 'OFF'
+        else:
+            state = ''
+
+        self.stats_trigger.setText("Trigger signal state: " + state)
 
 
-    # CALLED BY am_rx.py FOR EVERY SAMPLE
-    def timestamp_slot(self, timestamp):
-
-        self.timestamps.append(timestamp)
-
-        self.stats_time.setText('Time: %.1f' % (timestamp))
-
-        self.num_samples += 1
-        self.stats_num_samples.setText('Samples: %d' % self.num_samples)
-
-        if (self.num_samples > Am_ui.FREQ_AVERAGE_WINDOW):
-            # self.true_frequency = (Am_ui.FREQ_AVERAGE_WINDOW / (self.timestamps[-1] - self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW + 1)])) * 1000
-            window = self.timestamps[-(Am_ui.FREQ_AVERAGE_WINDOW):]
+        if (num_samples > Am_gui.FREQ_AVERAGE_WINDOW):
+            window = timestamps[-(Am_gui.FREQ_AVERAGE_WINDOW):]
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
-            self.stats_true_frequency.setText('Frequency: %.3f' % self.true_frequency)
+            self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
+
+        for p in self.plots:
+            p.plot_slot()
+
+
 
 
     def numimus_slot(self, num_imus):
@@ -456,13 +467,12 @@ class Am_ui(QWidget):
 
     # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
     def message_slot(self, the_string, red=False):
-        # self.text_window.setTextColor(QtGui.QColor(120, 120, 120))
-        # self.text_window.insertPlainText("\n" + time.strftime("%c") + "    ")
-
         if (red):
-            self.text_window.setTextColor(QtGui.QColor(255,0,0))
+            self.text_window.setTextColor(PyQt5.QtGui.QColor(255,0,0))
         else:
-            self.text_window.setTextColor(QtGui.QColor(0,0,0))
+            self.text_window.setTextColor(PyQt5.QtGui.QColor(200,200,200))
+            #self.text_window.setTextColor(PyQt5.QtGui.QColor(0,0,0))
+        #self.text_window.insertPlainText(str(datetime.datetime.today()) + "  " + the_string)
         self.text_window.insertPlainText(the_string)
         sb = self.text_window.verticalScrollBar();
         sb.setValue(sb.maximum());
@@ -473,23 +483,28 @@ class Am_ui(QWidget):
 #         OTHER FUNCTIONS (NOT SLOTS)      #
 ############################################
 
+    def start_plot_slot(self):
+        self.timer.start(Am_gui.PLOT_DELAY_MS)
 
     # START RECORDING DATA
     def record(self):
         self.recording = True
         self.receiver.recording = True
-        self.data_saved = False
+        self.data.saved = False
 
         self.buttons['record'].setText('Stop')
 
         self.buttons['record'].setToolTip('Stop recording samples')
 
         self.buttons['save'].setEnabled(False)
-        self.buttons['test'].setEnabled(False)
+        #self.buttons['test'].setEnabled(False)
 
-        self.clear_plots_signal.emit()
+        self.buttons['process'].setEnabled(False)
+        self.buttons['load'].setEnabled(False)
 
         self.receiver_thread.start()
+
+
 
 
     # STOP RECORDING DATA
@@ -500,15 +515,16 @@ class Am_ui(QWidget):
     # THIS FUNCTION SHOULD BE OK WITH BEING CALLED REPEATEDLY
     def stop_recording(self):
         self.receiver.recording = False
+        self.timer.stop()
 
                                           
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt, will leave child process running!
-    app = QApplication(sys.argv)
-    ex = Am_ui()
+    app = PyQt5.QtGui.QApplication(sys.argv)
+    ex = Am_gui()
     atexit.register(ex.stop_recording)
     ex.show()
-    sys.exit(app.exec_())
+    #ex.showMaximized()
+    #sys.exit(app.exec_())
+    return app.exec_()
           
-if __name__ == '__main__':
-    main()

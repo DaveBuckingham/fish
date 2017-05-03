@@ -164,7 +164,7 @@ class Process(object):
             initwindow - Initial time window to average to get the initial orientation.
             beta - Madgwick beta parameter. beta=0 is equivalent to integrating the gyros
             lCa - log10 of the Ca parameter.  Makes it easier to give values for Ca that are close to but not
-                equal to zero.  lCa overrides Ca if you give both.
+                equal to zero.  lCa overrides Ca if you give both. (is this last sentance true? -db)
             Ca - Dynamic acceleration drift parameter. Roughly related to the frequency range of dynamic acceleartion.
                 Small values (close to zero) mean that dynamic acceleration will be relatively smooth, while larger
                  values (> 1) mean that dynamic acceleration will track the overall acceleration more closely
@@ -178,6 +178,7 @@ class Process(object):
                 Ca = np.array(Ca) / dt
             self._get_orientation_ekf(Ca=Ca)
 
+            # this is the bit that needs work!
             orient_world = []
             for chiprpy in self.orient_sensor:
                 QT = self._eul2rotm(chiprpy)
@@ -187,6 +188,7 @@ class Process(object):
                 r, p, y = self._rotm2eul(worldrotm)
                 orient_world.append([r, p, y])
 
+            # and here!
             accdyn_world = []
             for acc1 in self.accdyn_sensor:
                 accdyn_world.append(self.chip2world_rot.dot(acc1))

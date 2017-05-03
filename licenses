@@ -1,9 +1,0 @@
-QT               LGPL
-PyQt4            GPL or commercial(450 GBP)
-(pyside)         LGPL
-h5py             permissive
-pyqtgraph        MIT
-numpy            BSD
-scipy            BSD
-quaternion       BSD
-matplotlib       based on PSF, BSD compatible

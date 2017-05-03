@@ -51,16 +51,16 @@
 //            CONSTANTS                //
 /////////////////////////////////////////
 
-#define DEL                          1 
+#define DEL                                       1 
 
 #define USE_ENCODER
 
-#define USE_TRIGGER
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
-#define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
-const uint8_t IMU_SELECT[]                      = {8, 9, 10};    // len = MAX_CHIP_SELECTS
+
 #define TRIGGER_PIN                               4
+#define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
+const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX_CHIP_SELECTS
 
 #define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: response_len + room for byte stuffing
 
@@ -112,21 +112,21 @@ const uint8_t IMU_SELECT[]                      = {8, 9, 10};    // len = MAX_CH
 #define COM_FLAG_XOR                              0X20
 
 // TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-#define COM_PACKET_SAMPLE                         0x60
-#define COM_PACKET_ASA                            0x61
-#define COM_PACKET_TRIGGER                        0x63
-#define COM_PACKET_STRING                         0x64
-#define COM_PACKET_TEST                           0x65
-#define COM_PACKET_HELLO                          0x66
-#define COM_PACKET_NUMIMUS                        0x67
+#define COM_PACKET_SAMPLE                         0x50
+#define COM_PACKET_ASA                            0x51
+#define COM_PACKET_TRIGGER                        0x53
+#define COM_PACKET_STRING                         0x54
+#define COM_PACKET_TEST                           0x55
+#define COM_PACKET_HELLO                          0x56
+#define COM_PACKET_NUMIMUS                        0x57
 
 // SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-#define COM_SIGNAL_INIT                           0x50
-#define COM_SIGNAL_ASA                            0x52
-#define COM_SIGNAL_RUN                            0x53
-#define COM_SIGNAL_STOP                           0x54
-#define COM_SIGNAL_TEST                           0x55
-#define COM_SIGNAL_HELLO                          0x56
+#define COM_SIGNAL_INIT                           0x69  // 'i'
+#define COM_SIGNAL_ASA                            0x61  // 'a'
+#define COM_SIGNAL_RUN                            0x72  // 'r'
+#define COM_SIGNAL_STOP                           0x73  // 's'
+#define COM_SIGNAL_TEST                           0x74  // 't'
+#define COM_SIGNAL_HELLO                          0x68  // 'h'
 
 #define IMU_WHOAMI_VAL                            0x71
 
@@ -144,6 +144,7 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
+byte first;
 
 
 
@@ -246,10 +247,6 @@ int read_encoder() {
 #define NUM_REPS         200
 
 byte self_test(byte chip) {
-    // uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
-    // uint8_t selfTest[6];
-    // int32_t gAvg[3] = {0}, aAvg[3] = {0}, aSTAvg[3] = {0}, gSTAvg[3] = {0};
-    // float factoryTrim[6];
 
     uint8_t FS = 0;
 
@@ -501,35 +498,20 @@ byte self_test(byte chip) {
 
 void begin_imu_com() {
 
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
-
     uint8_t i;
-
-//     for (i=0; i < num_imus; i++) {
-//         pinMode(imu_select[i], OUTPUT);
-//         digitalWrite(imu_select[i], HIGH);
-//     }
 
     num_imus = 0;
 
     for (i=0; i < MAX_CHIP_SELECTS; i++) {
-        pinMode(IMU_SELECT_OPTION[i], OUTPUT);
-        digitalWrite(IMU_SELECT_OPTION[i], HIGH);
-        delay(400); // NEED THIS???
-        if (read_register(IMU_SELECT_OPTION[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
-           imu_select[num_imus] = i;
+        pinMode(IMU_SELECT_OPTIONS[i], OUTPUT);
+        digitalWrite(IMU_SELECT_OPTIONS[i], HIGH);
+        //delay(400); // NEED THIS???
+        if (read_register(IMU_SELECT_OPTIONS[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
+           imu_select[num_imus] = IMU_SELECT_OPTIONS[i];
            num_imus++;
         }
     }
 }
-
-void end_imu_com() {
-    SPI.endTransaction();
-    SPI.end();
-    Serial.flush();
-}
-
 
 
 void initialize(){
@@ -540,11 +522,10 @@ void initialize(){
     begin_imu_com();
     tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);
 
-    response_len = 4 + (12 * num_imus) + 1;
+    response_len = 4 + (18 * num_imus) + 1;
     #ifdef USE_ENCODER
-        resposne_len += 2;
+        response_len += 2;
     #endif
-
 
     uint8_t i;
 
@@ -598,16 +579,13 @@ void tx_asa(){
         delay(DEL);
         tx_packet(response, 3, COM_PACKET_ASA);
     }
-
 }
-
 
 
 void read_sample(){
     uint8_t response[response_len];
     uint8_t i;
     uint8_t j;
-
 
     for (j=0; j < response_len; j++) {
         response[j] = 0;
@@ -623,13 +601,6 @@ void read_sample(){
     response[j++] = next_sample_id >> 8;
     response[j++] = next_sample_id;
     next_sample_id++;
-
-
-#ifdef USE_ENCODER
-    int encoder_angle = read_encoder();
-    response[j++] = encoder_angle >> 8;
-    response[j++] = encoder_angle;
-#endif
 
 
     for (i=0; i < num_imus; i++) {
@@ -659,11 +630,31 @@ void read_sample(){
     // will overwrite the extra byte from mag STATUS2
     response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
 
+#ifdef USE_ENCODER
+    int encoder_angle = read_encoder();
+    response[j++] = encoder_angle >> 8;
+    response[j++] = encoder_angle;
+#endif
+
+
     tx_packet(response, response_len, COM_PACKET_SAMPLE);
 }
 
 
 void start_recording() {
+
+    // DO ONE MAG READING BECAUSE FIRST MEASUREMENT SEEMS TO BE GARBAGE
+    uint8_t buff[7];
+    uint8_t i;
+    for (i=0; i < num_imus; i++) {
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
+        read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, buff, 7);
+    }
+    delay(10);
+
+    // SET TIMER FOR read_sample()
     noInterrupts();                                      // disable all interrupts
     TCCR1A = 0;
     TCCR1B = 0;
@@ -684,12 +675,13 @@ void stop_recording() {
         write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
     }
-    end_imu_com();
-
 }
 
 void setup() {
+    first = 1;
     Serial.begin(115200);
+    SPI.begin();
+    SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
 }
 
 
@@ -733,6 +725,7 @@ void loop() {
         switch (Serial.read()) {
             case COM_SIGNAL_HELLO:
                 tx_packet(0, 0, COM_PACKET_HELLO);
+                break;
             case COM_SIGNAL_INIT:
                 initialize();
                 break;
@@ -753,4 +746,3 @@ void loop() {
         }
     }
 }
-

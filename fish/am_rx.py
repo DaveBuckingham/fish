@@ -1,20 +1,15 @@
-#!/usr/bin/python
-
 import os
-import sys
 import time
 import serial
-import warnings
 import struct
-import random
-import array
 
+from fish.am_data import Am_data
 import serial.tools.list_ports
 
-from PyQt4.QtCore import pyqtSignal, QObject, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
 
 try:
-    from PyQt4.QtCore import QString
+    from PyQt5.QtCore import QString
 except ImportError:
     QString = str
 
@@ -29,34 +24,41 @@ class Am_rx(QObject):
     COM_FLAG_XOR                    = 0x20
 
     # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-    COM_PACKET_SAMPLE               = 0x60     # 96
-    COM_PACKET_ASA                  = 0x61     # 97
-    COM_PACKET_STRING               = 0x64
-    COM_PACKET_TEST                 = 0x65
-    COM_PACKET_HELLO                = 0x66
-    COM_PACKET_NUMIMUS              = 0x67
+    COM_PACKET_SAMPLE               = 0x50
+    COM_PACKET_ASA                  = 0x51
+    COM_PACKET_STRING               = 0x54
+    COM_PACKET_TEST                 = 0x55
+    COM_PACKET_HELLO                = 0x56
+    COM_PACKET_NUMIMUS              = 0x57
 
     # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-    COM_SIGNAL_INIT                 = 0x50
-    COM_SIGNAL_ASA                  = 0x52
-    COM_SIGNAL_RUN                  = 0x53
-    COM_SIGNAL_STOP                 = 0x54
-    COM_SIGNAL_TEST                 = 0x55
-    COM_SIGNAL_HELLO                = 0x56
+    COM_SIGNAL_INIT                 = 0x69
+    COM_SIGNAL_ASA                  = 0x61
+    COM_SIGNAL_RUN                  = 0x72
+    COM_SIGNAL_STOP                 = 0x73
+    COM_SIGNAL_TEST                 = 0x74
+    COM_SIGNAL_HELLO                = 0x68
 
 
     GYRO_SENSITIVITY             = 131     # if range is +- 250
     ACCEL_SENSITIVITY            = 16384   # if range is +- 2
 
-    PLOT_REFRESH_RATE            = 20
 
 
     MAGNETOMETER_SCALE_FACTOR    = 0.15
     # WHO_AM_I                     = 0x71
 
+    codes = {str(COM_PACKET_NUMIMUS): 'COM_PACKET_NUMIMUS', 
+        str(COM_PACKET_SAMPLE): 'COM_PACKET_SAMPLE', 
+        str(COM_PACKET_HELLO): 'COM_PACKET_HELLO', 
+        str(COM_PACKET_ASA): 'COM_PACKET_ASA', 
+        str(COM_SIGNAL_INIT): 'COM_SIGNAL_INIT', 
+        str(COM_SIGNAL_ASA): 'COM_SIGNAL_ASA', 
+        str(COM_SIGNAL_RUN): 'COM_SIGNAL_RUN', 
+        str(COM_SIGNAL_STOP): 'COM_SIGNAL_STOP', 
+        str(COM_SIGNAL_HELLO): 'COM_SIGNAL_HELLO', 
+        }
 
-    # mag_0_asa = [1, 1, 1]
-    # mag_1_asa = [1, 1, 1]
     mag_asas = []
 
 
@@ -65,30 +67,25 @@ class Am_rx(QObject):
     error_signal = pyqtSignal(QString)
     numimus_signal = pyqtSignal(int)
 
+    recording_signal = pyqtSignal()
+
+    trigger_state = None
 
     timestamp_signal = pyqtSignal(float)
 
-    plot_a0_signal = pyqtSignal(float, list, bool)
-    plot_a1_signal = pyqtSignal(float, list, bool)
-    plot_g0_signal = pyqtSignal(float, list, bool)
-    plot_g1_signal = pyqtSignal(float, list, bool)
-    plot_m0_signal = pyqtSignal(float, list, bool)
-    plot_m1_signal = pyqtSignal(float, list, bool)
-
-
-    def __init__(self, parent = None):
-        super(Am_rx, self).__init__(parent)
+    def __init__(self, data, settings):
+        super(Am_rx, self).__init__()
 
         self.recording = False
 
         self.sample_length = 0
 
-        self.data = []
-        self.end_timestamp = 'inf'
+        self.data = data
+        self.settings = settings
 
-        self.use_trigger = False
-        
-        self.num_imus = 0
+        self.trigger_value = False
+
+
 
 
     def calculate_accel_ft(self, a_test):
@@ -114,9 +111,12 @@ class Am_rx(QObject):
         self.connection.flushInput()
         self.connection.close()
 
+
     # FOR SENDING COMMAND SIGNALS TO ARDUINO
     def tx_byte(self, val):
-        self.connection.write(chr(val))
+        #time.sleep(1)
+        #print("WRITE: " + self.codes[str(val)])
+        self.connection.write(bytearray((val,)))
         
     # SHOULD ONLY BE USED BY rx_packet()
     def rx_byte(self):
@@ -124,7 +124,8 @@ class Am_rx(QObject):
         if (len(val) == 0):
             return None
         else:
-            return ord(val)
+            return struct.unpack("<B", val)[0]
+            #return ord(val)
 
 
     # READ A PACKET FROM SERIAL AND RETURN ITS CONTENTS
@@ -145,7 +146,6 @@ class Am_rx(QObject):
 
         # READ, UNSTUFF, AND STORE PAYLOAD
         while (val != Am_rx.COM_FLAG_END):
-            # UNSTUFF
             if (val == Am_rx.COM_FLAG_ESCAPE):
                 val = self.rx_byte()
                 if (val == None):
@@ -156,6 +156,7 @@ class Am_rx(QObject):
             if (val == None):
                 return (None, None)
 
+        #print("READ: " + self.codes[str(message_type)])
         return (message, message_type)
 
 
@@ -165,11 +166,11 @@ class Am_rx(QObject):
         # FIND A PORT CONNECTED TO AN ARDUINO
         arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
-            self.error_signal.emit('No Arduino found\n')
+            self.error_signal.emit('no Arduino found\n')
             return False
         else:
             serial_port = arduino_ports[0]
-            self.message_signal.emit('Using Arduino found on ' + serial_port + "\n")
+            self.message_signal.emit('using Arduino found on ' + serial_port + "\n")
 
         # CONNECT
         try:
@@ -184,27 +185,44 @@ class Am_rx(QObject):
                 # timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
                 timeout  = 1.0    # 1 second timeout 
             )
+            self.message_signal.emit("serial connection established\n")
 
         except serial.serialutil.SerialException:
-            self.error_signal.emit("failed to create connection\n")
-            # self.finished_signal.emit()
             return False
 
-        # GIVE ARDUINO TIME TO RESET
-        self.connection.flushInput()
-        time.sleep(3)
 
         # HANDSHAKE
+        self.tx_byte(Am_rx.COM_SIGNAL_STOP)
+        time.sleep(2)
+        self.connection.flushInput()
         self.tx_byte(Am_rx.COM_SIGNAL_HELLO)
-        time.sleep(1)
-        (message, message_type) = self.rx_packet()
-        if ((message_type is not None) and (message_type == Am_rx.COM_PACKET_HELLO)):
-            self.message_signal.emit("serial connection established, handshake succesfull\n")
-            return True
+
+        handshake_success = None
+        handshake_attempts = 0
+
+        while (handshake_success is None):
+            self.message_signal.emit("attempting handshake\n")
+            (message, message_type) = self.rx_packet()
+            if ((message_type is not None) and (message_type == Am_rx.COM_PACKET_HELLO)):
+                handshake_success = True
+            else:
+                handshake_attempts += 1
+
+                if (handshake_attempts > 4):
+                    handshake_success = False
+                else:
+                    self.tx_byte(Am_rx.COM_SIGNAL_STOP)
+                    time.sleep(2)
+                    self.connection.flushInput()
+                    self.tx_byte(Am_rx.COM_SIGNAL_HELLO)
+
+        if (handshake_success):
+            self.message_signal.emit("handshake succesfull\n")
         else:
-            self.error_signal.emit("serial connection established but handshake failed\n")
+            self.error_signal.emit("handshake failed\n")
             self.close_connection()
-            return False
+
+        return handshake_success
 
 
 
@@ -225,27 +243,41 @@ class Am_rx(QObject):
 
 
 
+
+
     @pyqtSlot()
     def run(self):
 
         if (not self.open_connection()):
+            self.error_signal.emit("failed to create connection, aborting\n")
             self.finished_signal.emit()
-            return
+            return()
 
         self.message_signal.emit("initializing imus\n")
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
+        time.sleep(1)
         (message, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_NUMIMUS):
-            self.num_imus = message;
-            self.message_signal.emit("Detected " + str(self.num_imus) + " IMUs.\n")
+            num_imus = message[0];
+            self.message_signal.emit("detected " + str(num_imus) + " IMUs.\n")
         else:
-            self.error_signal.emit("Unable to determine number of IMUs.\n")
+            self.error_signal.emit("unable to determine number of IMUs, aborting.\n")
+            self.close_connection()
             self.finished_signal.emit()
-            return
+            return()
 
-        self.numimus_signal.emit(num_imus)
+        self.data.reset_data(num_imus)
 
-        self.sample_length = 4 + (12 * self.num_imus) + 1
+        if (num_imus < 1):
+            self.error_signal.emit("no IMUs detected, aborting\n")
+            self.close_connection()
+            self.finished_signal.emit()
+            return()
+
+        # MUST BE AFTER imu_data SET UP
+        self.numimus_signal.emit(self.data.num_imus)
+
+        self.sample_length = 4 + (18 * num_imus) + 1
         if (Am_rx.USE_ENCODER):
             self.sample_length += 2
 
@@ -256,16 +288,11 @@ class Am_rx(QObject):
         #        MAG ADJUSTMENT          #
         ##################################
 
-        self.message_signal.emit("calculating magnetometer sensitivty adjustment... ")
+        self.message_signal.emit("calculating magnetometer sensitivty adjustment...\n")
+        Am_rx.mag_asas = []
+        time.sleep(1)
         self.tx_byte(Am_rx.COM_SIGNAL_ASA)
-
-        # if ((message_type == Am_rx.COM_PACKET_ASA) and (len(received) == 6)):
-        #     for i in (range(0, 3)):
-        #         Am_rx.mag_0_asa[i] = ((float(received[i]     - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-        #         Am_rx.mag_1_asa[i] = ((float(received[i + 3] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR
-        #     self.message_signal.emit("OK\n")
-        #     self.message_signal.emit("mag_0 asa: " + ', '.join(map(str, Am_rx.mag_0_asa)) + "\n")
-        #     self.message_signal.emit("mag_1 asa: " + ', '.join(map(str, Am_rx.mag_1_asa)) + "\n")
+        time.sleep(1)
 
         for i in (range(0, num_imus)):
             (received, message_type) = self.rx_packet()
@@ -275,6 +302,8 @@ class Am_rx(QObject):
                     asa.append(((float(received[j] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR)
                 Am_rx.mag_asas.append(asa)
             else:
+                print(str(message_type))
+                print(str(len(received)))
                 self.error_signal.emit("ASA read failed, using 1 adjustment\n")
                 Am_rx.mag_asas.append([1,1,1])
 
@@ -293,84 +322,70 @@ class Am_rx(QObject):
 
         self.message_signal.emit("recording data\n")
 
+        self.recording_signal.emit()
+
         # RESET TIMER
         start_time = time.time() * 1000
 
-        sample_index = 0
+        #sample_index = 0
 
-        self.imu_data = {}
-        self.imu_data['timestamps'] = []
-        self.imu_data['imus'] = [[]] * num_imus
-        if (Am_rx.USE_ENCODER):
-            self.imu_data['encoder'] = []
+
 
         while (self.recording):
 
             (received, message_type) = self.rx_packet()
-            if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == Am_rx.sample_length)):
+
+
+            if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
                 timestamp = (time.time() * 1000) - start_time
 
-                self.imu_data['timestamps'].append(timestamp)
 
                 received = bytearray(received)
+               
 
-                (id) = struct.unpack('>L', received[:4])
-                del received[:4]
+                (id,) = struct.unpack('>L', received[:4])
 
-                if (Am_rx.USE_ENCODER):
-                    (enc) = struct.unpack('>h', received[:2])
-                    del received[:2]
-                    enc *= 0.3515625  # 360/1024
 
-                for i in (range(0, num_imus)):
-                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[:12])
-                    del received[:12]
-                    (mx, my, mz) = struct.unpack('<hhh', received[:6]) # BIG ENDIAN
-                    del received[:6]
+                sample = []
+                sample.append(timestamp)
+                sample.append([])
+
+                for i in (range(0, self.data.num_imus)):
+
+                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
+                    (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
                     (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
-                    (mx, my, mz) = [(mx, my, mz)[i] * Am_rx.mag_0_asa[i] for i in range(3)]
-                    imu_data['imus'][i]['accel'].append([ax, ay, az])
-                    imu_data['imus'][i]['gyro'].append([gx, gy, gz])
-                    imu_data['imus'][i]['mag'].append([mx, my, mz])
+                    (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                (trig) = struct.unpack('>?', received[0])
-                del received[0]
+                    sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
-                if (len(received > 0):
-                    self.error_signal.emit("Sample packet too long.\n")
+                (self.trigger_state,) = struct.unpack('>?', received[22:23])
+
+                if (self.settings.invert_trigger):
+                    self.trigger_state = not self.trigger_state
 
                 if (Am_rx.USE_ENCODER):
-                    imu_data['encoder'].append(enc)
+                    (enc,) = struct.unpack('>h', received[23:25])
+                    enc *= 0.3515625  # 360/1024
+                    sample.append(enc)
 
-                if (trig and self.use_trigger):
+                self.data.add_sample(sample)
+
+
+                if (self.settings.use_trigger and self.trigger_state):
                     self.message_signal.emit("received trigger\n")
-                    self.recording = False
-                    break
-
-                sample_index += 1
-
-                self.timestamp_signal.emit(timestamp)
-
-                count = sample_index % Am_rx.PLOT_REFRESH_RATE
-
-                #self.plot_a0_signal.emit(timestamp, [ax0, ay0, az0], count == 0) 
-                #self.plot_a1_signal.emit(timestamp, [ax1, ay1, az1], count == 0) 
-                #self.plot_g0_signal.emit(timestamp, [gx0, gy0, gz0], count == 0) 
-                #self.plot_g1_signal.emit(timestamp, [gx1, gy1, gz1], count == 0) 
-                #self.plot_m0_signal.emit(timestamp, [mx0, my0, mz0], count == 0) 
-                #self.plot_m1_signal.emit(timestamp, [mx1, my1, mz1], count == 0) 
+                    self.tx_byte(Am_rx.COM_SIGNAL_STOP)
+                    self.close_connection()
+                    self.finished_signal.emit()
+                    return()
 
             else:
-                print("unknown sample received. type: " + str(message_type))
+                print("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
 
 
         self.message_signal.emit("stopping recording data\n")
-        self.tx_byte(Am_rx.COM_SIGNAL_STOP)
-
-
         self.close_connection()
-
         self.finished_signal.emit()
-
+        return()
 
