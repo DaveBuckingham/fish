@@ -146,11 +146,11 @@ class IMU(object):
 
         elif method == 'running':
             self.gyro = np.zeros_like(self.gyro0)
-            self.accel = np.zeros_like(self.acc0)
+            self.acc = np.zeros_like(self.acc0)
 
             for i in range(3):
                 self.gyro[:, i] = np.convolve(self.gyro0[:, i], np.ones((nsamp,))/nsamp, mode='same')
-                self.accel[:, i] = np.convolve(self.acc0[:, i], np.ones((nsamp,))/nsamp, mode='same')
+                self.acc[:, i] = np.convolve(self.acc0[:, i], np.ones((nsamp,))/nsamp, mode='same')
 
     def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None):
         """Get orientation and dynamic acceleration from IMU data.
@@ -178,22 +178,28 @@ class IMU(object):
                 Ca = np.array(Ca) / dt
             self._get_orientation_ekf(Ca=Ca)
 
-            # this is the bit that needs work!
+            g0 = np.array([0, 0, 1.0])
+
             orient_world = []
-            for chiprpy in self.orient_sensor:
-                QT = self._eul2rotm(chiprpy)
-                worldrotm = self.chip2world_rot.dot(QT)
-                worldrotm = worldrotm[:, self.axord_world]
-
-                r, p, y = self._rotm2eul(worldrotm)
-                orient_world.append([r, p, y])
-
-            # and here!
             accdyn_world = []
-            for acc1 in self.accdyn_sensor:
-                accdyn_world.append(self.chip2world_rot.dot(acc1))
+            accdyn_sensor2 = []
+            for chiprpy, acc1 in zip(self.orient_sensor, self.acc):
+                Rchip = self._eul2rotm(chiprpy)
+                R = Rchip.dot(self.chip2world_rot)
+
+                worldrotm = self.chip2world_rot.T.dot(R)
+                orient_world.append(self._rotm2eul(worldrotm))
+
+                g1 = R.dot(g0)      # gravity in chip coordinates
+                adyn1 = acc1 - g1   # subtract gravity vector from chip acceleration
+
+                accdyn_sensor2.append(adyn1)
+
+                # rotate the dynamic acceleration into the world coordinates
+                accdyn_world.append(R.T.dot(adyn1))
 
             self.orient_world = np.array(orient_world)
+            self.accdyn_sensor2 = np.array(accdyn_sensor2)
             self.accdyn_world = np.array(accdyn_world)
             self.accdyn = self.accdyn_world
 
@@ -231,16 +237,22 @@ class IMU(object):
             # convert file data from deg/sec to rad/sec
             gyro = np.deg2rad(gyro)
 
-            self.bias_gyro = np.mean(gyro, axis=0)
-
             accel = 9.81 * np.array(h5calib['/data/Accel'])
 
-            # get noise covariances
-            self.Qgyro = np.cov(gyro, rowvar=False)
-            self.Qacc = np.cov(accel, rowvar=False)
+            self._calibrate(accel, gyro)
 
-            # bias noise covariance (assuming low drift)
-            self.Qbias = 1e-10 * self.Qacc
+    def _calibrate(self, accel, gyro):
+        """Get initial covariances.
+        gyro in rad/sec
+        accel in m/s^2"""
+        self.bias_gyro = np.mean(gyro, axis=0)
+
+        # get noise covariances
+        self.Qgyro = np.cov(gyro, rowvar=False)
+        self.Qacc = np.cov(accel, rowvar=False)
+
+        # bias noise covariance (assuming low drift)
+        self.Qbias = 1e-10 * self.Qacc
 
     def get_inertial_coords(self, filename, method='mean accel', g=None):
         """Get the initial gravity vector"""
@@ -252,7 +264,7 @@ class IMU(object):
             elif method == 'mean accel':
                 self.gN = np.mean(accel, axis=0)
 
-    def get_world_coordinates(self, filename, axes=['z'], times=None, averagedur=0.1):
+    def get_world_coordinates(self, filename=None, axes=('z'), times=None, averagedur=0.1, acc=None, t=None):
         """Get the world coordinates.
 
         Uses a file where the chip is oriented so that gravity points along what we want as the world axes,
@@ -261,9 +273,10 @@ class IMU(object):
         """
         axinddict = {'x': 0, 'y': 1, 'z': 2}
 
-        with h5py.File(filename, 'r') as h5calib:
-            acc = np.array(h5calib['/data/Accel'])
-            t = np.array(h5calib['/data/t'])
+        if acc is None:
+            with h5py.File(filename, 'r') as h5calib:
+                acc = np.array(h5calib['/data/Accel'])
+                t = np.array(h5calib['/data/t'])
 
         gax = np.eye(3)
 
@@ -298,11 +311,15 @@ class IMU(object):
         basis = self._gramschmidt(gax[:, axord])
         basis = basis[:, axrevord]
 
-        # check for right handed-ness
-        # the Z axis should be equal to the cross product of the X and Y axes
-        # because of small numerical issues, it's sometimes not exactly equal,
-        # so we check that they're in the same direction
-        assert(np.dot(np.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) > 0.9)
+        if len(axes) == 3:
+            # check for right handed-ness
+            # the Z axis should be equal to the cross product of the X and Y axes
+            # because of small numerical issues, it's sometimes not exactly equal,
+            # so we check that they're in the same direction
+            assert(np.dot(np.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) > 0.9)
+        else:
+            if np.dot(np.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) < -0.5:
+                basis[:, 2] = -basis[:, 2]
 
         self.chip2world_rot = basis
         self.axord_world = axord
@@ -481,30 +498,45 @@ class IMU(object):
         Rx_roll =  np.array([[1,                0,              0],
                              [0,                np.cos(phi),    np.sin(phi)],
                              [0,                -np.sin(phi),   np.cos(phi)]])
-        QT = Rx_roll.dot(Ry_pitch).dot(Rz_yaw)
+        QT = Rx_roll.dot(Ry_pitch.dot(Rz_yaw))
 
         return QT
 
     def _rotm2eul(self, rotm, singularity=0.001):
-        if rotm[2, 0] < -1 + singularity:
-            psi1 = 0
-            theta1 = -np.pi/2
-            phi1 = np.arctan(-rotm[0, 1], -rotm[0, 3])
-        elif rotm[2, 0] > 1 - singularity:
-            psi1 = 0
-            theta1 = np.pi / 2
-            phi1 = np.arctan(rotm[0, 1], rotm[0, 3])
-        else:
-            theta1 = np.pi + np.arcsin(rotm[2, 0])
-            theta2 = -np.arcsin(rotm[2, 0])
+        # if rotm[0, 2] < -1 + singularity:
+        #     psi = 0
+        #     theta = -np.pi/2
+        #     phi = np.arctan2(-rotm[1, 0], -rotm[2, 0])
+        # elif rotm[2, 0] > 1 - singularity:
+        #     psi = 0
+        #     theta = np.pi / 2
+        #     phi = np.arctan2(rotm[1, 0], rotm[2, 0])
+        # else:
+        phi = np.arctan2(rotm[1, 2], rotm[2, 2])
+        theta = np.arcsin(rotm[0, 2])
+        psi = np.arctan2(rotm[0, 1], rotm[0, 0])
 
-            phi1 = np.arctan2(rotm[2, 1]/np.cos(theta1), rotm[2, 2]/np.cos(theta1))
-            phi2 = np.arctan2(rotm[2, 1]/np.cos(theta1), rotm[2, 2]/np.cos(theta1))
+        return phi, theta, psi
 
-            psi1 = np.arctan2(rotm[1, 0]/np.cos(theta2), rotm[0, 0]/np.cos(theta2))
-            psi2 = np.arctan2(rotm[1, 0]/np.cos(theta1), rotm[0, 0]/np.cos(theta1))
+    def _correct_singularity(self, rpy, tol=0.01):
+        jump = np.pi - tol
 
-        return phi1, theta1, psi1
+        rpycorr = copy(rpy)
+        for rpy1, rpynext in zip(rpycorr, rpycorr[1:, :]):
+            if rpynext[0] - rpy1[0] >= jump:
+                rpynext[0] -= np.pi
+                if rpynext[2] >= jump:
+                    rpynext[1] = -rpynext[1] - np.pi
+                    rpynext[2] -= np.pi
+                else:
+                    rpynext[2] += np.pi
+            elif rpynext[0] - rpy1[0] <= -jump:
+                rpynext[0] += np.pi
+                rpynext[1] = -rpynext[1] - np.pi
+                rpynext[2] -= np.pi
+
+        return rpycorr
+
 
     def _stack_matrices(self, M):
         m = []
