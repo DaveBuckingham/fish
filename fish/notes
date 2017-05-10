@@ -1,5 +1,14 @@
 TODO:
 
+fix trigger
+
+what happens if recording starts with trigger on? make sure
+its correct in the manual
+
+fewer messages in textbox
+
+fix magnetometer.....
+
 downsample plotting data when it gets big so no slowdown
 
 test port detection on windows

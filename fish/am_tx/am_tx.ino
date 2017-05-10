@@ -517,7 +517,11 @@ void begin_imu_com() {
 void initialize(){
     next_sample_id = 0;
 
-    pinMode(TRIGGER_PIN, INPUT);
+    //pinMode(TRIGGER_PIN, INPUT);
+    pinMode(TRIGGER_PIN, INPUT_PULLUP);
+
+
+
 
     begin_imu_com();
     tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);

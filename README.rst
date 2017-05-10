@@ -1,66 +1,10 @@
+PROGRAM_NAME is an application for recording and processing data from inertial
+measurement units (IMUs). It consists of two parts. Microcontroller code running
+on an Arduino board collects data from the IMUs and transmits it to a PC. A
+Python program running on the PC receives data from the Arduino and provides
+users with a graphical interface. This interface allows users to interact with
+the Arduino and to view and manipulate IMU data.
 
-INSTALLATION
-============
-
-PyQt5
------
-
-It is first necessary to install PyQt5. It is not possible to use
-pip to install PyQt5.
-
-Windows
-    Binaries can be download from riverbankcomputing:
-        https://www.riverbankcomputing.com/software/pyqt/download5
-
-Debian
-    Python2
-        ``# apt-get install python-qt5``
-    Python3
-        ``# apt-get install python3-qt5``
-
-Source
-    You can build PyQt yourself.
-        First you need SIP:
-            http://www.riverbankcomputing.com/software/sip/download
-        Then PyQt5:
-            https://www.riverbankcomputing.com/software/pyqt/download5
-
-pip
----
-
-Once PyQt5 is installed, use pip to install *program_name*.
-
-It may be necessary to update pip:
-    ``# pip install --upgrade pip``
-
-Then:
-    ``# pip install`` *program_name*
-
-Pip will automatically install dependencies other than PyQt5, which are listed in  ``requirements.txt``.
+For more information, consult the user manual.
 
 
-OPERATION
-=========
-
-
-
-FILES
-=====
-
-am_gui.py
-    main program
-
-am_plot.py
-    module for plotting data i.e. one of the 4 plot windows
-
-am_rx.py
-    module for com with arduino
-
-am_settings.py
-    module for program settings
-
-am_tx/am_tx.ino
-    arduino code
-
-COPYRIGHT
-=========
