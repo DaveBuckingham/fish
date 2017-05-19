@@ -67,7 +67,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         self.settings = Am_settings(self)
 
-        self.data = Am_data(self.settings)
+        self.data = Am_data()
         # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
         self.data.saved = True
 

@@ -53,7 +53,7 @@
 
 #define DEL                                       1 
 
-#define USE_ENCODER
+//#define USE_ENCODER
 
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second

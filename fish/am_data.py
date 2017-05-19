@@ -12,15 +12,13 @@ except ImportError:
 
 class Am_data(PyQt5.QtCore.QObject):
 
-    USE_ENCODER = True
+    USE_ENCODER = False
 
     mag_asas = []
 
 
-    finished_signal = PyQt5.QtCore.pyqtSignal()
     message_signal = PyQt5.QtCore.pyqtSignal(QString)
     error_signal = PyQt5.QtCore.pyqtSignal(QString)
-    numimus_signal = PyQt5.QtCore.pyqtSignal(int)
 
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
@@ -28,13 +26,11 @@ class Am_data(PyQt5.QtCore.QObject):
     timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
 
 
-    def __init__(self, settings):
+    def __init__(self):
         super(Am_data, self).__init__()
 
         self.imu_data = {}
         self.imu_data['timestamps'] = []
-
-        self.settings = settings
 
         self.data_lock = [False]
 
@@ -45,6 +41,9 @@ class Am_data(PyQt5.QtCore.QObject):
 
     def has_data(self):
         return (len(self.imu_data['timestamps']) > 0)
+
+    def num_samples(self):
+        return len(self.imu_data['timestamps'])
 
 
     def reset_data(self, num_imus):
@@ -58,7 +57,7 @@ class Am_data(PyQt5.QtCore.QObject):
         self.data_lock[0] = False
         self.num_imus = num_imus
 
-    def add_sample(self, sample):
+    def add_sample(self, sample, limit):
         if (Am_data.USE_ENCODER):
             assert(len(sample) == 3)
         else:
@@ -91,7 +90,6 @@ class Am_data(PyQt5.QtCore.QObject):
                 self.imu_data['encoder'].append(sample[2])
 
 
-            limit = self.settings.data_buffer_len
             if (len(self.imu_data['timestamps']) > limit):
                 self.imu_data['timestamps'] = self.imu_data['timestamps'][-limit:]
 
@@ -139,7 +137,7 @@ class Am_data(PyQt5.QtCore.QObject):
             reader = csv.reader(datafile, delimiter=',')
             for row in reader:
                 if (len(row) % 9 != expected_non_imu_columns):
-                    self.error_slot("invalid csv file\n")
+                    self.error_signal.emit("invalid csv file\n")
                     return False
                 row_num_imus = (len(row) - 2) // 9       # // for integer division in python3
                 if self.num_imus is None:       # READING FIRST LINE OF CSV
@@ -147,7 +145,7 @@ class Am_data(PyQt5.QtCore.QObject):
                     self.reset_data(row_num_imus)
                 else:
                     if (len(row) != (self.num_imus * 9) + expected_non_imu_columns):
-                        self.error_slot("invalid csv file\n")
+                        self.error_signal.emit("invalid csv file\n")
                         return False
                 row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
                 self.imu_data['timestamps'].append(row[0])
@@ -234,5 +232,4 @@ class Am_data(PyQt5.QtCore.QObject):
                 if (Am_data.USE_ENCODER):
                     row.append(self.imu_data['encoder'][i])
                 writer.writerow(row)
-
 

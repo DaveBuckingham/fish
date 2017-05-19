@@ -3,16 +3,22 @@ import os
 import PyQt5.QtCore
 import PyQt5.QtGui
 
+
+from fish.am_data import Am_data
+from fish.am_process import Am_process
+
 try:
     from PyQt5.QtCore import QString
 except ImportError:
     QString = str
+
 
 class Am_process_dialog(PyQt5.QtGui.QWidget):
 
     finished_signal = PyQt5.QtCore.pyqtSignal()
     message_signal = PyQt5.QtCore.pyqtSignal(QString)
     error_signal = PyQt5.QtCore.pyqtSignal(QString)
+
 
     #def __init__(self, current_data=False, parent=None):
     def __init__(self, data):
@@ -23,6 +29,8 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         super(Am_process_dialog, self).__init__()
 
         self.data=data
+
+        self.process = Am_process()
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
@@ -49,7 +57,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         self.batch_layout = PyQt5.QtGui.QVBoxLayout()
 
         # SELECT FILES BUTTON
-        select_files_btn = PyQt5.QtGui.QPushButton('Select files')
+        select_files_btn = PyQt5.QtGui.QPushButton('Select input files')
         select_files_btn.clicked.connect(self.select_files)
         self.batch_layout.addWidget(select_files_btn)
 
@@ -139,6 +147,14 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         algorithm_box.setLayout(algorithm_layout)
 
 
+        #########################################################
+        #                     CALIBRATION SETUP                 #
+        #########################################################
+
+        calibration_layout = PyQt5.QtGui.QVBoxLayout()
+        select_calibration_btn = PyQt5.QtGui.QPushButton('Parse calibration file')
+        select_calibration_btn.clicked.connect(self.parse_calibration)
+        calibration_layout.addWidget(select_calibration_btn)
 
 
 
@@ -154,9 +170,10 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         button_layout.addWidget(process_btn)
  
 
-        top_layout.addWidget(mode_box, 0, 0)
-        top_layout.addLayout(self.batch_layout, 1, 0)
-        top_layout.addWidget(algorithm_box, 0, 1)
+        top_layout.addWidget(algorithm_box, 0, 0)
+        top_layout.addLayout(calibration_layout, 1, 0)
+        top_layout.addWidget(mode_box, 0, 1)
+        top_layout.addLayout(self.batch_layout, 1, 1)
         top_layout.addLayout(button_layout, 2, 0, 2, 0)
         self.setLayout(top_layout)
 
@@ -235,6 +252,33 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             self.data.reset_data(0)
             self.data.saved = True
 
+    def parse_calibration(self):
+
+        calib_data = Am_data()
+
+        # THIS CODE COPIED FROM AM_GUI, THERE MUST BE A BETTER WAY
+        options = PyQt5.QtGui.QFileDialog.Options()
+        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", filter="*.hdf5;;*.csv", options=options)
+
+        if filename:
+            filename = str(filename)
+
+            if (filetype == "*.hdf5"):
+                calib_data.load_hdf5_file(filename)
+            elif (filetype == "*.csv"):
+                calib_data.load_csv_file(filename)
+            else:
+                self.error_slot("invalid file type: " + filetype + "\n")
+                return
+
+        vals = self.process.get_calib_values(calib_data)
+        print("VALS:")
+        for v in vals:
+            print(v)
+
+
+        
 
     def run_process(self):
         if(self.batch_process):

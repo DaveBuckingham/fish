@@ -199,14 +199,14 @@ an external power source instead of relying on the USB port.
 \toprule
 description & label & color & pin \\
 \midrule 
-IMU 1 chip select & NCS / CS & white & 8 \\
-IMU 2 chip select & NCS / CS & white & 9 \\
-IMU 3 chip select & NCS / CS & white & 10 \\
-data from Arduino to IMU & MOSI / SDA & green & 11 \\
-data from IMU to Arduino & MISO / SDO & blue & 12 \\
-clock & SCL / CLK & yellow & 13 \\
-power &  & red & 3.3V \\
-ground &  & black & GND \\
+IMU 1 chip select & NCS / CS / SS & white & 8 \\
+IMU 2 chip select & NCS / CS / SS & white & 9 \\
+IMU 3 chip select & NCS / CS / SS & white & 10 \\
+data from Arduino to IMU & MOSI / SDI / SDA & green & 11 \\
+data from IMU to Arduino & MISO / SDO / ADO & blue & 12 \\
+clock & SCL / CLK / SCK & yellow & 13 \\
+power & VCC & red & 3.3V \\
+ground & GND & black & GND \\
 trigger &  &  & 4 \\
 \bottomrule
 \end{tabular}

@@ -16,7 +16,7 @@ except ImportError:
 
 class Am_rx(QObject):
 
-    USE_ENCODER = True
+    USE_ENCODER = False
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -370,7 +370,7 @@ class Am_rx(QObject):
                     enc *= 0.3515625  # 360/1024
                     sample.append(enc)
 
-                self.data.add_sample(sample)
+                self.data.add_sample(sample, self.settings.data_buffer_len)
 
 
                 if (self.settings.use_trigger and self.trigger_state):
