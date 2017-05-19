@@ -108,39 +108,52 @@ class IMU(object):
 
         if method == 'butter':
             if gyro_cutoff is not None:
+                islofreq = False
                 if len(gyro_cutoff) == 1:
                     gyro_hi = gyro_cutoff[0]
-                    gyro = self.gyro0
+                elif len(gyro_cutoff) == 2 and (gyro_cutoff[0] == 0):
+                    gyro_hi = gyro_cutoff[1]
                 elif len(gyro_cutoff) == 2:
                     gyro_hi = gyro_cutoff[1]
-
-                    gyrolo = self.get_low_baseline(self.t0, self.gyro0, gyro_cutoff[0])
-                    gyro = self.gyro0 - gyrolo
+                    gyro_lo = gyro_cutoff[0]
+                    islofreq = True
                 else:
                     raise ValueError('Unrecognized frequency range {}'.format(acc_cutoff))
 
                 # use the SOS form, because it tends to avoid numerical problems for low frequencies
                 gyro_sos = signal.butter(order, gyro_hi/(self.sampfreq/2.0), "lowpass", output='sos')
+                gyro = signal.sosfiltfilt(gyro_sos, self.gyro0, axis=0)
 
-                self.gyro = signal.sosfiltfilt(gyro_sos, gyro, axis=0)
+                if islofreq:
+                    gyro -= self.get_low_baseline(self.t0, gyro, gyro_lo)
+
+                self.gyro = gyro
             else:
                 self.gyro = self.gyro0
 
             if acc_cutoff is not None:
+                islofreq = False
                 if len(acc_cutoff) == 1:
                     acc_hi = acc_cutoff[0]
                     acc = self.acc0
+                elif len(acc_cutoff) == 2 and (acc_cutoff[0] == 0):
+                    acc_hi = acc_cutoff[1]
+                    acc = self.acc0
                 elif len(acc_cutoff) == 2:
                     acc_hi = acc_cutoff[1]
-
-                    acclo = self.get_low_baseline(self.t0, self.acc0, acc_cutoff[0])
+                    acc_lo = acc_cutoff[0]
+                    islofreq = True
                     acc = self.acc0 - acclo
                 else:
                     raise ValueError('Unrecognized frequency range {}'.format(acc_cutoff))
 
                 acc_sos = signal.butter(order, acc_hi / (self.sampfreq / 2.0), 'lowpass', output='sos')
+                acc = signal.sosfiltfilt(acc_sos, acc, axis=0)
 
-                self.acc = signal.sosfiltfilt(acc_sos, acc, axis=0)
+                if islofreq:
+                    acc -= self.get_low_baseline(self.t0, self.acc0, acc_lo)
+
+                self.acc = acc
             else:
                 self.acc = self.acc0
 
@@ -151,6 +164,55 @@ class IMU(object):
             for i in range(3):
                 self.gyro[:, i] = np.convolve(self.gyro0[:, i], np.ones((nsamp,))/nsamp, mode='same')
                 self.acc[:, i] = np.convolve(self.acc0[:, i], np.ones((nsamp,))/nsamp, mode='same')
+
+    def get_low_baseline(self, t, y, cutoff, padmode='mean', stat_length=None):
+        dur = 1.0 / cutoff
+        dt = t[1] - t[0]
+        n = int(dur // dt)+1
+        N = len(t)
+
+        nblocks = int(np.ceil(float(N)/n))
+        print "dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks)
+
+        pad = n*nblocks - N
+
+        pad1 = int(pad // 2)
+        pad2 = int(pad - pad1)
+
+        y = np.pad(y, ((pad1, pad2), (0, 0)), mode=padmode, stat_length=stat_length)
+
+        yblock = np.split(y, nblocks, axis=0)
+
+        ymn = np.mean(yblock, axis=1)
+        ymn = np.pad(ymn, ((1, 1), (0, 0)), mode='edge')
+        ctrind = np.arange(nblocks)*n + n/2
+        ctrind = np.concatenate(([0], ctrind, [N-1]))
+        ind = np.arange(N)
+
+        print "nblocks={}, ymn.shape={}".format(nblocks, ymn.shape)
+        ylo = interpolate.interp1d(ctrind, ymn, kind='cubic', axis=0)(ind)
+        return ylo
+
+    def _filter_gyro(self, t, gyro):
+        if len(self.freqrange) == 1:
+            btype = 'lowpass'
+        elif len(self.freqrange) == 2:
+            btype = 'bandpass'
+        else:
+            raise ValueError('Unrecognized frequency range {}'.format(self.freqrange))
+
+        sos = signal.butter(self.filterorder, self.freqrange/(self.sampfreq/2.0), btype, output='sos')
+
+        gyros = signal.sosfiltfilt(sos, gyro, axis=0)
+        return gyros
+
+    def _resample_gyro(self, t0, gyro0, resamplefreq):
+        t = np.arange(t0[0], t0[-1], 1.0/resamplefreq)
+
+        intp = interpolate.interp1d(t0, gyro0, axis=0)
+        gyro = intp(t)
+
+        return t, gyro
 
     def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None):
         """Get orientation and dynamic acceleration from IMU data.
@@ -213,18 +275,15 @@ class IMU(object):
             # self.qorient is the quaternion that specifies the current orientation of the chip, relative to its initial
             # orientation, and self.qchip2world is the quaternion that rotates from the initial chip orientation to the
             # world frame
-            qorient_world = self.qchip2world.conj() * self.qorient * self.qchip2world
+            qorient_world = [self.qchip2world.conj() * q1.conj() for q1 in self.qorient]
             self.qorient_world = qorient_world
 
-            self.orient_world = np.array([quaternion.as_euler_angles(q1) for q1 in qorient_world])
+            self.orient_world = np.array([self._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_world])
             self.orient = self.orient_world
 
-            # make accdyn into a quaternion with zero real part.  That will allow us to rotate it into world coordinates
-            qacc = np.zeros((self.accdyn_sensor.shape[0], 4))
-            qacc[:, 1:] = self.accdyn_sensor
-
             # rotate accdyn into the world coordinate system
-            qaccdyn_world = self.qchip2world.conj() * quaternion.as_quat_array(qacc) * self.qchip2world
+            qaccdyn_world = [self.qchip2world.conj() * np.quaternion(0, *a1) * self.qchip2world
+                             for a1 in self.accdyn_sensor]
             self.accdyn_world = np.array([q.components[1:] for q in qaccdyn_world])
             self.accdyn = self.accdyn_world
 
@@ -545,8 +604,8 @@ class IMU(object):
         return np.vstack(tuple(m))
 
     def _get_orientation_madgwick(self, initwindow=0.5, beta=2.86):
-        gyrorad = self.gyro * np.pi/180.0
-        betarad = beta * np.pi/180.0
+        gyrorad = np.deg2rad(self.gyro)
+        betarad = np.deg2rad(beta)
 
         qorient = np.zeros_like(self.t, dtype=np.quaternion)
         qgyro = np.zeros_like(self.t, dtype=np.quaternion)
@@ -555,13 +614,14 @@ class IMU(object):
         dt = 1.0 / self.sampfreq
 
         isfirst = self.t <= self.t[0] + initwindow
-        qorient[0] = self.orientation_from_accel(np.mean(self.acc[isfirst, :], axis=0))
+        # qorient[0] = self.orientation_from_accel(np.mean(self.acc[isfirst, :], axis=0))
+        qorient[0] = self.qchip2world.conj()
 
         for i, gyro1 in enumerate(gyrorad[1:, :], start=1):
             qprev = qorient[i-1]
 
             acc1 = self.acc[i, :]
-            acc1 = -acc1 / np.linalg.norm(acc1)
+            acc1 = acc1 / np.linalg.norm(acc1)
 
             # quaternion angular change from the gryo
             qdotgyro = 0.5 * (qprev * np.quaternion(0, *gyro1))
@@ -586,13 +646,15 @@ class IMU(object):
                 qdot = qdotgyro
 
             qorient[i] = qprev + qdot * dt
+            qorient[i] /= np.abs(qorient[i])
 
         # get the gravity vector
-        # gravity is -Z
-        gvec = [(q.conj() * np.quaternion(0, 0, 0, -1) * q).components[1:] for q in qorient]
+        # gravity is +Z
+        gvec = [(q.conj() * np.quaternion(0, 0, 0, 1) * q).components[1:] for q in qorient]
 
         self.qorient = qorient
-        self.orient_sensor = quaternion.as_euler_angles(qorient)
+        self.orient_sensor = np.array([self._rotm2eul(quaternion.as_rotation_matrix(self.qchip2world * q1))
+                                       for q1 in qorient])
         self.gvec = gvec
         self.accdyn_sensor = self.acc - gvec
 
@@ -625,65 +687,26 @@ class IMU(object):
 
     def orientation_from_accel(self, acc):
         """Get a quaternion orientation from an accelerometer reading, assuming that the accelerometer correctly
-        measures the gravitational acceleration"""
-        acc1 = -acc / np.linalg.norm(acc)
+        measures the gravitational acceleration.
+        
+        Equation from Valenti, Dryanovski, and Xiao 2015 (Sensors 15)"""
+        acc1 = acc / np.linalg.norm(acc)
 
         ax, ay, az = acc1
 
-        AXZ = ax * np.sqrt(1 - az)
-        AXY = np.sqrt(ax**2 + ay**2)
-        q0 = np.quaternion(0, AXZ / (np.sqrt(2)*AXY), ay*AXZ / (np.sqrt(2) * ax * AXY), ax*AXY / (np.sqrt(2)*AXZ))
+        if az >= 0:
+            q0 = np.quaternion(np.sqrt((az+1)/2), ay/np.sqrt(2*(az+1)), -ax/np.sqrt(2*(az+1)), 0)
+        else:
+            q0 = np.quaternion(-ay/np.sqrt(2*(1-az)), -np.sqrt((1-az)/2), 0, -ax/np.sqrt(2*(1-az)))
+
+        # Other equation - not sure where from...
+        # AXZ = ax * np.sqrt(1 - az)
+        # AXY = np.sqrt(ax**2 + ay**2)
+        # q0 = np.quaternion(0, AXZ / (np.sqrt(2)*AXY), ay*AXZ / (np.sqrt(2) * ax * AXY), ax*AXY / (np.sqrt(2)*AXZ))
+        q0 = q0 / np.abs(q0)
 
         return q0
 
-    def get_low_baseline(self, t, y, cutoff, padmode='mean', stat_length=None):
-        dur = 1.0 / cutoff
-        dt = t[1] - t[0]
-        n = int(dur // dt)+1
-        N = len(t)
-
-        nblocks = int(np.ceil(float(N)/n))
-        print "dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks)
-
-        pad = n*nblocks - N
-
-        pad1 = int(pad // 2)
-        pad2 = int(pad - pad1)
-
-        y = np.pad(y, ((pad1, pad2), (0, 0)), mode=padmode, stat_length=stat_length)
-
-        yblock = np.split(y, nblocks, axis=0)
-
-        ymn = np.mean(yblock, axis=1)
-        ymn = np.pad(ymn, ((1, 1), (0, 0)), mode='edge')
-        ctrind = np.arange(nblocks)*n + n/2
-        ctrind = np.concatenate(([0], ctrind, [N-1]))
-        ind = np.arange(N)
-
-        print "nblocks={}, ymn.shape={}".format(nblocks, ymn.shape)
-        ylo = interpolate.interp1d(ctrind, ymn, kind='cubic', axis=0)(ind)
-        return ylo
-
-    def _filter_gyro(self, t, gyro):
-        if len(self.freqrange) == 1:
-            btype = 'lowpass'
-        elif len(self.freqrange) == 2:
-            btype = 'bandpass'
-        else:
-            raise ValueError('Unrecognized frequency range {}'.format(self.freqrange))
-
-        sos = signal.butter(self.filterorder, self.freqrange/(self.sampfreq/2.0), btype, output='sos')
-
-        gyros = signal.sosfiltfilt(sos, gyro, axis=0)
-        return gyros
-
-    def _resample_gyro(self, t0, gyro0, resamplefreq):
-        t = np.arange(t0[0], t0[-1], 1.0/resamplefreq)
-
-        intp = interpolate.interp1d(t0, gyro0, axis=0)
-        gyro = intp(t)
-
-        return t, gyro
 
 
 def main():
@@ -753,6 +776,7 @@ def main():
     ax.plot(t, accd3[:, 0], label='Ca=1')
     ax.plot(t, accd4[:, 0], label='Ca=0.01')
     ax.legend()
+
 
     plt.show(block=True)
 
