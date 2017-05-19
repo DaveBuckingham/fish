@@ -12,6 +12,8 @@ from process_imu import IMU
 class IMU_test_data(IMU):
     def __init__(self, trange):
         self.t = np.arange(trange[0], trange[1], trange[2])
+        self.t0 = self.t
+        self.sampfreq = 1.0/trange[2]
 
     def set_initial_orientation(self, R0):
         '''Set the initial orientation of the chip.  
@@ -33,7 +35,9 @@ class IMU_test_data(IMU):
         dt = self.t[1] - self.t[0]
         t = np.arange(0, duration, dt)
 
-        acc = np.zeros((len(self.t), 3))
+        g_imu = np.matmul(self.R0, np.array([0, 0, 1.0]))
+
+        acc = np.tile(g_imu[np.newaxis], (len(t), 1))
         gyro = np.zeros((len(self.t), 3))
 
         accn, gyron = self._add_noise(acc, gyro)
@@ -83,17 +87,21 @@ class IMU_test_data(IMU):
         super(IMU_test_data, self).get_world_coordinates(acc=accn, t=t, times=[0.5*d1, 1.5*d1, 2.5*d1],
                                                          axes=['z', 'y', 'x'], **kwargs)
 
-    def generate_arm_data(self, alpham, Am, f, delta, l, accaxis=0, rotaxis=1):
-        t = self.t
+    def generate_arm_data(self, alpham, Am, f, delta, l, accaxis=0, rotaxis=1, delay=1.0):
+        t = self.t - delay
 
         # angle of the arm, about the world's y axis
         alpha = alpham * np.sin(2 * np.pi * f * t)
         alphavel = 2 * np.pi * f * alpham * np.cos(2 * np.pi * f * t)
         alphaacc = -4 * np.pi ** 2 * f ** 2 * alpham * np.sin(2 * np.pi * f * t)
+        alpha[t <= 0] = 0
+        alphavel[t <= 0] = 0
+        alphaacc[t <= 0] = 0
 
         # acceleration of the body in the world frame
         accb = np.zeros((len(t), 3))
         accb[:, accaxis] = -4 * np.pi**2 * f**2 * Am * np.sin(2*np.pi*(f*t - delta))
+        accb[t <= 0, accaxis] = 0
 
         # angular velocities in the world frame
         omega = np.zeros_like(accb)
@@ -147,29 +155,28 @@ class IMU_test_data(IMU):
         # and in the body frame
         self.accdyn_imu_true = np.matmul(R, self.accdyn_world_true)
 
-        # roll, pitch, yaw in world frame
         uw = []
         qw = []
+        uc = []
         for R1 in R:
+            # roll, pitch, yaw in world frame
             roll, pitch, yaw = self._rotm2eul(np.matmul(self.R0.T, R1))
             uw.append([roll, pitch, yaw])
 
             qw.append(quaternion.from_rotation_matrix(R1))
 
+            # roll, pitch, yaw in chip frame
+            roll, pitch, yaw = self._rotm2eul(np.matmul(self.R0, R1.T))
+            uc.append([roll, pitch, yaw])
+
         self.orient_world_true = np.array(uw)
         self.qorient_world_true = np.array(qw)
+        self.orient_imu_true = np.array(uc)
 
         # roll = np.arctan2(R[:, 1, 2], R[:, 2, 2])
         # pitch = -np.arcsin(R[:, 0, 2])
         # yaw = np.arctan2(R[:, 0, 1], R[:, 0, 0])
         # self.orient_world_true = np.vstack((roll, pitch, yaw)).T
-
-        # roll, pitch, yaw in chip frame
-        uc = []
-        for R1 in R.transpose((0, 2, 1)):
-            roll, pitch, yaw = self._rotm2eul(R1)
-            uc.append([roll, pitch, yaw])
-        self.orient_imu_true = np.array(uc)
 
         # R1 = R.transpose((0, 2, 1))
         # roll_imu = np.arctan2(R1[:, 1, 2], R1[:, 2, 2])
@@ -235,7 +242,7 @@ def main():
     imu = IMU_test_data((0, 20, 1.0/200))
 
     # initial chip orientation is on its side. x axis up, y axis forward, z axis left. But misaligned slightly
-    R0 = imu._eul2rotm(np.deg2rad(np.array([-85, 87, 4])))
+    R0 = imu._eul2rotm(np.deg2rad(np.array([0, 0, 0])))
     imu.set_initial_orientation(R0)
 
     imu.set_noise_params(gyrorms=5.0,          # deg/sec
@@ -245,7 +252,7 @@ def main():
                          accrms=0.03,          # g
                          accfreq=33)           # Hz
 
-    imu.generate_arm_data(alpham=np.deg2rad(15), # 15deg
+    imu.generate_arm_data(alpham=0.0, #np.deg2rad(15), # 15deg
                               Am=0.0, # 0.15m back and forth
                               f=0.7, # 0.7Hz oscillation
                               l=0.4,
@@ -267,12 +274,24 @@ def main():
         ax1.set_ylabel(lab)
     ax[0].set_title('True')
 
+    imu.get_world_coordinates(duration=30.0)
+
+    imu.filter(method='butter', order=5, gyro_cutoff=(0.1, 10), acc_cutoff=(0, 30))
+
+    imu.get_orientation(method='madgwick')
+    orient_mad = np.rad2deg(copy(imu.orient_sensor))
+
     imu.filter(nsamp=10, method='running')
 
     imu.calibrate(duration=30.0)
     imu.get_inertial_coords(duration=30.0)
     # debug right handed coordinate system here
-    imu.get_world_coordinates(duration=30.0)
+
+    fig, ax = plt.subplots(3,1)
+    for o1, ax1, lab in zip(np.rollaxis(orient_mad, 1), ax, ['roll', 'pitch', 'yaw']):
+        ax1.plot(imu.t, o1, label='mad')
+        ax1.set_ylabel(lab)
+    ax[0].set_title('Madgwick')
 
     imu.get_orientation(method='ekf', lCa=(0.0, -0.3, -0.7))
     orient_ekf1 = np.rad2deg(copy(imu.orient_sensor))
