@@ -244,25 +244,19 @@ class IMU(object):
 
             orient_world = []
             accdyn_world = []
-            accdyn_sensor2 = []
-            for chiprpy, acc1 in zip(self.orient_sensor, self.acc):
+            for chiprpy, adyn1 in zip(self.orient_sensor, self.accdyn_sensor):
                 Rchip = self._eul2rotm(chiprpy)
                 R = Rchip.dot(self.chip2world_rot)
 
                 worldrotm = self.chip2world_rot.T.dot(R)
                 orient_world.append(self._rotm2eul(worldrotm))
 
-                g1 = R.dot(g0)      # gravity in chip coordinates
-                adyn1 = acc1 - g1   # subtract gravity vector from chip acceleration
-
-                accdyn_sensor2.append(adyn1)
-
                 # rotate the dynamic acceleration into the world coordinates
                 accdyn_world.append(R.T.dot(adyn1))
 
             self.orient_world = np.array(orient_world)
-            self.accdyn_sensor2 = np.array(accdyn_sensor2)
-            self.accdyn_world = np.array(accdyn_world)
+            self.accdyn_sensor /= 9.81
+            self.accdyn_world = np.array(accdyn_world) / 9.81
             self.accdyn = self.accdyn_world
 
         elif method.lower() in ['madgwick', 'integrate_gyro']:

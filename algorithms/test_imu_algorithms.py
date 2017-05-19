@@ -57,7 +57,7 @@ class IMU_test_data(IMU):
 
         accn, gyron = self._add_noise(acc, gyro)
 
-        self.gN = np.mean(accn, axis=0)
+        self.gN = 9.81 * np.mean(accn, axis=0)
 
     def get_world_coordinates(self, duration=30.0, **kwargs):
         # first oriented with gravity aligned with z axis
