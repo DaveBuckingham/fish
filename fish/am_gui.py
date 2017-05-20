@@ -218,8 +218,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.receiver.error_signal.connect(self.error_slot)
         self.receiver.numimus_signal.connect(self.numimus_slot)
 
-        self.data.message_signal.connect(self.message_slot)
-        self.data.error_signal.connect(self.error_slot)
 
 
     def hline(self):
@@ -345,6 +343,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
             self.record()
 
     def save_button_slot(self):
+        self.message_slot("saving " + filename + "\n")
 
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
@@ -382,13 +381,18 @@ class Am_gui(PyQt5.QtGui.QWidget):
         filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
 
         if filename:
+            self.message_slot("loading " + filename + "\n")
             filename = str(filename)
             self.last_data_path = os.path.dirname(filename)
 
             if (filetype == "*.hdf5"):
-                self.data.load_hdf5_file(filename)
+                if not self.data.load_hdf5_file(filename):
+                    self.error_slot("invalid hdf5 file\n")
+                    return
             elif (filetype == "*.csv"):
-                self.data.load_csv_file(filename)
+                if not self.data.load_csv_file(filename):
+                    self.error_slot("invalid csv file\n")
+                    return
             else:
                 self.error_slot("invalid file type: " + filetype + "\n")
                 return

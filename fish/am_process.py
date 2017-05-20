@@ -16,13 +16,24 @@ class Am_process(object):
 
 
     def calib_within_thresholds(self, data, start, end):
-        gyro_min = self.data.imu_data['gyro'][start:end].min
-        gyro_max = self.data.imu_data['gyro'][start:end].max
-        accel_min = self.data.imu_data['accel'][start:end].min
-        accel_max = self.data.imu_data['accel'][start:end].max
-        gyro_ok = max(abs(gyro_min), abs(gyro_max)) < self.CALIBRATE_GYRO_THRESHOLD
-        accel_ok = accel_max - accel_min < self.CALIBRself.ATE_ACCEL_DELTA_THRESHOLD
-        return (gyro_ok and accel_ok)
+        gyro_ok = True
+        accel_ok = True
+        for i in range(0, data.num_imus):
+            for axis in ([0,1,2]):
+                gyro_min = min(data.imu_data['imus'][i]['gyro'][axis][start:end])
+                gyro_max = max(data.imu_data['imus'][i]['gyro'][axis][start:end])
+                gyro_ok = gyro_ok and (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
+
+                accel_min = min(data.imu_data['imus'][i]['accel'][axis][start:end])
+                accel_max = max(data.imu_data['imus'][i]['accel'][axis][start:end])
+                accel_ok = accel_ok and (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
+
+                if not (gyro_ok and accel_ok):
+                    return False
+
+        #print(str(gyro_ok) + "  " + str(accel_ok))
+        return True
+        #return (gyro_ok and accel_ok)
 
 
     def get_calib_values(self, data):
@@ -31,10 +42,10 @@ class Am_process(object):
         end = self.HOLD_MIN
         while end <= data.num_samples():
 
-            if (within_thresholds(start,end)):
-                while (within_thresholds(start, end) and (end < data.num_samples())):
+            if (self.calib_within_thresholds(data, start, end)):
+                while (self.calib_within_thresholds(data, start, end) and (end < data.num_samples())):
                     end += 1
-                push(intervals, (start, end))
+                intervals.append((start, end))
                 start = end
                 end = start + self.HOLD_MIN
             else:

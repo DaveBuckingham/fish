@@ -252,6 +252,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             self.data.reset_data(0)
             self.data.saved = True
 
+
     def parse_calibration(self):
 
         calib_data = Am_data()
@@ -265,11 +266,15 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             filename = str(filename)
 
             if (filetype == "*.hdf5"):
-                calib_data.load_hdf5_file(filename)
+                if not calib_data.load_hdf5_file(filename):
+                    self.error_signal.emit("load failed\n")
+                    return
             elif (filetype == "*.csv"):
-                calib_data.load_csv_file(filename)
+                if not calib_data.load_csv_file(filename):
+                    self.error_signal.emit("load failed\n")
+                    return
             else:
-                self.error_slot("invalid file type: " + filetype + "\n")
+                self.error_signal.emit("invalid file type: " + filetype + "\n")
                 return
 
         vals = self.process.get_calib_values(calib_data)

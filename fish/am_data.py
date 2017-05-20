@@ -17,8 +17,6 @@ class Am_data(PyQt5.QtCore.QObject):
     mag_asas = []
 
 
-    message_signal = PyQt5.QtCore.pyqtSignal(QString)
-    error_signal = PyQt5.QtCore.pyqtSignal(QString)
 
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
@@ -124,7 +122,6 @@ class Am_data(PyQt5.QtCore.QObject):
     ##################################################
 
     def load_csv_file(self, filename):
-        self.message_signal.emit("loading " + filename + "\n")
 
         if (Am_data.USE_ENCODER):
             expected_non_imu_columns = 2
@@ -132,20 +129,17 @@ class Am_data(PyQt5.QtCore.QObject):
             expected_non_imu_columns = 1
 
         self.num_imus = None
-        #with open(filename, 'rb') as datafile:
         with open(filename, 'r') as datafile:
             reader = csv.reader(datafile, delimiter=',')
             for row in reader:
                 if (len(row) % 9 != expected_non_imu_columns):
-                    self.error_signal.emit("invalid csv file\n")
                     return False
-                row_num_imus = (len(row) - 2) // 9       # // for integer division in python3
+                row_num_imus = (len(row) - expected_non_imu_columns) // 9       # // for integer division in python3
                 if self.num_imus is None:       # READING FIRST LINE OF CSV
                     self.num_imus = row_num_imus
                     self.reset_data(row_num_imus)
                 else:
                     if (len(row) != (self.num_imus * 9) + expected_non_imu_columns):
-                        self.error_signal.emit("invalid csv file\n")
                         return False
                 row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
                 self.imu_data['timestamps'].append(row[0])
@@ -163,13 +157,13 @@ class Am_data(PyQt5.QtCore.QObject):
                     self.imu_data['imus'][i]['mag'][2].append(row[j+8])
                     j+=9
 
-                self.imu_data['encoder'].append(row[-1])
+                if (Am_data.USE_ENCODER):
+                    self.imu_data['encoder'].append(row[-1])
             return True
         return False
 
 
     def load_hdf5_file(self, filename):
-        self.message_signal.emit("loading " + filename + "\n")
         with h5py.File(filename, 'r') as datafile:
             self.imu_data = {}
             self.imu_data['timestamps'] = datafile.get('data/t')[()]
@@ -194,7 +188,6 @@ class Am_data(PyQt5.QtCore.QObject):
 
 
     def save_hdf5_file(self, filename):
-        self.message_signal.emit("saving " + filename + "\n")
         with h5py.File(filename, 'w') as datafile:
             save_data = datafile.create_group("data")
 
@@ -212,7 +205,6 @@ class Am_data(PyQt5.QtCore.QObject):
 
 
     def save_csv_file(self, filename):
-        self.message_signal.emit("saving " + filename + "\n")
         with open(filename, 'w') as datafile:
             writer = csv.writer(datafile, delimiter=',')
 
