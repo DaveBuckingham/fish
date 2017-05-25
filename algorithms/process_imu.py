@@ -330,6 +330,9 @@ class IMU(object):
         # bias noise covariance (assuming low drift)
         self.Qbias = 1e-10 * self.Qacc
 
+        # gyro noise
+        self.gyro_noise = np.std(gyro, axis=0)
+
     def get_inertial_coords(self, filename, method='mean accel', g=None):
         """Get the initial gravity vector"""
         with h5py.File(filename, 'r') as h5inertial:

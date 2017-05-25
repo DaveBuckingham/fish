@@ -43,7 +43,7 @@ class IMU_test_data(IMU):
         accn, gyron = self._add_noise(acc, gyro)
 
         accn = 9.81 * accn
-        gyron = np.deg2rad(gyro)
+        gyron = np.deg2rad(gyron)
 
         self._calibrate(accn, gyron)
 
@@ -211,7 +211,8 @@ class IMU_test_data(IMU):
 
         sos = signal.butter(9, self.accfreq / (sampfreq / 2), btype='highpass', output='sos')
         acc_noise = signal.sosfilt(sos, n, axis=0)
-        acc_noise *= self.accrms / np.sqrt(np.mean(np.square(acc_noise), axis=0))
+        acc_noise /= np.sqrt(np.mean(np.square(acc_noise), axis=0))
+        acc_noise *= self.accrms
         accn = accel + acc_noise
 
         # gyro noise
@@ -221,7 +222,8 @@ class IMU_test_data(IMU):
 
         sos = signal.butter(9, self.gyrofreq / (sampfreq / 2), btype='highpass', output='sos')
         gyro_noise = signal.sosfilt(sos, n, axis=0)
-        gyro_noise *= self.gyrorms / np.sqrt(np.mean(np.square(gyro_noise), axis=0))
+        gyro_noise /= np.sqrt(np.mean(np.square(gyro_noise), axis=0))
+        gyro_noise *= self.gyrorms
 
         # then drift
         if self.gyrodriftrms > 0.0:
@@ -229,7 +231,8 @@ class IMU_test_data(IMU):
 
             sos = signal.butter(9, self.gyrodriftfreq / (sampfreq / 2), btype='lowpass', output='sos')
             gyro_drift = signal.sosfilt(sos, n, axis=0)
-            gyro_drift *= self.gyrodriftrms / np.sqrt(np.mean(np.square(gyro_drift), axis=0))
+            gyro_drift /= np.sqrt(np.mean(np.square(gyro_drift), axis=0))
+            gyro_drift *= self.gyrodriftrms
         else:
             gyro_drift = np.zeros_like(gyro)
 
