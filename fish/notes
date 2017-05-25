@@ -1,5 +1,7 @@
 TODO:
 
+"invalid input string" when loading a file
+
 update author names in setup.py
 
 am_data.py line 65, change assert to error message

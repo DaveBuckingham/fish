@@ -16,8 +16,6 @@ except ImportError:
 class Am_process_dialog(PyQt5.QtGui.QWidget):
 
     finished_signal = PyQt5.QtCore.pyqtSignal()
-    message_signal = PyQt5.QtCore.pyqtSignal(QString)
-    error_signal = PyQt5.QtCore.pyqtSignal(QString)
 
 
     #def __init__(self, current_data=False, parent=None):
@@ -217,7 +215,8 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
 
     def process_current_dataset(self, algorithm):
-        self.message_signal.emit("running " + algorithm + "\n")
+        # CANE WE REMOVE THIS?
+        logging.info("running " + algorithm + "\n")
         if (self.data.has_data()):
             for i in range(0, len(self.data.imu_data['timestamps'])):
                 for j in range(0, len(self.data.imu_data['imus'])):
@@ -278,9 +277,9 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
                 return
 
         vals = self.process.get_calib_values(calib_data)
-        print("VALS:")
-        for v in vals:
-            print(v)
+        if(vals):
+            for v in vals:
+                print(v)
 
 
         

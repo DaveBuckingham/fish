@@ -6,6 +6,7 @@ import datetime
 import signal
 import atexit
 import time
+import logging
 
 import PyQt5.QtCore
 import PyQt5.QtGui
@@ -29,6 +30,9 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
     def __init__(self, parent = None):
         super(Am_gui, self).__init__(parent)
+
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
 
 
 
@@ -212,10 +216,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
 
 
-
-
-        self.receiver.message_signal.connect(self.message_slot)
-        self.receiver.error_signal.connect(self.error_slot)
         self.receiver.numimus_signal.connect(self.numimus_slot)
 
 
@@ -227,11 +227,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         return line
 
 
-    def print_pass_fail(self, val):
-        if (val):
-            self.message_slot("PASS\n")
-        else:
-            self.error_slot("FAIL\n")
 
     # thanks to ekhumoro for this function
     # http://stackoverflow.com/questions/9374063/remove-widgets-and-layout-as-well
@@ -319,8 +314,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         #self.w.setGeometry(QRect(100, 100, 400, 200))
         
         self.w.finished_signal.connect(self.update)
-        self.w.message_signal.connect(self.message_slot)
-        self.w.error_signal.connect(self.error_slot)
 
         self.w.show()
 
@@ -329,7 +322,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
         #if (self.check_saved()):
         self.stop_recording()
         time.sleep(.2)  # let thread finish
-        self.message_slot("exiting")
+        logging.info("exiting")
         self.close()
 
 
@@ -343,7 +336,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
             self.record()
 
     def save_button_slot(self):
-        self.message_slot("saving " + filename + "\n")
 
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
@@ -364,10 +356,10 @@ class Am_gui(PyQt5.QtGui.QWidget):
                     filename += '.csv'
                 self.data.save_csv_file(filename)
             else:
-                self.error_slot("invalid file type: " + filetype + "\n")
+                logging.error("invalid file type: " + filetype)
                 return False
 
-            #self.message_slot("data saved to  " + filename + "\n")
+            logging.info("saved " + filename)
             self.data.saved = True
             return True
 
@@ -381,27 +373,27 @@ class Am_gui(PyQt5.QtGui.QWidget):
         filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
 
         if filename:
-            self.message_slot("loading " + filename + "\n")
+            logging.info("loading " + filename)
             filename = str(filename)
             self.last_data_path = os.path.dirname(filename)
 
             if (filetype == "*.hdf5"):
                 if not self.data.load_hdf5_file(filename):
-                    self.error_slot("invalid hdf5 file\n")
+                    logging.error("invalid hdf5 file")
                     return
             elif (filetype == "*.csv"):
                 if not self.data.load_csv_file(filename):
-                    self.error_slot("invalid csv file\n")
+                    logging.error("invalid csv file")
                     return
             else:
-                self.error_slot("invalid file type: " + filetype + "\n")
+                logging.error("invalid file type: " + filetype)
                 return
 
             self.make_plots()
             for p in self.plots:
                 p.plot_slot()
 
-            #self.message_slot(filename + " loaded\n")
+            logging.info(filename + " loaded")
             self.data.saved = True
             self.buttons['save'].setEnabled(True)
 
@@ -423,7 +415,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.buttons['process'].setEnabled(True)
         self.buttons['load'].setEnabled(True)
 
-        self.message_slot("done recording\n")
+        logging.info("done recording")
 
 
     def update(self):
@@ -462,24 +454,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
     def numimus_slot(self, num_imus):
         self.num_imus = num_imus
         self.make_plots()
-
-
-    # CONVENIENCE FUNCTION TO CALL MESSAGE_SLOT WITH RED TEXT
-    def error_slot(self, the_string):
-        self.message_slot(the_string, True)
-
-
-    # CALLED BY ANYONE TO DISPLAY TEXT IN TEXT WINDOW
-    def message_slot(self, the_string, red=False):
-        if (red):
-            self.text_window.setTextColor(PyQt5.QtGui.QColor(255,0,0))
-        else:
-            self.text_window.setTextColor(PyQt5.QtGui.QColor(200,200,200))
-            #self.text_window.setTextColor(PyQt5.QtGui.QColor(0,0,0))
-        #self.text_window.insertPlainText(str(datetime.datetime.today()) + "  " + the_string)
-        self.text_window.insertPlainText(the_string)
-        sb = self.text_window.verticalScrollBar();
-        sb.setValue(sb.maximum());
 
 
 
