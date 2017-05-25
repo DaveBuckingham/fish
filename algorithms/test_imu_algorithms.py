@@ -90,7 +90,7 @@ class IMU_test_data(IMU):
     def generate_arm_data(self, alpham, Am, f, delta, l, accaxis=0, rotaxis=1, delay=1.0):
         t = self.t - delay
 
-        # angle of the arm, about the world's y axis
+        # angle of the arm, about the world's rotaxis (default=y) axis
         alpha = alpham * np.sin(2 * np.pi * f * t)
         alphavel = 2 * np.pi * f * alpham * np.cos(2 * np.pi * f * t)
         alphaacc = -4 * np.pi ** 2 * f ** 2 * alpham * np.sin(2 * np.pi * f * t)
@@ -110,10 +110,10 @@ class IMU_test_data(IMU):
         omegadot[:, rotaxis] = alphaacc
         self.omega_world = omega
 
-        self.gyro_nonoise = np.matmul(self.R0, omega[:, :, np.newaxis])
+        self.gyro_nonoise = np.array([self.R0.dot(o1) for o1 in omega])
 
         omegab = self.gyro_nonoise
-        omegabdot = np.matmul(self.R0, omegadot[:, :, np.newaxis])
+        omegabdot = np.array([self.R0.dot(od1) for od1 in omegadot])
 
         # rotation matrix from the world to the body frame
         if rotaxis == 0:
@@ -146,14 +146,16 @@ class IMU_test_data(IMU):
         # convert to body coordinates
         xpb = np.matmul(self.R0, xpw)
 
-        angacc = np.cross(omegabdot.squeeze(), xpb[np.newaxis, :])
-        centripacc = np.cross(omegab.squeeze(), np.cross(omegab.squeeze(), xpb[np.newaxis, :]))
-        self.accdyn_world_true = accb[:, :, np.newaxis] + \
-                                 np.matmul(R.transpose((0, 2, 1)),
-                                   angacc[:, :, np.newaxis] + centripacc[:, :, np.newaxis])
+        angacc = np.cross(omegabdot, xpb)
+        centripacc = np.cross(omegab, np.cross(omegab, xpb))
+        adw = accb[:, :, np.newaxis] + np.matmul(np.transpose(R, (0, 2, 1)),
+                                                 angacc[:, :, np.newaxis] + centripacc[:, :, np.newaxis])
+        adb = np.matmul(R, adw)
 
-        # and in the body frame
-        self.accdyn_imu_true = np.matmul(R, self.accdyn_world_true)
+        self.accdyn_world_true = np.squeeze(adw)
+        self.accdyn_imu_true = np.squeeze(adb)
+        self.angacc = angacc
+        self.centripacc = centripacc
 
         uw = []
         qw = []
@@ -163,7 +165,7 @@ class IMU_test_data(IMU):
             roll, pitch, yaw = self._rotm2eul(np.matmul(self.R0.T, R1))
             uw.append([roll, pitch, yaw])
 
-            qw.append(quaternion.from_rotation_matrix(R1))
+            qw.append(np.conj(self._rotm2quat(np.matmul(self.R0.T, R1))))
 
             # roll, pitch, yaw in chip frame
             roll, pitch, yaw = self._rotm2eul(np.matmul(self.R0, R1.T))
@@ -185,7 +187,7 @@ class IMU_test_data(IMU):
         # self.orient_imu_true = np.vstack((roll_imu, pitch_imu, yaw_imu)).T
 
         g = np.array([0, 0, 1.0])
-        self.g_imu = np.matmul(R, g[np.newaxis, :, np.newaxis])
+        self.g_imu = np.array([np.matmul(R1, g) for R1 in R])
 
         # convert to gs
         self.accdyn_world_true /= 9.81
@@ -194,8 +196,8 @@ class IMU_test_data(IMU):
 
         # convert to deg/sec
         self.gyro_nonoise = np.rad2deg(np.squeeze(self.gyro_nonoise))
-        self.orient_world_true = np.rad2deg(np.squeeze(self.orient_world_true))
-        self.orient_imu_true = np.rad2deg(np.squeeze(self.orient_imu_true))
+        self.orient_world_true = np.squeeze(self.orient_world_true)
+        self.orient_imu_true = np.squeeze(self.orient_imu_true)
 
         self.acc0, self.gyro0 = self._add_noise(self.acc_nonoise, self.gyro_nonoise)
 
@@ -252,15 +254,16 @@ def main():
                          accrms=0.03,          # g
                          accfreq=33)           # Hz
 
-    imu.generate_arm_data(alpham=0.0, #np.deg2rad(15), # 15deg
-                              Am=0.0, # 0.15m back and forth
-                              f=0.7, # 0.7Hz oscillation
+    imu.generate_arm_data(alpham=np.deg2rad(15), # 15deg
+                              Am=0.0, #0.15, # 15 cm back and forth
+                              f=0.7, # Hz oscillation
                               l=0.4,
                               delta=0.2) # 20% phase lag between angle and forward back motion
 
     fig, ax = plt.subplots(2,1)
     ax[0].plot(imu.t, imu.acc0)
     ax[0].plot(imu.t, imu.acc_nonoise, '--')
+    ax[0].plot(imu.t, imu.g_imu, ':')
     ax[0].set_ylabel('Accel')
 
     ax[1].plot(imu.t, imu.gyro0)
@@ -278,42 +281,88 @@ def main():
 
     imu.filter(method='butter', order=5, gyro_cutoff=(0.1, 10), acc_cutoff=(0, 30))
 
-    imu.get_orientation(method='madgwick')
-    orient_mad = np.rad2deg(copy(imu.orient_sensor))
+    imu.get_orientation(method='valenti', gain=1.0, gainrange=None)     # should be strictly accelerometer
+    qorient_vala = copy(imu.qorient)
+    orient_vala = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_vala])
 
-    imu.filter(nsamp=10, method='running')
+    imu.get_orientation(method='valenti', gain=0.0, gainrange=None)     # should be strictly gyro
+    qorient_valg = copy(imu.qorient)
+    orient_valg = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valg])
 
-    imu.calibrate(duration=30.0)
-    imu.get_inertial_coords(duration=30.0)
-    # debug right handed coordinate system here
+    imu.get_orientation(method='valenti', gain=0.5, gainrange=None)     # should be in between
+    qorient_valfix = copy(imu.qorient)
+    orient_valfix = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valfix])
+    alphafix = copy(imu.alpha)
 
-    fig, ax = plt.subplots(3,1)
-    for o1, ax1, lab in zip(np.rollaxis(orient_mad, 1), ax, ['roll', 'pitch', 'yaw']):
-        ax1.plot(imu.t, o1, label='mad')
-        ax1.set_ylabel(lab)
-    ax[0].set_title('Madgwick')
+    imu.get_orientation(method='valenti', gain=1.0, gainrange=(0.0, 0.02))     # should be in between
+    qorient_valadapt = copy(imu.qorient)
+    orient_valadapt = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valadapt])
+    alphaadapt = copy(imu.alpha)
 
-    imu.get_orientation(method='ekf', lCa=(0.0, -0.3, -0.7))
-    orient_ekf1 = np.rad2deg(copy(imu.orient_sensor))
-    accd1 = copy(imu.accdyn)
+    imu.get_orientation(method='integrate_gyro')     # should also be strict gyro integration
+    qorient_gyro = copy(imu.qorient)
+    orient_gyro = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_gyro])
 
-    fig, ax = plt.subplots(3,1)
-    for o1, ax1, lab in zip(np.rollaxis(orient_ekf1, 1), ax, ['roll', 'pitch', 'yaw']):
-        ax1.plot(imu.t, np.unwrap(o1), label='ekf')
-        ax1.set_ylabel(lab)
-    ax[0].set_title('EKF')
+    fig, ax = plt.subplots(5,1)
+    ax[0].plot(imu.t, np.rad2deg(orient_valg[:, 1]), 'b-',
+               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    ax[0].set_ylabel('Gyro')
 
-    fig, ax = plt.subplots(3,1)
-    for o1, o0, ax1 in zip(np.rollaxis(orient_ekf1, 1), np.rollaxis(imu.orient_imu_true, 1), ax):
-        ax1.plot(imu.t, np.unwrap(o1), label='ekf')
-        ax1.plot(imu.t, o0, 'k--', label='true')
+    ax[1].plot(imu.t, np.rad2deg(orient_vala[:, 1]), 'g-',
+               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    ax[1].set_ylabel('Acc')
 
-    # fig, ax = plt.subplots(3,1)
-    # for o1, o0, ax1 in zip(np.rollaxis(orient_ekf1, 1), np.rollaxis(imu.orient_world_true, 1), ax):
-    #     ax1.plot(imu.t, np.unwrap(o1), label='ekf')
-    #     ax1.plot(imu.t, o0, 'k--', label='true')
+    ax[2].plot(imu.t, np.rad2deg(orient_valfix[:, 1]), 'r-',
+               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    ax[2].set_ylabel('Fixed')
+
+    ax[3].plot(imu.t, np.rad2deg(orient_valadapt[:, 1]), 'm-',
+               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    ax[3].set_ylabel('Adapt')
+
+    ax[4].plot(imu.t, np.linalg.norm(imu.acc, axis=1))
+    ax[4].set_ylabel('Acc mag')
 
     plt.show(block=True)
+
+    # imu.filter(method='butter', order=5, gyro_cutoff=(0.1, 10), acc_cutoff=(0, 30))
+    #
+    # imu.get_orientation(method='madgwick')
+    # orient_mad = np.rad2deg(copy(imu.orient_sensor))
+    #
+    # imu.filter(nsamp=10, method='running')
+    #
+    # imu.calibrate(duration=30.0)
+    # imu.get_inertial_coords(duration=30.0)
+    # # debug right handed coordinate system here
+    #
+    # fig, ax = plt.subplots(3,1)
+    # for o1, ax1, lab in zip(np.rollaxis(orient_mad, 1), ax, ['roll', 'pitch', 'yaw']):
+    #     ax1.plot(imu.t, o1, label='mad')
+    #     ax1.set_ylabel(lab)
+    # ax[0].set_title('Madgwick')
+    #
+    # imu.get_orientation(method='ekf', lCa=(0.0, -0.3, -0.7))
+    # orient_ekf1 = np.rad2deg(copy(imu.orient_sensor))
+    # accd1 = copy(imu.accdyn)
+    #
+    # fig, ax = plt.subplots(3,1)
+    # for o1, ax1, lab in zip(np.rollaxis(orient_ekf1, 1), ax, ['roll', 'pitch', 'yaw']):
+    #     ax1.plot(imu.t, np.unwrap(o1), label='ekf')
+    #     ax1.set_ylabel(lab)
+    # ax[0].set_title('EKF')
+    #
+    # fig, ax = plt.subplots(3,1)
+    # for o1, o0, ax1 in zip(np.rollaxis(orient_ekf1, 1), np.rollaxis(imu.orient_imu_true, 1), ax):
+    #     ax1.plot(imu.t, np.unwrap(o1), label='ekf')
+    #     ax1.plot(imu.t, o0, 'k--', label='true')
+    #
+    # # fig, ax = plt.subplots(3,1)
+    # # for o1, o0, ax1 in zip(np.rollaxis(orient_ekf1, 1), np.rollaxis(imu.orient_world_true, 1), ax):
+    # #     ax1.plot(imu.t, np.unwrap(o1), label='ekf')
+    # #     ax1.plot(imu.t, o0, 'k--', label='true')
+    #
+    # plt.show(block=True)
 
 if __name__ == "__main__":
     main()

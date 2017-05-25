@@ -214,12 +214,13 @@ class IMU(object):
 
         return t, gyro
 
-    def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None):
+    def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None,
+                        gain=0.5, gainrange=(0.1, 0.2), epsilon=0.9):
         """Get orientation and dynamic acceleration from IMU data.
 
         Estimates the orientation as roll, pitch, yaw and the dynamic acceleration.
 
-        Three algorithms are implemented: 'madgwick', 'integrate_gyro', and 'ekf'.
+        Three algorithms are implemented: 'madgwick', 'integrate_gyro', 'ekf', 'valenti'.
 
         Arguments:
             method - Algorithm ('madgwick', 'integrate_gyro', or 'ekf')
@@ -230,6 +231,13 @@ class IMU(object):
             Ca - Dynamic acceleration drift parameter. Roughly related to the frequency range of dynamic acceleartion.
                 Small values (close to zero) mean that dynamic acceleration will be relatively smooth, while larger
                  values (> 1) mean that dynamic acceleration will track the overall acceleration more closely
+            
+            Valenti algorithm:
+            gain - Gain parameter, between 0 and 1.  gain=0 is gyro integration; gain=1 is assuming the
+                accelerometer always reads gravity exactly (ie, no dynamic acceleration)
+            gainrange - Adaptive gain range. Default = (0.1, 0.2).  Gain = gain below gainrange[0]; gain = 0 above
+                gainrange[1], and linear interpolation between the two
+            epsilon - Accelerometer interpolation parameter. Default = 0.9
         """
 
         if method.lower() == 'ekf':
@@ -257,6 +265,21 @@ class IMU(object):
             self.orient_world = np.array(orient_world)
             self.accdyn_sensor /= 9.81
             self.accdyn_world = np.array(accdyn_world) / 9.81
+            self.accdyn = self.accdyn_world
+
+        elif method.lower() == 'valenti':
+            self._get_orientation_valenti(initwindow=initwindow, gain=gain, gainrange=gainrange, epsilon=epsilon)
+
+            qorient_world = [self.qchip2world.conj() * q1.conj() for q1 in self.qorient]
+            self.qorient_world = qorient_world
+
+            self.orient_world = np.array([self._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_world])
+            self.orient = self.orient_world
+
+            # rotate accdyn into the world coordinate system
+            qaccdyn_world = [self.qchip2world.conj() * np.quaternion(0, *a1) * self.qchip2world
+                             for a1 in self.accdyn_sensor]
+            self.accdyn_world = np.array([q.components[1:] for q in qaccdyn_world])
             self.accdyn = self.accdyn_world
 
         elif method.lower() in ['madgwick', 'integrate_gyro']:
@@ -571,6 +594,31 @@ class IMU(object):
 
         return phi, theta, psi
 
+    def _rotm2quat(self, R):
+        if R[1, 1] > -R[2, 2] and R[0, 0] > -R[1, 1] and R[0, 0] > -R[2, 2]:
+            a = np.sqrt(1 + R[0, 0] + R[1, 1] + R[2, 2])
+            q = 0.5 * np.quaternion(a, (R[1, 2] - R[2, 1]) / a, (R[2, 0] - R[0, 2]) / a, (R[0, 1] - R[1, 0]) / a)
+        elif R[1, 1] < -R[2, 2] and R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+            a = np.sqrt(1 + R[0, 0] - R[1, 1] - R[2, 2])
+            q = 0.5 * np.quaternion((R[1, 2] - R[2, 1]) / a, a, (R[0, 1] + R[1, 0]) / a, (R[2, 0] + R[0, 2]) / a)
+        elif R[1, 1] > R[2, 2] and R[0, 0] < R[1, 1] and R[0, 0] < -R[2, 2]:
+            a = np.sqrt(1 - R[0, 0] + R[1, 1] - R[2, 2])
+            q = 0.5 * np.quaternion((R[2, 0] - R[0, 2]) / a, (R[0, 1] + R[1, 0]) / a, a, (R[1, 2] + R[2, 1]) / a)
+        elif R[1, 1] < R[2, 2] and R[0, 0] < -R[1, 1] and R[0, 0] < R[2, 2]:
+            a = np.sqrt(1 - R[0, 0] - R[1, 1] + R[2, 2])
+            q = 0.5 * np.quaternion((R[0, 1] - R[1, 0]) / a, (R[2, 0] + R[0, 2]) / a, (R[1, 2] + R[2, 1]) / a, a)
+
+        return q
+
+    def _eul2quat(self, x):
+        phi, theta, psi = x
+
+        q_yaw = np.quaternion(np.cos(0.5*psi), 0, 0, np.sin(0.5*psi))
+        q_pitch = np.quaternion(np.cos(0.5*theta), 0, np.sin(0.5*theta), 0)
+        q_roll = np.quaternion(np.cos(0.5*phi), np.sin(0.5*phi), 0, 0)
+
+        return q_roll * q_pitch * q_yaw
+
     def _correct_singularity(self, rpy, tol=0.01):
         jump = np.pi - tol
 
@@ -641,6 +689,95 @@ class IMU(object):
 
             qorient[i] = qprev + qdot * dt
             qorient[i] /= np.abs(qorient[i])
+
+        # get the gravity vector
+        # gravity is +Z
+        gvec = [(q.conj() * np.quaternion(0, 0, 0, 1) * q).components[1:] for q in qorient]
+
+        self.qorient = qorient
+        self.orient_sensor = np.array([self._rotm2eul(quaternion.as_rotation_matrix(self.qchip2world * q1))
+                                       for q1 in qorient])
+        self.gvec = gvec
+        self.accdyn_sensor = self.acc - gvec
+
+    def _get_orientation_valenti(self, initwindow=0.5, gain=0.5, gainrange=(0.1, 0.2), epsilon=0.9):
+        def adapt_gain(gain, err, gainrange=(0.1, 0.2)):
+            if err < gainrange[0]:
+                return gain
+            elif err < gainrange[1]:
+                return gain * (1.0 - (err - gainrange[0]) / (gainrange[1] - gainrange[0]))
+            else:
+                return 0.0
+
+        gyrorad = np.deg2rad(self.gyro)
+
+        qorientGL = np.zeros_like(self.t, dtype=np.quaternion)
+
+        qgyro = np.zeros_like(self.t, dtype=np.quaternion)
+        gvec = np.zeros_like(self.gyro)
+
+        dt = 1.0 / self.sampfreq
+
+        isfirst = self.t <= self.t[0] + initwindow
+        # qorientGL[0] = self.orientation_from_accel(np.mean(self.acc[isfirst, :], axis=0)).conj()
+        qorientGL[0] = self.qchip2world
+
+        if gainrange is None:
+            gainfcn = lambda gain, e, r: gain
+        elif len(gainrange) == 2:
+            gainfcn = adapt_gain
+
+        self.err = [0]
+        self.alpha = [gain]
+
+        for i, (gyro1, acc1) in enumerate(zip(gyrorad[1:, :], self.acc[1:, :]), start=1):
+            qprev = qorientGL[i-1]
+
+            # first integrate gyro
+            qdotgyroGL = -0.5 * np.quaternion(0, *gyro1) * qprev
+            qgyro1 = qprev + qdotgyroGL * dt
+
+            err = np.abs(np.linalg.norm(acc1) - 1.0)
+            alpha = gainfcn(gain, err, gainrange)
+
+            self.err.append(err)
+            self.alpha.append(alpha)
+
+            # correction relative to gravity
+
+            # use the integrated gyro to estimate the gravity vector
+            acc1 = acc1 / np.linalg.norm(acc1)
+
+            grav_est = qgyro1.conj() * np.quaternion(0, *acc1) * qgyro1
+            grav_est = grav_est.components[1:]
+
+            # this is the quaternion rotation to bring our estimated gravity in line with the true one ([0, 0, 1])
+            deltaqacc = np.quaternion(np.sqrt((grav_est[2]+1)/2), -grav_est[1]/np.sqrt(2*(grav_est[2]+1)),
+                                      grav_est[0]/np.sqrt(2*(grav_est[2]+1)), 0)
+
+            # interpolate between qI = [1 0 0 0] (= no rotation) and deltaqacc
+            qI = np.quaternion(1, 0, 0, 0)
+            if deltaqacc.components[0] > epsilon:
+                # use linear interpolation
+                deltaqacc = (1 - alpha)*qI + alpha*deltaqacc
+                deltaqacc = deltaqacc / abs(deltaqacc)
+            else:
+                # use spherical linear interpolation
+
+                # dot product of quaternions is cos of angle between them
+                # only non-zero element of qI is the first one
+                Omega = np.arccos(qI.components[0] * deltaqacc.components[0])
+
+                deltaqacc = np.sin((1 - alpha)*Omega)/np.sin(Omega) * qI + \
+                            np.sin(alpha * Omega)/np.sin(Omega) * deltaqacc
+
+            qorientGL[i] = qgyro1 * deltaqacc
+
+        self.err = np.array(self.err)
+        self.alpha = np.array(self.alpha)
+
+        # qorientGL is the quaternion for the global frame relative to the local.  We want it the other way round
+        qorient = np.array([q1.conj() for q1 in qorientGL])
 
         # get the gravity vector
         # gravity is +Z
