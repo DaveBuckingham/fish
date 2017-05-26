@@ -175,6 +175,8 @@ class IMU_test_data(IMU):
         self.qorient_world_true = np.array(qw)
         self.orient_imu_true = np.array(uc)
 
+        self.orient_world_rotm_true = np.array([np.matmul(self.R0.T, R1) for R1 in R])
+
         # roll = np.arctan2(R[:, 1, 2], R[:, 2, 2])
         # pitch = -np.arcsin(R[:, 0, 2])
         # yaw = np.arctan2(R[:, 0, 1], R[:, 0, 0])

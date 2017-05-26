@@ -252,17 +252,22 @@ class IMU(object):
 
             orient_world = []
             accdyn_world = []
+            rotm_world = []
+            qorient_world = []
             for chiprpy, adyn1 in zip(self.orient_sensor, self.accdyn_sensor):
                 Rchip = self._eul2rotm(chiprpy)
                 R = Rchip.dot(self.chip2world_rot)
 
                 worldrotm = self.chip2world_rot.T.dot(R)
                 orient_world.append(self._rotm2eul(worldrotm))
+                qorient_world.append(self._rotm2quat(worldrotm))
+                rotm_world.append(worldrotm)
 
                 # rotate the dynamic acceleration into the world coordinates
                 accdyn_world.append(R.T.dot(adyn1))
 
             self.orient_world = np.array(orient_world)
+            self.orient_world_rotm = np.array(rotm_world)
             self.accdyn_sensor /= 9.81
             self.accdyn_world = np.array(accdyn_world) / 9.81
             self.accdyn = self.accdyn_world
@@ -273,7 +278,8 @@ class IMU(object):
             qorient_world = [self.qchip2world.conj() * q1.conj() for q1 in self.qorient]
             self.qorient_world = qorient_world
 
-            self.orient_world = np.array([self._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_world])
+            self.orient_world_rotm = np.array([quaternion.as_rotation_matrix(q1) for q1 in qorient_world])
+            self.orient_world = np.array([self._rotm2eul(R1) for R1 in self.orient_world_rotm])
             self.orient = self.orient_world
 
             # rotate accdyn into the world coordinate system
@@ -293,9 +299,10 @@ class IMU(object):
             # orientation, and self.qchip2world is the quaternion that rotates from the initial chip orientation to the
             # world frame
             qorient_world = [self.qchip2world.conj() * q1.conj() for q1 in self.qorient]
-            self.qorient_world = qorient_world
+            self.qorient_world = np.array(qorient_world)
 
-            self.orient_world = np.array([self._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_world])
+            self.orient_world_rotm = np.array([quaternion.as_rotation_matrix(q1) for q1 in qorient_world])
+            self.orient_world = np.array([self._rotm2eul(R1) for R1 in self.orient_world_rotm])
             self.orient = self.orient_world
 
             # rotate accdyn into the world coordinate system
