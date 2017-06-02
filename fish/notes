@@ -1,6 +1,15 @@
 TODO:
 
-fix trigger
+"invalid input string" when loading a file
+
+update author names in setup.py
+
+am_data.py line 65, change assert to error message
+am_rx.py line 384, error message
+
+COMMENTS!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+manual: discuss timestamp (pc receive time. capture time = 200/s by arduino clock)
 
 what happens if recording starts with trigger on? make sure
 its correct in the manual

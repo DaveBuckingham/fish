@@ -2,11 +2,12 @@ import os
 import time
 import serial
 import struct
-
-from fish.am_data import Am_data
+import logging
 import serial.tools.list_ports
 
-from PyQt5.QtCore import pyqtSignal, QObject, pyqtSlot
+from fish.am_data import Am_data
+
+import PyQt5.QtCore
 
 try:
     from PyQt5.QtCore import QString
@@ -14,9 +15,9 @@ except ImportError:
     QString = str
 
 
-class Am_rx(QObject):
+class Am_rx(PyQt5.QtCore.QObject):
 
-    USE_ENCODER = True
+    USE_ENCODER = False
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -62,16 +63,14 @@ class Am_rx(QObject):
     mag_asas = []
 
 
-    finished_signal = pyqtSignal()
-    message_signal = pyqtSignal(QString)
-    error_signal = pyqtSignal(QString)
-    numimus_signal = pyqtSignal(int)
+    finished_signal = PyQt5.QtCore.pyqtSignal()
+    numimus_signal = PyQt5.QtCore.pyqtSignal(int)
 
-    recording_signal = pyqtSignal()
+    recording_signal = PyQt5.QtCore.pyqtSignal()
 
     trigger_state = None
 
-    timestamp_signal = pyqtSignal(float)
+    timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
 
     def __init__(self, data, settings):
         super(Am_rx, self).__init__()
@@ -107,7 +106,7 @@ class Am_rx(QObject):
             return (3275 * (1.046 ** (g_test - 1)))
 
     def close_connection(self):
-        self.message_signal.emit("closing serial connection\n")
+        self.message_signal.emit("closing serial connection")
         self.connection.flushInput()
         self.connection.close()
 
@@ -138,7 +137,7 @@ class Am_rx(QObject):
         while (val != Am_rx.COM_FLAG_START):
             val = self.rx_byte()
             if (val == None):
-                self.error_signal.emit("rx failed, no data read from serial\n")
+                logging.warning("rx failed, no data read from serial")
                 return (None, None)
 
         message_type = self.rx_byte()
@@ -161,16 +160,16 @@ class Am_rx(QObject):
 
 
     def open_connection(self):
-        self.message_signal.emit("establishing serial connection...\n")
+        logging.info("establishing serial connection...")
         
         # FIND A PORT CONNECTED TO AN ARDUINO
         arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
         if not arduino_ports:
-            self.error_signal.emit('no Arduino found\n')
+            logging.warning('no Arduino found')
             return False
         else:
             serial_port = arduino_ports[0]
-            self.message_signal.emit('using Arduino found on ' + serial_port + "\n")
+            logging.info('using Arduino found on ' + serial_port)
 
         # CONNECT
         try:
@@ -185,7 +184,7 @@ class Am_rx(QObject):
                 # timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
                 timeout  = 1.0    # 1 second timeout 
             )
-            self.message_signal.emit("serial connection established\n")
+            logging.info("serial connection established")
 
         except serial.serialutil.SerialException:
             return False
@@ -201,7 +200,7 @@ class Am_rx(QObject):
         handshake_attempts = 0
 
         while (handshake_success is None):
-            self.message_signal.emit("attempting handshake\n")
+            logging.info("attempting handshake")
             (message, message_type) = self.rx_packet()
             if ((message_type is not None) and (message_type == Am_rx.COM_PACKET_HELLO)):
                 handshake_success = True
@@ -217,9 +216,9 @@ class Am_rx(QObject):
                     self.tx_byte(Am_rx.COM_SIGNAL_HELLO)
 
         if (handshake_success):
-            self.message_signal.emit("handshake succesfull\n")
+            logging.info("handshake succesfull")
         else:
-            self.error_signal.emit("handshake failed\n")
+            logging.error("handshake failed")
             self.close_connection()
 
         return handshake_success
@@ -245,23 +244,23 @@ class Am_rx(QObject):
 
 
 
-    @pyqtSlot()
+    #@pyqtSlot()
     def run(self):
 
         if (not self.open_connection()):
-            self.error_signal.emit("failed to create connection, aborting\n")
+            logging.warning("failed to create connection, aborting")
             self.finished_signal.emit()
             return()
 
-        self.message_signal.emit("initializing imus\n")
+        logging.info("initializing imus")
         self.tx_byte(Am_rx.COM_SIGNAL_INIT)
         time.sleep(1)
         (message, message_type) = self.rx_packet()
         if (message_type == Am_rx.COM_PACKET_NUMIMUS):
             num_imus = message[0];
-            self.message_signal.emit("detected " + str(num_imus) + " IMUs.\n")
+            logging.info("detected " + str(num_imus) + " IMUs")
         else:
-            self.error_signal.emit("unable to determine number of IMUs, aborting.\n")
+            logging.error("unable to determine number of IMUs, aborting")
             self.close_connection()
             self.finished_signal.emit()
             return()
@@ -269,7 +268,7 @@ class Am_rx(QObject):
         self.data.reset_data(num_imus)
 
         if (num_imus < 1):
-            self.error_signal.emit("no IMUs detected, aborting\n")
+            logging.warning("no IMUs detected, aborting")
             self.close_connection()
             self.finished_signal.emit()
             return()
@@ -288,7 +287,7 @@ class Am_rx(QObject):
         #        MAG ADJUSTMENT          #
         ##################################
 
-        self.message_signal.emit("calculating magnetometer sensitivty adjustment...\n")
+        logging.info("calculating magnetometer sensitivty adjustment...")
         Am_rx.mag_asas = []
         time.sleep(1)
         self.tx_byte(Am_rx.COM_SIGNAL_ASA)
@@ -304,12 +303,13 @@ class Am_rx(QObject):
             else:
                 print(str(message_type))
                 print(str(len(received)))
-                self.error_signal.emit("ASA read failed, using 1 adjustment\n")
+                logging.warning("ASA read failed, using 1 adjustment")
                 Am_rx.mag_asas.append([1,1,1])
 
-        self.message_signal.emit("Magnetometer asa values:\n")
+        logging.info("Magnetometer asa values:")
         for imu in Am_rx.mag_asas:
-            self.message_signal.emit(', '.join(map(str, imu)) + "\n")
+            logging.info(imu)
+            #logging.info(', '.join(map(str, imu)))
 
 
         ##################################
@@ -317,10 +317,10 @@ class Am_rx(QObject):
         ##################################
 
         self.tx_byte(Am_rx.COM_SIGNAL_RUN)
-        self.message_signal.emit("sent record command to arduino\n")
+        logging.info("sent record command to arduino")
 
 
-        self.message_signal.emit("recording data\n")
+        logging.info("recording data")
 
         self.recording_signal.emit()
 
@@ -370,21 +370,21 @@ class Am_rx(QObject):
                     enc *= 0.3515625  # 360/1024
                     sample.append(enc)
 
-                self.data.add_sample(sample)
+                self.data.add_sample(sample, self.settings.data_buffer_len)
 
 
                 if (self.settings.use_trigger and self.trigger_state):
-                    self.message_signal.emit("received trigger\n")
+                    self.message_signal.emit("received trigger")
                     self.tx_byte(Am_rx.COM_SIGNAL_STOP)
                     self.close_connection()
                     self.finished_signal.emit()
                     return()
 
             else:
-                print("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
+                logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
 
 
-        self.message_signal.emit("stopping recording data\n")
+        logging.info("stopping recording data")
         self.close_connection()
         self.finished_signal.emit()
         return()
