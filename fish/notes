@@ -1,5 +1,7 @@
 TODO:
 
+add scipy to install
+
 "invalid input string" when loading a file
 
 update author names in setup.py

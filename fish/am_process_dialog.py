@@ -5,6 +5,7 @@ import PyQt5.QtGui
 
 
 from fish.am_data import Am_data
+from fish.am_get_basis import Am_get_basis
 from fish.am_process import Am_process
 
 try:
@@ -28,7 +29,9 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         self.data=data
 
-        self.process = Am_process()
+        self.get_basis = Am_get_basis()
+
+        self.process_data = Am_process()
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
@@ -276,10 +279,11 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
                 self.error_signal.emit("invalid file type: " + filetype + "\n")
                 return
 
-        vals = self.process.get_calib_values(calib_data)
-        if(vals):
-            for v in vals:
-                print(v)
+        basis_vector = self.get_basis.get_calib_values(calib_data)
+
+        solution = self.process_data.get_orientation_madgwick(basis_vector, self.data)
+
+        print(solution)
 
 
         

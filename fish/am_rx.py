@@ -106,15 +106,13 @@ class Am_rx(PyQt5.QtCore.QObject):
             return (3275 * (1.046 ** (g_test - 1)))
 
     def close_connection(self):
-        self.message_signal.emit("closing serial connection")
+        logging.info("closing serial connection")
         self.connection.flushInput()
         self.connection.close()
 
 
     # FOR SENDING COMMAND SIGNALS TO ARDUINO
     def tx_byte(self, val):
-        #time.sleep(1)
-        #print("WRITE: " + self.codes[str(val)])
         self.connection.write(bytearray((val,)))
         
     # SHOULD ONLY BE USED BY rx_packet()
@@ -182,7 +180,7 @@ class Am_rx(PyQt5.QtCore.QObject):
                 bytesize = serial.EIGHTBITS,
                 # timeout  = None   # block, wait forever
                 # timeout  = 0      # non-blocking, return immedietly up to number of requested bytes
-                timeout  = 1.0    # 1 second timeout 
+                timeout  = 1.0      # 1 second timeout 
             )
             logging.info("serial connection established")
 
@@ -331,6 +329,7 @@ class Am_rx(PyQt5.QtCore.QObject):
 
 
 
+        timestamp = 0
         while (self.recording):
 
             (received, message_type) = self.rx_packet()
@@ -338,7 +337,7 @@ class Am_rx(PyQt5.QtCore.QObject):
 
             if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
-                timestamp = (time.time() * 1000) - start_time
+                #timestamp = (time.time() * 1000) - start_time
 
 
                 received = bytearray(received)
@@ -382,6 +381,8 @@ class Am_rx(PyQt5.QtCore.QObject):
 
             else:
                 logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
+
+            timestamp += 5
 
 
         logging.info("stopping recording data")
