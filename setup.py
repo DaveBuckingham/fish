@@ -78,7 +78,8 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['h5py>=2.6.0', 'numpy>=1.11.2', 'pyqtgraph>=0.10.0', 'pyserial>=3.2.1', 'pyqt5'],
+    install_requires=['h5py>=2.6.0', 'numpy>=1.11.2', 'pyqtgraph>=0.10.0', 'pyserial>=3.2.1', 'pyqt5>=5.8.2', 'numba>=0.33.0', 'scipy>=0.19.0', 'numpy-quaternion>=0.0.0.dev2017.06.15.18.47.02'],
+
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

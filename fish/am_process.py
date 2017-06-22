@@ -271,15 +271,15 @@ class Am_process(object):
         return get_orientation_madgwick(basis, initwindow=initwindow, beta=0)
 
 
-    def get_orientation_madgwick(self, basis, data, initwindow=0.5, beta=2.86):
+    def get_orientation_madgwick(self, basis, timestamps, accel_data, gyro_data, initwindow=0.5, beta=2.86):
         qchip2world = quaternion.from_rotation_matrix(basis)
-        timestamps = data.imu_data['timestamps']
+        #timestamps = data.imu_data['timestamps']
 
 
-        gyro = np.array([list(i) for i in zip(*data.imu_data['imus'][0]['gyro'])])
-        accel = np.array([list(i) for i in zip(*data.imu_data['imus'][0]['accel'])])
-        print(accel)
-        exit()
+        gyro = np.array([list(i) for i in zip(*gyro_data)])
+        accel = np.array([list(i) for i in zip(*accel_data)])
+        #gyro = np.array([list(i) for i in zip(*data.imu_data['imus'][0]['gyro'])])
+        #accel = np.array([list(i) for i in zip(*data.imu_data['imus'][0]['accel'])])
 
 
         gyrorad = np.deg2rad(gyro)
@@ -291,14 +291,12 @@ class Am_process(object):
 
         dt = 1.0 / self.sampfreq
 
-        isfirst = self.t <= timestamps[0] + initwindow
         qorient[0] = qchip2world.conj()
 
         for i, gyro1 in enumerate(gyrorad[1:, :], start=1):
             qprev = qorient[i-1]
 
             acc1 = accel[i, :]
-            acc1 = acc1 / np.linalg.norm(acc1)
 
             # quaternion angular change from the gryo
             qdotgyro = 0.5 * (qprev * np.quaternion(0, *gyro1))
@@ -347,7 +345,7 @@ class Am_process(object):
         self.accdyn_world = np.array([q.components[1:] for q in qaccdyn_world])
         self.accdyn = self.accdyn_world
 
-        return self.orient_world
+        return [self.accdyn_world, self.orient_world]
 
 
     def calibrate(self, data):

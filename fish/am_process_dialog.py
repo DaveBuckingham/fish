@@ -2,11 +2,11 @@ import os
 
 import PyQt5.QtCore
 import PyQt5.QtGui
-
+import logging
 
 from fish.am_data import Am_data
 from fish.am_get_basis import Am_get_basis
-#from fish.am_process import Am_process
+from fish.am_process import Am_process
 
 try:
     from PyQt5.QtCore import QString
@@ -31,9 +31,11 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         self.get_basis = Am_get_basis()
 
-        #self.process_data = Am_process()
+        self.process_data = Am_process()
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
+
+        self.basis_vector = None
 
         #self.setMaximumWidth(300)
 
@@ -220,13 +222,31 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
     def process_current_dataset(self, algorithm):
         # CANE WE REMOVE THIS?
         logging.info("running " + algorithm + "\n")
+
         if (self.data.has_data()):
-            for i in range(0, len(self.data.imu_data['timestamps'])):
-                for j in range(0, len(self.data.imu_data['imus'])):
+            #[solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(self.basis_vector, self.data)
+
+            for i in range(0, self.data.num_imus):
+
+                [solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(self.basis_vector,
+                                                                                             self.data.imu_data['timestamps'],
+                                                                                             self.data.imu_data['imus'][i]['accel'],
+                                                                                             self.data.imu_data['imus'][i]['gyro'])
+                assert(len(self.data.imu_data['timestamps']) == len(solution_accel))
+                assert(len(self.data.imu_data['timestamps']) == len(solution_gyro))
+
+
+                for j in range(0, len(self.data.imu_data['timestamps'])):
                     for k in range(0, 3):
-                        self.data.imu_data['imus'][j]['accel'][k][i] *= -2
-                        self.data.imu_data['imus'][j]['gyro'][k][i] *= -1
-                        self.data.imu_data['imus'][j]['mag'][k][i] *= 2
+                        self.data.imu_data['imus'][i]['accel'][k][j] = solution_accel[j][k]
+                        self.data.imu_data['imus'][i]['gyro'][k][j]  = solution_gyro[j][k]
+
+#           for i in range(0, len(self.data.imu_data['timestamps'])):
+#               for j in range(0, len(self.data.imu_data['imus'])):
+#                   for k in range(0, 3):
+#                       self.data.imu_data['imus'][j]['accel'][k][i] *= -2
+#                       self.data.imu_data['imus'][j]['gyro'][k][i] *= -1
+#                       self.data.imu_data['imus'][j]['mag'][k][i] *= 2
 
 
     def process_multiple_datasets(self, algorithm):
@@ -281,19 +301,26 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         basis_vector = self.get_basis.get_calib_values(calib_data)
 
-        #solution = self.process_data.get_orientation_madgwick(basis_vector, self.data)
+        if basis_vector:
+            logging.info("extracted basis vector:\n" + str(basis_vector[0]) + "\n" + str(basis_vector[1]) + "\n" + str(basis_vector[2]))
+            self.basis_vector = basis_vector
+        else:
+            logging.error("failed to extract basis vector")
 
-        print(solution)
+        #[solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(basis_vector, self.data)
 
 
         
 
     def run_process(self):
-        if(self.batch_process):
-            self.process_multiple_datasets(self.process_algorithm)
+        if(self.basis_vector is not None):
+            if(self.batch_process):
+                self.process_multiple_datasets(self.process_algorithm)
+            else:
+                self.process_current_dataset(self.process_algorithm)
+            self.close()
         else:
-            self.process_current_dataset(self.process_algorithm)
-        self.close()
+            logging.error("can't process data without basis vector from calibration file")
 
     # OVERRIDE
     def closeEvent(self, event):

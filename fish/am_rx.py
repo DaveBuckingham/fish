@@ -41,13 +41,13 @@ class Am_rx(PyQt5.QtCore.QObject):
     COM_SIGNAL_HELLO                = 0x68
 
 
-    GYRO_SENSITIVITY             = 131     # if range is +- 250
-    ACCEL_SENSITIVITY            = 16384   # if range is +- 2
+    GYRO_SENSITIVITY                = 131     # if range is +- 250
+    ACCEL_SENSITIVITY               = 16384   # if range is +- 2
 
 
 
-    MAGNETOMETER_SCALE_FACTOR    = 0.15
-    # WHO_AM_I                     = 0x71
+    MAGNETOMETER_SCALE_FACTOR       = 0.15
+    # WHO_AM_I                      = 0x71
 
     codes = {str(COM_PACKET_NUMIMUS): 'COM_PACKET_NUMIMUS', 
         str(COM_PACKET_SAMPLE): 'COM_PACKET_SAMPLE', 
@@ -327,7 +327,9 @@ class Am_rx(PyQt5.QtCore.QObject):
 
         #sample_index = 0
 
-
+        last_accel = [0, 0, 0]
+        last_gyro  = [0.0, 0.0,0.0]
+        last_mag   = [0.0, 0.0,0.0]
 
         timestamp = 0
         while (self.recording):
@@ -357,7 +359,29 @@ class Am_rx(PyQt5.QtCore.QObject):
                     (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
                     (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                    sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
+                    # SOMETIMES WE GET ALL ZEROS (I THINK CAUSE IMU IS BUSY)
+                    # BUT ALL ZEROS WILL BREAK DATA PROCESSING, SO...
+
+                    new_accel = [ax, ay, az]
+                    if (ax == 0 and ay == 0 and az == 0):
+                        new_accel = last_accel
+
+                    new_gyro = [gx, gy, gz]
+                    if (gx == 0.0 and gy == 0.0 and gz == 0.0):
+                        new_gyro = last_gyro
+
+                    new_mag = [mx, my, mz]
+                    if (mx == 0.0 and my == 0.0 and mz == 0.0):
+                        new_mag = last_mag
+
+                    last_accel = new_accel
+                    last_gyro  = new_gyro
+                    last_mag   = new_mag
+
+                    sample[1].append([new_accel, new_gyro, new_mag])
+
+                    # IF ZEROS ARE OK, COULD JUST DO THIS INSTEAD
+                    #sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
                 (self.trigger_state,) = struct.unpack('>?', received[22:23])
 

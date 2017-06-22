@@ -22,7 +22,7 @@
 //     TRIGGER    4
 //
 // MOSI, MISO, and SCK pins are specified by the arduino spi library.
-// Chip selects CS1 and CS2 are specified by in code (IMU_SELECT[]).
+// Chip selects CS1 and CS2 are specified in this code (IMU_SELECT[]).
 
 // encoder (optional)
 //
@@ -144,7 +144,6 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
-byte first;
 
 
 
@@ -202,8 +201,9 @@ void read_multiple_registers(byte chip, uint8_t address, uint8_t *buff, unsigned
 
     digitalWrite(chip, LOW);
     SPI.transfer(address | READ_FLAG);
-    for(i = 0; i < num_bytes; i++)
+    for(i = 0; i < num_bytes; i++) {
         buff[i] = SPI.transfer(0x00);
+    }
     digitalWrite(chip, HIGH);
 }
 
@@ -598,6 +598,7 @@ void read_sample(){
     j = 0;
 
     // COULD SPEED THING UP BY REMOVING SAMPLE IDS...
+    // OR EVEN JUST USING 2 BYTES INSTEAD OF 4
     
     // SAMPLE ID
     response[j++] = next_sample_id >> 24;
@@ -623,7 +624,7 @@ void read_sample(){
         // READ MAG
         // WE READ 7 BYTES SO READING STATUS2 TRIGGERS DATA RESET
         // N.B., MAG REGISTERS ARE LAID OUT IN LITTLE-ENDIAN ORDER, UNLIKE ACCEL AND GYRO
-        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);     // specify mag i2c address
         write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
         read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, response + j, 7);
@@ -651,9 +652,9 @@ void start_recording() {
     uint8_t buff[7];
     uint8_t i;
     for (i=0; i < num_imus; i++) {
-        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);   // specify mag i2c address
-        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
-        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);           // set num bytes to read 
+        write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);    // specify mag i2c address
+        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                         // specify desired mag register
+        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 7 | ENABLE_SLAVE_FLAG);          // set num bytes to read 
         read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, buff, 7);
     }
     delay(10);
@@ -663,7 +664,7 @@ void start_recording() {
     TCCR1A = 0;
     TCCR1B = 0;
     TCNT1  = 0;
-    OCR1A = int((16000000 / 256) / SAMPLE_FREQ_HZ);      // compare match register = clock speed / prescaler / sample freq
+    OCR1A  = int((16000000 / 256) / SAMPLE_FREQ_HZ);     // compare match register = clock speed / prescaler / sample freq
     TCCR1B |= (1 << WGM12);                              // CTC mode
     TCCR1B |= (1 << CS12);                               // 256 prescaler 
     TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
@@ -682,7 +683,6 @@ void stop_recording() {
 }
 
 void setup() {
-    first = 1;
     Serial.begin(115200);
     SPI.begin();
     SPI.beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE3));
