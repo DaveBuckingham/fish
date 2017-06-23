@@ -340,7 +340,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
         dlg = PyQt5.QtGui.QFileDialog()
-        filename, filetype = dlg.getSaveFileName(self, "Save data", self.last_data_path, "*.hdf5;;*.csv", options=options)
+        filename, filetype = dlg.getSaveFileName(self, "Save data", self.last_data_path, "*.csv;;*.hdf5", options=options)
 
         if filename:
             filename = str(filename)
@@ -370,7 +370,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.hdf5;;*.csv", options=options)
+        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.csv;;*.hdf5", options=options)
 
         if filename:
             logging.info("loading " + filename)
