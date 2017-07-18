@@ -73,10 +73,10 @@ const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX
 #define SELF_TEST_Z_ACCEL                         0x0F
 
 #define REG_WHO_AM_I                              0x75           // 117
-#define REG_CONFIG                                0x1A
-#define GYRO_CONFIG                               0X1B           // 27
-#define ACCEL_CONFIG_1                            0x1C           // 28
-#define ACCEL_CONFIG_2                            0x1D           // 29
+#define REG_CONFIG                                0x1A           // 26
+#define REG_GYRO_CONFIG                           0X1B           // 27
+#define REG_ACCEL_CONFIG_1                        0x1C           // 28
+#define REG_ACCEL_CONFIG_2                        0x1D           // 29
 #define REG_I2C_MST_CTRL                          0x24
 #define REG_I2C_SLV0_ADDR                         0x25
 #define REG_I2C_SLV0_REG                          0x26
@@ -273,15 +273,15 @@ byte self_test(byte chip) {
     write_register(chip, REG_SAMPLE_RATE_DIVIDER, 0x00);           // Set gyro sample rate to 1 kHz
 
     write_register(chip, REG_CONFIG, 0x02);
-    write_register(chip, ACCEL_CONFIG_2, 0x02);
+    write_register(chip, REG_ACCEL_CONFIG_2, 0x02);
 
-    uint8_t gyro_old_fs = read_register(chip, GYRO_CONFIG) | 0x18;
-    write_register(chip, GYRO_CONFIG, 0x00);
-    // write_register(chip, GYRO_CONFIG, 1<<FS);
+    uint8_t gyro_old_fs = read_register(chip, REG_GYRO_CONFIG) | 0x18;
+    write_register(chip, REG_GYRO_CONFIG, 0x00);
+    // write_register(chip, REG_GYRO_CONFIG, 1<<FS);
 
-    uint8_t accel_old_fs = read_register(chip, ACCEL_CONFIG_1) | 0x18;
-    write_register(chip, ACCEL_CONFIG_1, 0x00);
-    // write_register(chip, ACCEL_CONFIG_1, 1<<FS);
+    uint8_t accel_old_fs = read_register(chip, REG_ACCEL_CONFIG_1) | 0x18;
+    write_register(chip, REG_ACCEL_CONFIG_1, 0x00);
+    // write_register(chip, REG_ACCEL_CONFIG_1, 1<<FS);
 
 
     ///// STEP 3.0.2 /////
@@ -327,8 +327,8 @@ byte self_test(byte chip) {
     ///// STEP 3.0.3 /////
 
     // SET SELF-TEST FLAGS
-    write_register(chip, GYRO_CONFIG, 0xE0);
-    write_register(chip, ACCEL_CONFIG_1, 0xE0);
+    write_register(chip, REG_GYRO_CONFIG, 0xE0);
+    write_register(chip, REG_ACCEL_CONFIG_1, 0xE0);
 
 
     ///// STEP 3.0.4 /////
@@ -386,8 +386,8 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.1.1 /////
-    write_register(chip, GYRO_CONFIG, 0x00);
-    write_register(chip, ACCEL_CONFIG_1, 0x00);
+    write_register(chip, REG_GYRO_CONFIG, 0x00);
+    write_register(chip, REG_ACCEL_CONFIG_1, 0x00);
 
     ///// STEP 3.1.2 /////
     delay(25);                                    
@@ -395,8 +395,8 @@ byte self_test(byte chip) {
 
 
     ///// STEP 3.1.3 /////
-    write_register(chip, GYRO_CONFIG, gyro_old_fs);
-    write_register(chip, ACCEL_CONFIG_1, accel_old_fs);
+    write_register(chip, REG_GYRO_CONFIG, gyro_old_fs);
+    write_register(chip, REG_ACCEL_CONFIG_1, accel_old_fs);
 
 
     ///// STEP 3.2.1 /////
@@ -520,9 +520,6 @@ void initialize(){
     //pinMode(TRIGGER_PIN, INPUT);
     pinMode(TRIGGER_PIN, INPUT_PULLUP);
 
-
-
-
     begin_imu_com();
     tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);
 
@@ -536,7 +533,7 @@ void initialize(){
 
     for (i=0; i < num_imus; i++) {
 
-        write_register(imu_select[i], REG_PWR_MGMT_1, 0x81);   // reset mpu and set clock source
+        write_register(imu_select[i], REG_PWR_MGMT_1, 0x81);         // reset mpu and set clock source
         delay(1);
 
         write_register(imu_select[i], REG_CONFIG, 0x01);             // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
@@ -551,8 +548,14 @@ void initialize(){
 
         // SET MAGNETOMETER TO CONTINUOUS MEASUREMENT MODE 2, 100HZ
         write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x16);                                          // 100hz, 16-bit
+        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x16);                     // 100hz, 16-bit
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+
+        // SET ACCLEROMETER RANGE +-2g, DISABLE SELF-TEST FLAGS
+        write_register(imu_select[i], REG_ACCEL_CONFIG_1, 0x00);
+
+        // SET GYROSCOPE RANGE +-250dps, DISABLE SELF-TEST FLAGS, SET FCHOICE_B TO 00 SO DLPF_CFG IS USED
+        write_register(imu_select[i], REG_GYRO_CONFIG, 0x00);
 
     }
 
@@ -673,13 +676,16 @@ void start_recording() {
 
 void stop_recording() {
     TIMSK1 &= ~(1 << OCIE1A);                            // disable timer compare interrupt
+
     // SET MAGS TO POWER-DOWN MODE
-    byte i;
-    for (i=0; i < num_imus; i++) {
-        write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-        write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
-        write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
-    }
+    // DON'T DO THIS BECAUSE THEY NEVER SEEM TO WAKE UP AGAIN WITHOUT FIRST CUTTING POWER
+//  byte i;
+//  for (i=0; i < num_imus; i++) {
+//      //write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
+//      //write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
+//      //write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+//  }
+
 }
 
 void setup() {

@@ -1,3 +1,4 @@
+import math
 import os
 import time
 import serial
@@ -40,25 +41,25 @@ class Am_rx(PyQt5.QtCore.QObject):
     COM_SIGNAL_TEST                 = 0x74
     COM_SIGNAL_HELLO                = 0x68
 
-
-    GYRO_SENSITIVITY                = 131     # if range is +- 250
-    ACCEL_SENSITIVITY               = 16384   # if range is +- 2
-
-
-
     MAGNETOMETER_SCALE_FACTOR       = 0.15
-    # WHO_AM_I                      = 0x71
 
+    INT_MAX                         = (2**16)/2
+
+    ACCEL_RANGE                     = 2       # +-. GS. SET BY ARDUINO CODE
+    GYRO_RANGE                      = 250     # +-. DEGREES PER SECOND. SET BY ARDUINO CODE
+    MAG_RANGE                       = 4800    # +-. MICRO TESLAS. CAN'T BE SET. MAYBE 4900?
+
+    # USED FOR DEBUGGING
     codes = {str(COM_PACKET_NUMIMUS): 'COM_PACKET_NUMIMUS', 
-        str(COM_PACKET_SAMPLE): 'COM_PACKET_SAMPLE', 
-        str(COM_PACKET_HELLO): 'COM_PACKET_HELLO', 
-        str(COM_PACKET_ASA): 'COM_PACKET_ASA', 
-        str(COM_SIGNAL_INIT): 'COM_SIGNAL_INIT', 
-        str(COM_SIGNAL_ASA): 'COM_SIGNAL_ASA', 
-        str(COM_SIGNAL_RUN): 'COM_SIGNAL_RUN', 
-        str(COM_SIGNAL_STOP): 'COM_SIGNAL_STOP', 
-        str(COM_SIGNAL_HELLO): 'COM_SIGNAL_HELLO', 
-        }
+             str(COM_PACKET_SAMPLE):  'COM_PACKET_SAMPLE', 
+             str(COM_PACKET_HELLO):   'COM_PACKET_HELLO', 
+             str(COM_PACKET_ASA):     'COM_PACKET_ASA', 
+             str(COM_SIGNAL_INIT):    'COM_SIGNAL_INIT', 
+             str(COM_SIGNAL_ASA):     'COM_SIGNAL_ASA', 
+             str(COM_SIGNAL_RUN):     'COM_SIGNAL_RUN', 
+             str(COM_SIGNAL_STOP):    'COM_SIGNAL_STOP', 
+             str(COM_SIGNAL_HELLO):   'COM_SIGNAL_HELLO', 
+             }
 
     mag_asas = []
 
@@ -84,6 +85,24 @@ class Am_rx(PyQt5.QtCore.QObject):
 
         self.trigger_value = False
 
+
+    def raw_accel_to_meters_per_second_squared(self, raw):
+        assert((raw >= -Am_rx.INT_MAX) and (raw < Am_rx.INT_MAX))
+        gs = Am_rx.ACCEL_RANGE * (raw / Am_rx.INT_MAX)
+        mps = gs * 9.80665
+        return mps
+
+    def raw_gyro_to_radians_per_second(self, raw):
+        assert((raw >= -Am_rx.INT_MAX) and (raw < Am_rx.INT_MAX))
+        dps = Am_rx.GYRO_RANGE * (raw / Am_rx.INT_MAX)
+        rps = dps * (math.pi / 180.0)
+        return rps
+
+    def raw_mag_to_microteslas(self, raw):
+        return raw * 0.15
+        # assert((raw >= -Am_rx.INT_MAX) and (raw < Am_rx.INT_MAX))
+        # mt = Am_rx.MAG_RANGE * (raw / Am_rx.INT_MAX)
+        # return mt
 
 
 
@@ -296,7 +315,8 @@ class Am_rx(PyQt5.QtCore.QObject):
             if ((message_type == Am_rx.COM_PACKET_ASA) and (len(received) == 3)):
                 asa = []
                 for j in (range(0, 3)):
-                    asa.append(((float(received[j] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR)
+                    asa.append((float(received[j] - 128.0) / 256.0) + 1.0)
+                    #asa.append(((float(received[j] - 128) / 256) + 1) * Am_rx.MAGNETOMETER_SCALE_FACTOR)
                 Am_rx.mag_asas.append(asa)
             else:
                 print(str(message_type))
@@ -356,10 +376,22 @@ class Am_rx(PyQt5.QtCore.QObject):
 
                     (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
                     (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
-                    (gx, gy, gz, gx, gy, gz) = map(lambda x: float(x) / Am_rx.GYRO_SENSITIVITY, (gx, gy, gz, gx, gy, gz))
-                    (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
 
-                    # SOMETIMES WE GET ALL ZEROS (I THINK CAUSE IMU IS BUSY)
+                    # CONVERT RAW MEASUREMENTS TO OUR FAVORITE UNITS
+                    (ax, ay, az) = map(self.raw_accel_to_meters_per_second_squared, (ax, ay, az))
+                    (gx, gy, gz) = map(self.raw_gyro_to_radians_per_second, (gx, gy, gz))
+
+
+                    # I'M NOT SURE WHICH IF THESE SHOULD BE FIRST
+                    # ASA FIRST, THEN SCALE BY 0.15 SEEMS TO PRODUCE APPROPRIATE VALUES
+                    # I.E. BETWEEN 25 AND 65 MICROTESLAS AT EARTHS SURFACE ACCORDING TO WIKIPEDIA
+                    (mx, my, mz) = [(mx, my, mz)[j] * Am_rx.mag_asas[i][j] for j in range(3)]
+                    (mx, my, mz) = map(self.raw_mag_to_microteslas, (mx, my, mz))
+
+
+
+
+                    # SOMETIMES WE GET ALL ZEROS (I THINK BECAUSE IMU IS BUSY)
                     # BUT ALL ZEROS WILL BREAK DATA PROCESSING, SO...
 
                     new_accel = [ax, ay, az]
@@ -382,6 +414,8 @@ class Am_rx(PyQt5.QtCore.QObject):
 
                     # IF ZEROS ARE OK, COULD JUST DO THIS INSTEAD
                     #sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
+
+
 
                 (self.trigger_state,) = struct.unpack('>?', received[22:23])
 

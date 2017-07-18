@@ -224,7 +224,6 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         logging.info("running " + algorithm + "\n")
 
         if (self.data.has_data()):
-            #[solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(self.basis_vector, self.data)
 
             for i in range(0, self.data.num_imus):
 
@@ -282,7 +281,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         # THIS CODE COPIED FROM AM_GUI, THERE MUST BE A BETTER WAY
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", filter="*.hdf5;;*.csv", options=options)
+        filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", filter="*.csv;;*.hdf5", options=options)
 
         if filename:
             filename = str(filename)
