@@ -116,6 +116,9 @@ class Am_data(PyQt5.QtCore.QObject):
 
 
 
+    def as_list_of_triples(self, imu_index, mode):
+        return list(zip(*self.imu_data['imus'][imu_index][mode]))
+
 
     ##################################################
     #            LOAD AND SAVE FILES                 #
@@ -196,9 +199,13 @@ class Am_data(PyQt5.QtCore.QObject):
                 imu = self.imu_data['imus'][i]
                 extension = "" if i < 1 else str(i + 1)
 
-                save_data.create_dataset('Accel' + extension, data=list(zip(*self.imu_data['imus'][i]['accel'])))
-                save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.imu_data['imus'][i]['gyro'])))
-                save_data.create_dataset('Mag'   + extension, data=list(zip(*self.imu_data['imus'][i]['mag'])))
+                #save_data.create_dataset('Accel' + extension, data=list(zip(*self.imu_data['imus'][i]['accel'])))
+                #save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.imu_data['imus'][i]['gyro'])))
+                #save_data.create_dataset('Mag'   + extension, data=list(zip(*self.imu_data['imus'][i]['mag'])))
+
+                save_data.create_dataset('Accel' + extension, data=self.as_list_of_triples(i, 'accel'))
+                save_data.create_dataset('Gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
+                save_data.create_dataset('Mag' + extension, data=self.as_list_of_triples(i, 'mag'))
 
             if (Am_data.USE_ENCODER):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])

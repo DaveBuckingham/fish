@@ -1,5 +1,6 @@
 import os
 
+import numpy
 import PyQt5.QtCore
 import PyQt5.QtGui
 import logging
@@ -31,7 +32,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         self.get_basis = Am_get_basis()
 
-        self.process_data = Am_process()
+        self.process = Am_process()
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
@@ -46,6 +47,10 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         self.process_algorithm = ""
 
         self.filename_list = []
+
+        self.calib_initial_gravity = None
+        self.calib_still_accel = None
+        self.calib_still_gyro = None
 
         
 
@@ -143,8 +148,8 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         radio.clicked.connect(lambda: self.set_algorithm('integrate'))
         algorithm_layout.addWidget(radio)
 
-        radio = PyQt5.QtGui.QRadioButton("Extended Kalman")
-        radio.clicked.connect(lambda: self.set_algorithm('ekf'))
+        radio = PyQt5.QtGui.QRadioButton("DSF")
+        radio.clicked.connect(lambda: self.set_algorithm('dsf'))
         algorithm_layout.addWidget(radio)
 
         algorithm_box.setLayout(algorithm_layout)
@@ -208,7 +213,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         self.batch_output_filetype = "input"
 
     def set_algorithm(self, name):
-        if (name == 'madgwick' or name == 'integrate' or name == 'ekf'):
+        if (name == 'madgwick' or name == 'integrate' or name == 'dsf'):
             self.process_algorithm = name
 
 
@@ -227,10 +232,24 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
             for i in range(0, self.data.num_imus):
 
-                [solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(self.basis_vector,
-                                                                                             self.data.imu_data['timestamps'],
-                                                                                             self.data.imu_data['imus'][i]['accel'],
-                                                                                             self.data.imu_data['imus'][i]['gyro'])
+                if (algorithm == 'integrate'):
+                    filter_samples = 10
+                    (solution_accel, solution_gyro) = self.process.get_orientation_integrate(self.basis_vector, self.data, filter_samples)
+
+                elif (algorithm == 'madgwick'):
+                    filter_samples = 10
+                    (solution_accel, solution_gyro) = self.process.get_orientation_madgwick(self.basis_vector, self.data, filter_samples)
+
+                elif (algorithm == 'dsf'):
+                    filter_samples = 10
+                    ca = (1.0, 1.0, 1.0)
+                    (solution_accel, solution_gyro) = self.process.get_orientation_dsf(ca, self.calib_initial_gravity, self.basis_vector, self.calib_still_accel, self.calib_still_gyro, self.data, filter_samples)
+
+                
+                else:
+                    logging.error("invalid algorithm: " + algorithm)
+                    return
+
                 assert(len(self.data.imu_data['timestamps']) == len(solution_accel))
                 assert(len(self.data.imu_data['timestamps']) == len(solution_gyro))
 
@@ -240,12 +259,6 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
                         self.data.imu_data['imus'][i]['accel'][k][j] = solution_accel[j][k]
                         self.data.imu_data['imus'][i]['gyro'][k][j]  = solution_gyro[j][k]
 
-#           for i in range(0, len(self.data.imu_data['timestamps'])):
-#               for j in range(0, len(self.data.imu_data['imus'])):
-#                   for k in range(0, 3):
-#                       self.data.imu_data['imus'][j]['accel'][k][i] *= -2
-#                       self.data.imu_data['imus'][j]['gyro'][k][i] *= -1
-#                       self.data.imu_data['imus'][j]['mag'][k][i] *= 2
 
 
     def process_multiple_datasets(self, algorithm):
@@ -278,9 +291,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         calib_data = Am_data()
 
-        # THIS CODE COPIED FROM AM_GUI, THERE MUST BE A BETTER WAY
-        options = PyQt5.QtGui.QFileDialog.Options()
-        options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
+        options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
         filename, filetype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", filter="*.csv;;*.hdf5", options=options)
 
         if filename:
@@ -297,16 +308,29 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             else:
                 self.error_signal.emit("invalid file type: " + filetype + "\n")
                 return
+        else:
+            return
 
-        basis_vector = self.get_basis.get_calib_values(calib_data)
+        intervals = self.get_basis.get_intervals(calib_data)
+        basis_vector = numpy.array(self.get_basis.get_basis_vector(calib_data, intervals))
 
-        if basis_vector:
+
+        if (basis_vector is not None):
             logging.info("extracted basis vector:\n" + str(basis_vector[0]) + "\n" + str(basis_vector[1]) + "\n" + str(basis_vector[2]))
             self.basis_vector = basis_vector
+            
+            still_start = intervals[0][0]
+            still_end = intervals[0][1]
+
+            calib_accel = calib_data.as_list_of_triples(0, 'accel')
+            calib_gyro = calib_data.as_list_of_triples(0, 'gyro')
+
+            self.calib_initial_gravity = numpy.mean(calib_accel[still_start:still_end], axis=0)
+            self.calib_still_accel = numpy.array(calib_accel[still_start:still_end])
+            self.calib_still_gyro = numpy.array(calib_gyro[still_start:still_end])
         else:
             logging.error("failed to extract basis vector")
 
-        #[solution_accel, solution_gyro] = self.process_data.get_orientation_madgwick(basis_vector, self.data)
 
 
         
