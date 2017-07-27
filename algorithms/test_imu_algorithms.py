@@ -71,7 +71,7 @@ class IMU_test_data(IMU):
         dt = self.t[1] - self.t[0]
         t = np.arange(0, duration, dt)
 
-        n1 = np.floor(d1/dt)
+        n1 = int(np.floor(d1/dt))
 
         Rt = np.vstack((np.tile(R1[np.newaxis, :, :], (n1, 1, 1)),
                        np.tile(R2[np.newaxis, :, :], (n1, 1, 1)),
@@ -282,51 +282,67 @@ def main():
         ax1.set_ylabel(lab)
     ax[0].set_title('True')
 
+    imu.filter(nsamp=10, method='running')
+
+    imu.calibrate(duration=30.0)
+    imu.get_inertial_coords(duration=30.0)
     imu.get_world_coordinates(duration=30.0)
 
-    imu.filter(method='butter', order=5, gyro_cutoff=(0.1, 10), acc_cutoff=(0, 30))
+    imu.get_orientation(method='dsf', Ca=(0.0, 0.0, 0.0))
+    orient_dsf1 = np.rad2deg(copy(imu.orient_sensor))
+    accd1 = copy(imu.accdyn)
 
-    imu.get_orientation(method='valenti', gain=1.0, gainrange=None)     # should be strictly accelerometer
-    qorient_vala = copy(imu.qorient)
-    orient_vala = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_vala])
+    fig, ax = plt.subplots(3,1)
+    for o1, ax1, lab in zip(np.rollaxis(orient_dsf1, 1), ax, ['roll', 'pitch', 'yaw']):
+        ax1.plot(imu.t, np.unwrap(o1), label='ekf')
+        ax1.set_ylabel(lab)
+    ax[0].set_title('EKF')
 
-    imu.get_orientation(method='valenti', gain=0.0, gainrange=None)     # should be strictly gyro
-    qorient_valg = copy(imu.qorient)
-    orient_valg = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valg])
-
-    imu.get_orientation(method='valenti', gain=0.5, gainrange=None)     # should be in between
-    qorient_valfix = copy(imu.qorient)
-    orient_valfix = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valfix])
-    alphafix = copy(imu.alpha)
-
-    imu.get_orientation(method='valenti', gain=1.0, gainrange=(0.0, 0.02))     # should be in between
-    qorient_valadapt = copy(imu.qorient)
-    orient_valadapt = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valadapt])
-    alphaadapt = copy(imu.alpha)
-
-    imu.get_orientation(method='integrate_gyro')     # should also be strict gyro integration
-    qorient_gyro = copy(imu.qorient)
-    orient_gyro = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_gyro])
-
-    fig, ax = plt.subplots(5,1)
-    ax[0].plot(imu.t, np.rad2deg(orient_valg[:, 1]), 'b-',
-               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
-    ax[0].set_ylabel('Gyro')
-
-    ax[1].plot(imu.t, np.rad2deg(orient_vala[:, 1]), 'g-',
-               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
-    ax[1].set_ylabel('Acc')
-
-    ax[2].plot(imu.t, np.rad2deg(orient_valfix[:, 1]), 'r-',
-               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
-    ax[2].set_ylabel('Fixed')
-
-    ax[3].plot(imu.t, np.rad2deg(orient_valadapt[:, 1]), 'm-',
-               imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
-    ax[3].set_ylabel('Adapt')
-
-    ax[4].plot(imu.t, np.linalg.norm(imu.acc, axis=1))
-    ax[4].set_ylabel('Acc mag')
+    # imu.get_world_coordinates(duration=30.0)
+    #
+    # imu.filter(method='butter', order=5, gyro_cutoff=(0.1, 10), acc_cutoff=(0, 30))
+    #
+    # imu.get_orientation(method='valenti', gain=1.0, gainrange=None)     # should be strictly accelerometer
+    # qorient_vala = copy(imu.qorient)
+    # orient_vala = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_vala])
+    #
+    # imu.get_orientation(method='valenti', gain=0.0, gainrange=None)     # should be strictly gyro
+    # qorient_valg = copy(imu.qorient)
+    # orient_valg = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valg])
+    #
+    # imu.get_orientation(method='valenti', gain=0.5, gainrange=None)     # should be in between
+    # qorient_valfix = copy(imu.qorient)
+    # orient_valfix = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valfix])
+    # alphafix = copy(imu.alpha)
+    #
+    # imu.get_orientation(method='valenti', gain=1.0, gainrange=(0.0, 0.02))     # should be in between
+    # qorient_valadapt = copy(imu.qorient)
+    # orient_valadapt = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_valadapt])
+    # alphaadapt = copy(imu.alpha)
+    #
+    # imu.get_orientation(method='integrate_gyro')     # should also be strict gyro integration
+    # qorient_gyro = copy(imu.qorient)
+    # orient_gyro = np.array([imu._rotm2eul(quaternion.as_rotation_matrix(q1)) for q1 in qorient_gyro])
+    #
+    # fig, ax = plt.subplots(5,1)
+    # ax[0].plot(imu.t, np.rad2deg(orient_valg[:, 1]), 'b-',
+    #            imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    # ax[0].set_ylabel('Gyro')
+    #
+    # ax[1].plot(imu.t, np.rad2deg(orient_vala[:, 1]), 'g-',
+    #            imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    # ax[1].set_ylabel('Acc')
+    #
+    # ax[2].plot(imu.t, np.rad2deg(orient_valfix[:, 1]), 'r-',
+    #            imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    # ax[2].set_ylabel('Fixed')
+    #
+    # ax[3].plot(imu.t, np.rad2deg(orient_valadapt[:, 1]), 'm-',
+    #            imu.t, np.rad2deg(imu.orient_imu_true[:, 1]), 'k--')
+    # ax[3].set_ylabel('Adapt')
+    #
+    # ax[4].plot(imu.t, np.linalg.norm(imu.acc, axis=1))
+    # ax[4].set_ylabel('Acc mag')
 
     plt.show(block=True)
 

@@ -220,10 +220,10 @@ class IMU(object):
 
         Estimates the orientation as roll, pitch, yaw and the dynamic acceleration.
 
-        Three algorithms are implemented: 'madgwick', 'integrate_gyro', 'ekf', 'valenti'.
+        Three algorithms are implemented: 'madgwick', 'integrate_gyro', 'dsf', 'valenti'.
 
         Arguments:
-            method - Algorithm ('madgwick', 'integrate_gyro', or 'ekf')
+            method - Algorithm ('madgwick', 'integrate_gyro', or 'dsf')
             initwindow - Initial time window to average to get the initial orientation.
             beta - Madgwick beta parameter. beta=0 is equivalent to integrating the gyros
             lCa - log10 of the Ca parameter.  Makes it easier to give values for Ca that are close to but not
@@ -240,13 +240,13 @@ class IMU(object):
             epsilon - Accelerometer interpolation parameter. Default = 0.9
         """
 
-        if method.lower() == 'ekf':
+        if method.lower() == 'dsf':
             dt = np.mean(np.diff(self.t))
             if Ca is None:
                 Ca = np.power(10, np.array(lCa)) / dt
             else:
                 Ca = np.array(Ca) / dt
-            self._get_orientation_ekf(Ca=Ca)
+            self._get_orientation_dsf(Ca=Ca)
 
             g0 = np.array([0, 0, 1.0])
 
@@ -337,6 +337,11 @@ class IMU(object):
         # bias noise covariance (assuming low drift)
         self.Qbias = 1e-10 * self.Qacc
 
+        # dynamic acceleration covariance
+        # this may be wrong
+        self.Qdyn = self._stack_matrices([[self.Qacc, np.zeros((3,3))],
+                                          [np.zeros((3,3)), self.Qacc]])
+
         # gyro noise
         self.gyro_noise = np.std(gyro, axis=0)
 
@@ -425,27 +430,26 @@ class IMU(object):
 
         return V
 
-    def _get_orientation_ekf(self, Ca):
-        """Extended Kalman filter for sensor fusion
+    def _get_orientation_dsf(self, Ca):
+        """Dynamic snap free Kalman filter for sensor fusion
         x is the state: [theta, bias, adyn]^T
         where theta are the Euler """
-        if self.Qbias is None or self.Qgyro is None or self.Qacc is None:
+        if self.Qbias is None or self.Qgyro is None or self.Qacc is None or self.Qdyn is None:
             raise ValueError('Noise covariance is not yet estimated')
         if self.gN is None:
             raise ValueError('Inertial reference frame is not yet set')
 
-        self.Qdyn = np.diag(Ca).dot(self.Qacc)
-
-        xkm1 = np.zeros((9,))
+        xkm1 = np.zeros((12,))
+        xkm1[-3:] = Ca
         dt = np.diff(self.t)
         dt = np.insert(dt, 0, dt[0:0])
         dt1 = dt[0]
 
         # make 9 x 9 matrix
         Pkm1 = self._stack_matrices([
-            [(self.Qgyro + self.Qbias)*dt1**2,  -self.Qbias*dt1,    np.zeros((3, 3))],
-            [-self.Qbias*dt1,                   self.Qbias,         np.zeros((3, 3))],
-            [np.zeros((3, 3)),                  np.zeros((3, 3)),   self.Qdyn]])
+            [(self.Qgyro + self.Qbias)*dt1**2,  -self.Qbias*dt1,    np.zeros((3, 6))],
+            [-self.Qbias*dt1,                   self.Qbias,         np.zeros((3, 6))],
+            [np.zeros((6, 3)),                  np.zeros((6, 3)),   self.Qdyn]])
 
         N = self.gyro.shape[0]
 
@@ -463,9 +467,9 @@ class IMU(object):
             Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1, Ca)
 
             Qk = self._stack_matrices([
-                [Bk.dot(self.Qgyro + self.Qbias).dot(Bk.T)*dt1**2,    -Bk.dot(self.Qbias)*dt1,  np.zeros((3,3))],
-                [-self.Qbias.dot(Bk.T)*dt1,                           self.Qbias,               np.zeros((3,3))],
-                [np.zeros((3,3)),                                     np.zeros((3,3)),          self.Qdyn]])
+                [Bk.dot(self.Qgyro + self.Qbias).dot(Bk.T)*dt1**2,    -Bk.dot(self.Qbias)*dt1,  np.zeros((3, 6))],
+                [-self.Qbias.dot(Bk.T)*dt1,                           self.Qbias,               np.zeros((3, 6))],
+                [np.zeros((6, 6)),                                                              self.Qdyn]])
 
             PkM = Fk.dot(Pkm1).dot(Fk.T) + Qk
             hk, Jh = self._observation_dynamics(xkM, self.gN)
@@ -475,21 +479,25 @@ class IMU(object):
             Sk = Hk.dot(PkM).dot(Hk.T) + Rk
             Kk = PkM.dot(Hk.T).dot(np.linalg.pinv(Sk))
             xk = xkM + Kk.dot(accel - hk)
-            Pk = (np.eye(9) - Kk.dot(Hk)).dot(PkM)
+            Pk = (np.eye(12) - Kk.dot(Hk)).dot(PkM)
 
             QT = self._eul2rotm(xk[:3])
 
             eulerEKF.append(xk[:3])
-            aD.append(QT.T.dot(xk[6:]))
-            err.append(accel - ((QT.dot(self.gN) + xk[6:])))
+            aD.append(QT.T.dot(xk[6:9]))
+            err.append(accel - ((QT.dot(self.gN) + xk[6:9])))
             PkEKF.append(Pk)
             xkEKF.append(xk)
 
             Pkm1 = Pk
             xkm1 = xk
 
+        xkEKF = np.array(xkEKF)
+
         self.orient_sensor = np.pad(np.array(eulerEKF), ((1, 0), (0, 0)), mode='edge')
         self.accdyn_sensor = np.pad(np.array(aD), ((1, 0), (0, 0)), mode='edge')
+        self.jerk_sensor = np.pad(xkEKF[:, 6:9], ((1, 0), (0, 0)), mode='edge')
+        self.snap_sensor = np.pad(xkEKF[:, 9:], ((1, 0), (0, 0)), mode='edge')
 
         qorient = []
         for o1 in self.orient_sensor:
@@ -527,12 +535,16 @@ class IMU(object):
                              np.dot(Bk_theta, unbiased_omegak),
                              np.dot(Bk_psi, unbiased_omegak)))
 
-        Fk = self._stack_matrices([
-            [np.eye(3) + Bkomega*dt, -Bk*dt, np.zeros((3,3))],
-            [np.zeros((3, 3)), np.eye(3), np.zeros((3, 3))],
-            [np.zeros((3, 3)), np.zeros((3, 3)), np.eye(3)]])
+        jerk = xk[9:]
 
-        xkp1 = np.hstack((xk[:3] + np.dot(Bk, unbiased_omegak).squeeze()*dt, xk[3:6], xk[6:] + Ca*dt))
+        Fk = self._stack_matrices([
+            [np.eye(3) + Bkomega*dt, -Bk*dt, np.zeros((3, 6))],
+            [np.zeros((3, 3)), np.eye(3), np.zeros((3, 6))],
+            [np.zeros((3, 6)), np.eye(3), np.eye(3)*dt],
+            [np.zeros((3, 6)), np.zeros((3, 3)), np.eye(3)]])
+
+        xkp1 = np.hstack((xk[:3] + np.dot(Bk, unbiased_omegak).squeeze()*dt, xk[3:6],
+                          xk[6:9] + jerk*dt, xk[9:]))
 
         return Fk, xkp1, Bk
 
@@ -567,8 +579,9 @@ class IMU(object):
         QT_pitch = Rx_roll.dot(Ry_pitch_rate).dot(Rz_yaw)
         QT_yaw   = Rx_roll.dot(Ry_pitch).dot(Rz_yaw_rate)
 
-        Jh = np.vstack((QT_roll.dot(gN), QT_pitch.dot(gN), QT_yaw.dot(gN), np.zeros((3, 3)), np.eye(3))).T
-        hk = QT.dot(gN) + xk[6:]
+        Jh = np.vstack((QT_roll.dot(gN), QT_pitch.dot(gN), QT_yaw.dot(gN), np.zeros((3, 3)),
+                        np.eye(3), np.zeros((3, 3)))).T
+        hk = QT.dot(gN) + xk[6:9]
 
         return hk, Jh
 
@@ -880,44 +893,31 @@ def main():
     # fig, ax = plt.subplots()
     # ax.plot(t, enc)
 
-    orient_ekf1 = copy(imu.get_orientation(method='ekf', lCa=(0.0, -0.3, -0.7)))
+    imu.get_orientation(method='dsf', Ca=(0.0, 0.0, 0.0))
+    orient_dsf = copy(imu.orient_world)
     accd1 = copy(imu.accdyn)
-    orient_ekf2 = copy(imu.get_orientation(method='ekf', lCa=(3.0, 3.0, 3.0)))
-    accd2 = copy(imu.accdyn)
-    orient_ekf3 = copy(imu.get_orientation(method='ekf', lCa=(0.0, 0.0, 0.0)))
-    accd3 = copy(imu.accdyn)
-    orient_ekf4 = copy(imu.get_orientation(method='ekf', lCa=(-5.0, -5.0, -5.0)))
-    accd4 = copy(imu.accdyn)
 
-    orient_mad = imu.get_orientation(method='madgwick')
-    orient_gyro = imu.get_orientation(method='integrate_gyro')
+    imu.get_orientation(method='madgwick')
+    orient_mad = copy(imu.orient_world)
+    imu.get_orientation(method='integrate_gyro')
+    orient_gyro = copy(imu.orient_world)
 
     enc -= enc[0]
+    enc = -enc
 
     fig, ax = plt.subplots()
     ax.plot(t, enc, label='encoder')
-    ax.plot(imu.t, np.rad2deg(orient_ekf1[:, 0]), label='ekf')
+    ax.plot(imu.t, np.rad2deg(orient_dsf[:, 0]), label='dsf')
     ax.plot(imu.t, np.rad2deg(orient_mad[:, 0]), label='madgwick')
     ax.plot(imu.t, np.rad2deg(orient_gyro[:, 0]), label='gyro')
     ax.legend()
 
-    fig, ax = plt.subplots(2, 1)
-    ax[0].plot(t, enc, label='encoder')
-    ax[0].plot(t, np.rad2deg(orient_ekf2[:,0]), label='Ca=1000')
-    ax[0].plot(t, np.rad2deg(orient_ekf3[:,0]), label='Ca=1')
-    ax[0].plot(t, np.rad2deg(orient_ekf4[:,0]), label='Ca=0.01')
-
-    ax[1].plot(t, np.rad2deg(orient_ekf2[:,0])-enc, label='Ca=1000')
-    ax[1].plot(t, np.rad2deg(orient_ekf3[:,0])-enc, label='Ca=1')
-    ax[1].plot(t, np.rad2deg(orient_ekf4[:,0])-enc, label='Ca=0.01')
-    ax[1].legend()
-
     fig, ax = plt.subplots()
-    ax.plot(t, accd2[:, 0], label='Ca=1000')
-    ax.plot(t, accd3[:, 0], label='Ca=1')
-    ax.plot(t, accd4[:, 0], label='Ca=0.01')
+    ax.plot(imu.t, np.rad2deg(orient_dsf[:, 0]) - enc, label='dsf')
+    ax.plot(imu.t, np.rad2deg(orient_mad[:, 0]) - enc, label='madgwick')
+    ax.plot(imu.t, np.rad2deg(orient_gyro[:, 0]) - enc, label='gyro')
+    ax.set_title('Error')
     ax.legend()
-
 
     plt.show(block=True)
 
