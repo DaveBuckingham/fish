@@ -83,6 +83,12 @@ class Am_data(PyQt5.QtCore.QObject):
                 self.imu_data['imus'][i]['mag'][1].append(sample[1][i][2][1])
                 self.imu_data['imus'][i]['mag'][2].append(sample[1][i][2][2])
 
+                # print(i)
+                # print(sample[1][i][0])
+                # print(sample[1][i][1])
+                # print(sample[1][i][2])
+                # print()
+
 
             if (Am_data.USE_ENCODER):
                 self.imu_data['encoder'].append(sample[2])

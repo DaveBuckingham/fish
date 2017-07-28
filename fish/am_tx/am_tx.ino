@@ -594,16 +594,16 @@ void read_sample(){
     uint8_t i;
     uint8_t j;
 
+    // COULD SKIP THIS TO SAVE TIME
     for (j=0; j < response_len; j++) {
         response[j] = 0;
     }
 
     j = 0;
 
-    // COULD SPEED THING UP BY REMOVING SAMPLE IDS...
-    // OR EVEN JUST USING 2 BYTES INSTEAD OF 4
-    
     // SAMPLE ID
+    // COULD SPEED THING UP BY REMOVING SAMPLE IDS...
+    // OR USE 2 BYTES INSTEAD OF 4
     response[j++] = next_sample_id >> 24;
     response[j++] = next_sample_id >> 16;
     response[j++] = next_sample_id >> 8;

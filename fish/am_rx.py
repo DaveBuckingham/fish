@@ -347,9 +347,9 @@ class Am_rx(PyQt5.QtCore.QObject):
 
         #sample_index = 0
 
-        last_accel = [0, 0, 0]
-        last_gyro  = [0.0, 0.0,0.0]
-        last_mag   = [0.0, 0.0,0.0]
+        last_accel = [0.0, 0.0, 0.0]
+        last_gyro  = [0.0, 0.0, 0.0]
+        last_mag   = [0.0, 0.0, 0.0]
 
         timestamp = 0
         while (self.recording):
@@ -374,8 +374,17 @@ class Am_rx(PyQt5.QtCore.QObject):
 
                 for i in (range(0, self.data.num_imus)):
 
-                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
-                    (mx, my, mz) = struct.unpack('<hhh', received[16:22]) # BIG ENDIAN
+
+                    accel_start = 4 + (i * 18)
+                    mag_start   = 16 + (i * 18)
+                    mag_end     = 22 + (i * 18)
+
+                    # ACCEL AND GYRO ARE LITTLE ENDIAN
+                    #(ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[4:16])
+                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[accel_start:mag_start])
+
+                    # MAG IS BIG ENDIAN
+                    (mx, my, mz) = struct.unpack('<hhh', received[mag_start:mag_end])
 
                     # CONVERT RAW MEASUREMENTS TO OUR FAVORITE UNITS
                     (ax, ay, az) = map(self.raw_accel_to_meters_per_second_squared, (ax, ay, az))
@@ -389,41 +398,42 @@ class Am_rx(PyQt5.QtCore.QObject):
                     (mx, my, mz) = map(self.raw_mag_to_microteslas, (mx, my, mz))
 
 
-
-
                     # SOMETIMES WE GET ALL ZEROS (I THINK BECAUSE IMU IS BUSY)
                     # BUT ALL ZEROS WILL BREAK DATA PROCESSING, SO...
 
-                    new_accel = [ax, ay, az]
-                    if (ax == 0 and ay == 0 and az == 0):
-                        new_accel = last_accel
+                    #  new_accel = [ax, ay, az]
+                    #  if (ax == 0 and ay == 0 and az == 0):
+                    #      new_accel = last_accel
 
-                    new_gyro = [gx, gy, gz]
-                    if (gx == 0.0 and gy == 0.0 and gz == 0.0):
-                        new_gyro = last_gyro
+                    #  new_gyro = [gx, gy, gz]
+                    #  if (gx == 0.0 and gy == 0.0 and gz == 0.0):
+                    #      new_gyro = last_gyro
 
-                    new_mag = [mx, my, mz]
-                    if (mx == 0.0 and my == 0.0 and mz == 0.0):
-                        new_mag = last_mag
+                    #  new_mag = [mx, my, mz]
+                    #  if (mx == 0.0 and my == 0.0 and mz == 0.0):
+                    #      new_mag = last_mag
 
-                    last_accel = new_accel
-                    last_gyro  = new_gyro
-                    last_mag   = new_mag
+                    #  last_accel = new_accel
+                    #  last_gyro  = new_gyro
+                    #  last_mag   = new_mag
 
-                    sample[1].append([new_accel, new_gyro, new_mag])
+                    #  sample[1].append([new_accel, new_gyro, new_mag])
 
                     # IF ZEROS ARE OK, COULD JUST DO THIS INSTEAD
-                    #sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
+                    sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
 
 
-                (self.trigger_state,) = struct.unpack('>?', received[22:23])
+                trigger_start = 4 + (self.data.num_imus * 18)
+                # ONE BYTE FOR TRIGGER
+                (self.trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
 
                 if (self.settings.invert_trigger):
                     self.trigger_state = not self.trigger_state
 
                 if (Am_rx.USE_ENCODER):
-                    (enc,) = struct.unpack('>h', received[23:25])
+                    # TWO BYTES FOR ENCODER
+                    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
                     enc *= 0.3515625  # 360/1024
                     sample.append(enc)
 
