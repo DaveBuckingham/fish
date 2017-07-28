@@ -18,7 +18,8 @@ except ImportError:
 
 class Am_rx(PyQt5.QtCore.QObject):
 
-    USE_ENCODER = False
+    #USE_ENCODER = False
+    USE_ENCODER = True
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -434,6 +435,7 @@ class Am_rx(PyQt5.QtCore.QObject):
                     # TWO BYTES FOR ENCODER
                     (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
                     enc *= 0.3515625  # 360/1024
+                    print(enc)
                     sample.append(enc)
 
                 self.data.add_sample(sample, self.settings.data_buffer_len)
