@@ -4,10 +4,6 @@ toggle units:
     m/s^2 vs Gs for accelerometer
     radians/sec vs degs/sec for gyro
 
-add scipy to install
-
-"invalid input string" when loading a file
-
 update author names in setup.py
 
 am_data.py line 65, change assert to error message
@@ -21,8 +17,6 @@ what happens if recording starts with trigger on? make sure
 its correct in the manual
 
 fewer messages in textbox
-
-fix magnetometer.....
 
 downsample plotting data when it gets big so no slowdown
 
@@ -45,10 +39,6 @@ global class:
     last search path
     disable/enable format
 
-cant plot for very long...
-
-segfault on exit with python3
-
 when loading file, check for correctness
 
 fix behavior on "rx failed"
@@ -67,17 +57,8 @@ tests:
     magnetometer
 
 
-
-
-
-
 DONE
 
 need to include in documentation: random trigger values if unplugged.
-
-JERRY TEST:
-buffer: print seconds too
-legend line colors
-trigger state indicator
 
 replot after process
