@@ -49,7 +49,14 @@ class Am_data(PyQt5.QtCore.QObject):
         self.data_lock[0] = True
         self.imu_data = {}
         self.imu_data['timestamps'] = []
-        self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * num_imus
+
+        # THIS DOESN'T WORK! * OPERATOR DOESN'T CREATE SEPARATE OBJECTS
+        #self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * num_imus
+
+        # THIS WORKS
+        self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]} for i in range(num_imus)]
+
+
         if (Am_data.USE_ENCODER):
             self.imu_data['encoder'] = []
         self.data_lock[0] = False
@@ -71,23 +78,17 @@ class Am_data(PyQt5.QtCore.QObject):
             self.imu_data['timestamps'].append(sample[0])
 
             for i in (range(0, self.num_imus)):
-                self.imu_data['imus'][i]['accel'][0].append(sample[1][i][0][0])
-                self.imu_data['imus'][i]['accel'][1].append(sample[1][i][0][1])
-                self.imu_data['imus'][i]['accel'][2].append(sample[1][i][0][2])
+                (self.imu_data['imus'][i]['accel'][0]).append(sample[1][i][0][0])
+                (self.imu_data['imus'][i]['accel'][1]).append(sample[1][i][0][1])
+                (self.imu_data['imus'][i]['accel'][2]).append(sample[1][i][0][2])
 
-                self.imu_data['imus'][i]['gyro'][0].append(sample[1][i][1][0])
-                self.imu_data['imus'][i]['gyro'][1].append(sample[1][i][1][1])
-                self.imu_data['imus'][i]['gyro'][2].append(sample[1][i][1][2])
+                (self.imu_data['imus'][i]['gyro'][0]).append(sample[1][i][1][0])
+                (self.imu_data['imus'][i]['gyro'][1]).append(sample[1][i][1][1])
+                (self.imu_data['imus'][i]['gyro'][2]).append(sample[1][i][1][2])
 
-                self.imu_data['imus'][i]['mag'][0].append(sample[1][i][2][0])
-                self.imu_data['imus'][i]['mag'][1].append(sample[1][i][2][1])
-                self.imu_data['imus'][i]['mag'][2].append(sample[1][i][2][2])
-
-                # print(i)
-                # print(sample[1][i][0])
-                # print(sample[1][i][1])
-                # print(sample[1][i][2])
-                # print()
+                (self.imu_data['imus'][i]['mag'][0]).append(sample[1][i][2][0])
+                (self.imu_data['imus'][i]['mag'][1]).append(sample[1][i][2][1])
+                (self.imu_data['imus'][i]['mag'][2]).append(sample[1][i][2][2])
 
 
             if (Am_data.USE_ENCODER):

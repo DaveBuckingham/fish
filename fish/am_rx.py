@@ -356,7 +356,6 @@ class Am_rx(PyQt5.QtCore.QObject):
 
             (received, message_type) = self.rx_packet()
 
-
             if ((message_type == Am_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
                 #timestamp = (time.time() * 1000) - start_time
