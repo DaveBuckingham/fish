@@ -138,18 +138,17 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         algorithm_layout = PyQt5.QtGui.QVBoxLayout()
         algorithm_box = PyQt5.QtGui.QGroupBox("Integration algorithm")
 
+        radio = PyQt5.QtGui.QRadioButton("DSF")
+        radio.clicked.connect(lambda: self.set_algorithm('dsf'))
+        algorithm_layout.addWidget(radio)
+        radio.click()  # OUR'S IS THE BEST...
 
         radio = PyQt5.QtGui.QRadioButton("Madgwick")
         radio.clicked.connect(lambda: self.set_algorithm('madgwick'))
         algorithm_layout.addWidget(radio)
-        radio.click()
 
         radio = PyQt5.QtGui.QRadioButton("Simple integration")
         radio.clicked.connect(lambda: self.set_algorithm('integrate'))
-        algorithm_layout.addWidget(radio)
-
-        radio = PyQt5.QtGui.QRadioButton("DSF")
-        radio.clicked.connect(lambda: self.set_algorithm('dsf'))
         algorithm_layout.addWidget(radio)
 
         algorithm_box.setLayout(algorithm_layout)

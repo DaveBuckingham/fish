@@ -1,5 +1,9 @@
 TODO:
 
+gui user can specify filter number of samples
+
+hdf5 section names: remove capse, t -> time
+
 toggle units:
     m/s^2 vs Gs for accelerometer
     radians/sec vs degs/sec for gyro

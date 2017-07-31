@@ -1,6 +1,4 @@
 
-
-
 // Has been tested on Arduino UNO.
 // Will likely work on other models with same (16mhz) clock speed (i.e. not Mega).
 // "imu" = MPU-9250 by InvenSense.
@@ -11,32 +9,38 @@
 
 // Wiring arduino to imus:
 //
-//    ARDUINO     PIN      IMU        COLOR
-//    
-//     CS1        8        NCS        WHITE/CLEAR
-//     CS2        9        NCS        WHITE/CLEAR
-//     CS3        10       NCS        WHITE/CLEAR
-//     MOSI       11       SDA/MOSI   GREEN
-//     MISO       12       AD0/MISO   BLUE
-//     SCK        13       SCL        YELLOW
-//     TRIGGER    4
+//    ARDUINO    PIN      IMU        COLOR
+//    ------------------------------------------
+//    POWER      3.3V     VCC        RED
+//    GROUND     GND      GND        BLACK
+//    CS1        8        NCS        WHITE/CLEAR
+//    CS2        9        NCS        WHITE/CLEAR
+//    CS3        10       NCS        WHITE/CLEAR
+//    MOSI       11       SDA/MOSI   GREEN
+//    MISO       12       AD0/MISO   BLUE
+//    SCK        13       SCL        YELLOW
+//    TRIGGER    4
 //
 // MOSI, MISO, and SCK pins are specified by the arduino spi library.
-// Chip selects CS1 and CS2 are specified in this code (IMU_SELECT[]).
+// Chip selects (CS*) are specified in this code (IMU_SELECT[]).
 
 // encoder (optional)
+//
+// We used this encoder to measure imu movements for testing our code and comparing algorithms
+// If the encoder parts of the code are all turned on, we can record from the encoder
+// at the same time as the IMUs and store encoder data in the saved data files.
 //
 // EMS22A30
 // C28-MS6
 // 1309M MEX
 //
-//    ENCODER                ARDUINO
-//   
+//    ENCODER                  ARDUINO
+//    --------------------------------
 //    PIN1(red)   INPUT
 //    PIN2        CLOCK        5
-//    PIN3        GROUND
+//    PIN3        GROUND       GND
 //    PIN4        OUTPUT       6
-//    PIN5        VCC
+//    PIN5        VCC          5V
 //    PIN6        CS           7
 
 
@@ -53,7 +57,7 @@
 
 #define DEL                                       1 
 
-#define USE_ENCODER
+//#define USE_ENCODER
 
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
@@ -681,9 +685,9 @@ void stop_recording() {
     // DON'T DO THIS BECAUSE THEY NEVER SEEM TO WAKE UP AGAIN WITHOUT FIRST CUTTING POWER
 //  byte i;
 //  for (i=0; i < num_imus; i++) {
-//      //write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
-//      //write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
-//      //write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
+//      write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_CNTL1);
+//      write_register(imu_select[i], REG_I2C_SLV0_DO, 0x10);
+//      write_register(imu_select[i], REG_I2C_SLV0_CTRL, 0x01 | ENABLE_SLAVE_FLAG);
 //  }
 
 }

@@ -23,6 +23,8 @@ class Am_plot(pg.PlotWidget):
 
         self.MAX_SAMPLES = 1000   # approx.
 
+        self.setMinimumWidth(250)
+
 
         self.setClipToView(False)
         self.showGrid(True, True, 0.5)

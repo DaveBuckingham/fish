@@ -12,8 +12,8 @@ except ImportError:
 
 class Am_data(PyQt5.QtCore.QObject):
 
-    #USE_ENCODER = False
-    USE_ENCODER = True
+    USE_ENCODER = False
+    #USE_ENCODER = True
 
     mag_asas = []
 

@@ -54,16 +54,23 @@ class Am_process():
 
     def get_orientation_dsf(self, Ca_arg, initial_gravity, chip2world_rot, still_accel, still_gyro, data, filter_num_samples):
 
+        # GET ACC IN MPS2
         acc  = numpy.array(data.as_list_of_triples(0, 'accel'))
+
+        # GET GYRO IN RADIANS PER SEC
         gyro = numpy.array(data.as_list_of_triples(0, 'gyro'))
-        time = numpy.array(data.imu_data['timestamps'])
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
         gyro = self.filter(gyro, filter_num_samples)
 
+        # GET TIME IN MS
+        time = numpy.array(data.imu_data['timestamps'])
+
         # CONVERT TIME TO SECONDS
         time = time / 1000.0
+
+
 
 
         bias_gyro = numpy.mean(still_gyro, axis=0)
@@ -106,7 +113,6 @@ class Am_process():
 
             PkM = Fk.dot(Pkm1).dot(Fk.T) + Qk
             hk, Jh = self._observation_dynamics(xkM, initial_gravity)
-
 
             Sk = Jh.dot(PkM).dot(Jh.T) + accel_noise_covariance_q
             Kk = PkM.dot(Jh.T).dot(numpy.linalg.pinv(Sk))
@@ -151,9 +157,11 @@ class Am_process():
 
     def get_orientation_madgwick(self, chip2world_rot, data, filter_num_samples, initwindow=0.5, beta=2.86):
 
+        # GET ACC IN MPS2
         acc  = numpy.array(data.as_list_of_triples(0, 'accel'))
+
+        # GET GYRO IN RADIANS PER SEC
         gyro = numpy.array(data.as_list_of_triples(0, 'gyro'))
-        time = numpy.array(data.imu_data['timestamps'])
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -161,6 +169,9 @@ class Am_process():
 
         # CONVERT ACCEL DATA TO TO GS
         acc = acc / 9.81
+
+        # GET TIME IN MS
+        time = numpy.array(data.imu_data['timestamps'])
 
         # CONVERT TIME TO SECONDS
         time = time / 1000.0
@@ -227,7 +238,7 @@ class Am_process():
         qaccdyn_world = [(qchip2world.conj() * numpy.quaternion(0, *a1) * qchip2world) for a1 in accdyn_sensor]
         accdyn_world = [q.components[1:] for q in qaccdyn_world]
 
-        # COVNERT BACK TO MPS2
+        # CONVERT ACCEL DATA BACK TO MPS2
         accdyn_world = [i * 9.81 for i in accdyn_world]
 
         return (accdyn_world, orient_world)
@@ -248,18 +259,18 @@ class Am_process():
         tTh = numpy.tan(theta)
         scTh = 1 / numpy.cos(theta)
 
-        Bk = numpy.array([[1,  sPh*tTh,    cPh*tTh],
-                       [0,  cPh,        -sPh],
-                       [0,  sPh*scTh,   cPh*scTh]])
+        Bk     = numpy.array([[1,  sPh*tTh,    cPh*tTh  ],
+                              [0,  cPh,       -sPh      ],
+                              [0,  sPh*scTh,   cPh*scTh]])
 
         # partial diffs
-        Bk_phi = numpy.array([[0,  cPh*tTh,    -sPh*tTh],
-                           [0,  -sPh,       -cPh],
-                           [0,  cPh*scTh,   -sPh*scTh]])
+        Bk_phi = numpy.array([[0,  cPh*tTh,    -sPh*tTh ],
+                              [0, -sPh,        -cPh     ],
+                              [0,  cPh*scTh,   -sPh*scTh]])
 
-        Bk_theta = numpy.array([[0,    sPh*scTh**2,    cPh*scTh**2],
-                             [0,    0,              0],
-                             [0,    sPh*scTh*tTh,   cPh*scTh*tTh]])
+        Bk_theta = numpy.array([[0,    sPh*scTh**2,    cPh*scTh**2 ],
+                                [0,    0,              0           ],
+                                [0,    sPh*scTh*tTh,   cPh*scTh*tTh]])
 
         Bk_psi = numpy.zeros((3, 3))
 
@@ -267,8 +278,8 @@ class Am_process():
         unbiased_omegak = unbiased_omegak[:, numpy.newaxis]
 
         Bkomega = numpy.hstack((numpy.dot(Bk_phi, unbiased_omegak),
-                             numpy.dot(Bk_theta, unbiased_omegak),
-                             numpy.dot(Bk_psi, unbiased_omegak)))
+                                numpy.dot(Bk_theta, unbiased_omegak),
+                                numpy.dot(Bk_psi, unbiased_omegak)))
 
         Fk = self._stack_matrices([
             [numpy.eye(3) + Bkomega*dt, -Bk*dt, numpy.zeros((3,3))],
@@ -278,6 +289,7 @@ class Am_process():
         xkp1 = numpy.hstack((xk[:3] + numpy.dot(Bk, unbiased_omegak).squeeze()*dt, xk[3:6], xk[6:] + Ca*dt))
 
         return Fk, xkp1, Bk
+
 
     def _observation_dynamics(self, xk, gN):
         """gN = gravity in inertial coordinate system (3x1)"""

@@ -18,8 +18,8 @@ except ImportError:
 
 class Am_rx(PyQt5.QtCore.QObject):
 
-    #USE_ENCODER = False
-    USE_ENCODER = True
+    USE_ENCODER = False
+    #USE_ENCODER = True
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -442,7 +442,7 @@ class Am_rx(PyQt5.QtCore.QObject):
 
 
                 if (self.settings.use_trigger and self.trigger_state):
-                    self.message_signal.emit("received trigger")
+                    logging.info("received trigger")
                     self.tx_byte(Am_rx.COM_SIGNAL_STOP)
                     self.close_connection()
                     self.finished_signal.emit()

@@ -140,11 +140,10 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         # TEXT OUTPUT WINDOW
 
-        self.text_window = PyQt5.QtGui.QTextEdit()
-        self.text_window.setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.text_window.setReadOnly(True)
-        #print self.text_window.minimumHeight()
-        self.text_window.setMinimumHeight(150)
+        # self.text_window = PyQt5.QtGui.QTextEdit()
+        # self.text_window.setMaximumWidth(Am_gui.BUTTON_WIDTH)
+        # self.text_window.setReadOnly(True)
+        # self.text_window.setMinimumHeight(150)
 
 
 
@@ -174,8 +173,8 @@ class Am_gui(PyQt5.QtGui.QWidget):
         panel_layout.addWidget(self.settings)
         panel_layout.addWidget(self.hline())
         panel_layout.addLayout(stats_layout)
-        panel_layout.addWidget(self.hline())
-        panel_layout.addWidget(self.text_window)
+        # panel_layout.addWidget(self.hline())
+        # panel_layout.addWidget(self.text_window)
 
         top_layout = PyQt5.QtGui.QHBoxLayout()
         top_layout.addStretch()
