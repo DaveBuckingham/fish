@@ -260,9 +260,6 @@ class Am_rx(PyQt5.QtCore.QObject):
 
 
 
-
-
-    #@pyqtSlot()
     def run(self):
 
         if (not self.open_connection()):

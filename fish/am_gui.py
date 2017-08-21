@@ -48,12 +48,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         # ALL THE BUTTONS IN THE MAIN WINDOW
         self.buttons = {}
 
-
-        # TIMESTAMPS OF COLLECTED DATA.
-        #self.timestamps   = []
-
-        #self.num_imus = 0
-
         # NUMBER OF SAMPLES COLLECTED
         self.num_samples = 0
 
@@ -71,7 +65,9 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         self.settings = Am_settings(self)
 
+        # THE MAIN DATA BUFFER
         self.data = Am_data()
+
         # HAS THE COLLECTED DATA BEEN SAVED TO FILE?
         self.data.saved = True
 
@@ -94,7 +90,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         #   CREATE GUI ELEMENTS AND ADD TO MAIN WINDOW   #
         ##################################################
         
-
         # CREATE BUTTONS AND ADD TO BUTTON LAYOUT
 
         button_layout = PyQt5.QtGui.QVBoxLayout()
@@ -106,7 +101,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
-
 
         # self.buttons['test'] = PyQt5.QtGui.QPushButton('Test')
         # self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
@@ -147,8 +141,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
         # self.text_window.setMinimumHeight(150)
 
 
-
-
         # STATUS INFO
 
         stats_layout = PyQt5.QtGui.QVBoxLayout()
@@ -184,7 +176,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
 
 
-
         # ADD TOP LEVEL LAYOUT
         self.setLayout(top_layout)
 
@@ -207,14 +198,10 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         self.receiver.recording_signal.connect(self.start_plot_slot)
 
-        # USE TO TEST WITHOUT ARDUINO, RANDOMLY GENERATED DATA
-        # self.receiver_thread.started.connect(self.receiver.run_fake)
-
         # COLLECT DATA FROM Am_rx() i.e. from arduino
         self.receiver_thread.started.connect(self.receiver.run)
 
         self.receiver_thread.finished.connect(self.receiver_done)
-
 
         self.receiver.numimus_signal.connect(self.numimus_slot)
 
@@ -274,29 +261,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
             self.plots_layout.addWidget(label, i+1, 0)
 
 
-    def check_saved(self):
-        if (self.data.saved):
-            return True
-        else:
-
-            msgBox = PyQt5.QtGui.QMessageBox()
-            msgBox.setText('Unsaved data will be lost.')
-            msgBox.setIcon(QMessageBox.Warning)
-            continue_btn = PyQt5.QtGui.QPushButton('Continue anyway')
-            save_btn = PyQt5.QtGui.QPushButton('Save data')
-            cancel_btn = PyQt5.QtGui.QPushButton('Cancel')
-            msgBox.addButton(continue_btn, PyQt5.QtGui.QMessageBox.YesRole)
-            msgBox.addButton(save_btn, PyQt5.QtGui.QMessageBox.YesRole)
-            msgBox.addButton(cancel_btn, PyQt5.QtGui.QMessageBox.NoRole)
-            msgBox.exec_()
-
-            if (msgBox.clickedButton() == save_btn):
-                return(self.save_button_slot())
-            elif (msgBox.clickedButton() == continue_btn):
-                return True
-            else:
-                return False
-
 
 
 
@@ -319,7 +283,6 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
 
     def quit_button_slot(self):
-        #if (self.check_saved()):
         self.stop_recording()
         time.sleep(.2)  # let thread finish
         logging.info("exiting")
@@ -331,10 +294,12 @@ class Am_gui(PyQt5.QtGui.QWidget):
         if (self.recording):
             self.stop_recording()
         else:
-            #if (self.check_saved()):
             self.num_samples = 0
             self.record()
 
+
+
+    # GET A FILENAME AND TYPE FROM THE USER AND THEN SAVE THE DATA BUFFER
     def save_button_slot(self):
 
         options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
@@ -364,6 +329,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
 
 
+    # GET A FILENAME FROM THE USER AND THEN LOAD THE FILE TO THE DATA BUFFER
     def load_button_slot(self):
 
         options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
@@ -415,39 +381,35 @@ class Am_gui(PyQt5.QtGui.QWidget):
         logging.info("done recording")
 
 
+    # UPDATE DISPLAYED INFORMATION
     def update(self):
  
+        # DISPLAY TIME
         timestamps = self.data.imu_data['timestamps']
-
         if(len(timestamps) > 0):
             self.stats_time.setText('Time (ms): %.1f' % (timestamps[-1]))
 
+        # DISPLAY NUMBER OF SAMPLES
         num_samples = len(timestamps)
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
 
-        if (self.receiver.trigger_state == True):
-            state = 'ON'
-        elif (self.receiver.trigger_state == False):
-            state = 'OFF'
-        else:
-            state = ''
+        # DISPLAY THE TRIGGER STATE
+        self.stats_trigger.setText("Trigger signal state: " + ('ON' if self.receiver.trigger_state else 'OFF'))
 
-        self.stats_trigger.setText("Trigger signal state: " + state)
-
-
+        # CALCULATE AND DISPLAY THE ACTUAL CURRENT MEASUREMENT FREQUENCY
         if (num_samples > Am_gui.FREQ_AVERAGE_WINDOW):
             window = timestamps[-(Am_gui.FREQ_AVERAGE_WINDOW):]
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
 
+        # REFRESH ALL PLOTS
         for p in self.plots:
             p.plot_slot()
 
 
-
-
+    # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS
     def numimus_slot(self, num_imus):
         self.num_imus = num_imus
         self.make_plots()
