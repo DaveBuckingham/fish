@@ -38,12 +38,12 @@ class Am_settings(PyQt5.QtGui.QWidget):
         #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
         ########################################
         trigger_checkbox = PyQt5.QtGui.QCheckBox('use trigger', self)
+        trigger_checkbox.setToolTip('Stop recording on trigger signal')
         trigger_checkbox.stateChanged.connect(self.toggle_trigger)
 
         self.invert_checkbox = PyQt5.QtGui.QCheckBox('invert trigger', self)
         self.invert_checkbox.setToolTip('Trigger activates on pin low')
         self.invert_checkbox.stateChanged.connect(self.toggle_invert)
-        #self.invert_checkbox.setEnabled(False)
 
 
         ########################################
@@ -54,7 +54,7 @@ class Am_settings(PyQt5.QtGui.QWidget):
         buffer_layout = PyQt5.QtGui.QGridLayout()
 
         # LABEL
-        buffer_label = PyQt5.QtGui.QLabel("data buffer length (# samples)")
+        buffer_label = PyQt5.QtGui.QLabel("data buffer size")
         buffer_layout.addWidget(buffer_label, 1, 1)
 
         # SLIDER
@@ -63,6 +63,7 @@ class Am_settings(PyQt5.QtGui.QWidget):
         self.buffer_slider.setMaximum(self.DATA_BUFFER_MAX)
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
+        self.buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # SECONDS
@@ -98,7 +99,6 @@ class Am_settings(PyQt5.QtGui.QWidget):
     ########################################
     def toggle_trigger(self, state):
         self.use_trigger = not self.use_trigger
-        #self.invert_checkbox.setEnabled(self.use_trigger)
 
     def toggle_invert(self, state):
         self.invert_trigger = not self.invert_trigger

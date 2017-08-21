@@ -66,6 +66,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         # SELECT FILES BUTTON
         select_files_btn = PyQt5.QtGui.QPushButton('Select input files')
+        select_files_btn.setToolTip('Select files for batch processing')
         select_files_btn.clicked.connect(self.select_files)
         self.batch_layout.addWidget(select_files_btn)
 
@@ -78,15 +79,18 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         filetype_layout = PyQt5.QtGui.QVBoxLayout()
 
         radio = PyQt5.QtGui.QRadioButton("hdf5")
+        radio.setToolTip('Batch process outputs files in hdf5 format')
         radio.clicked.connect(self.set_output_hdf5)
         filetype_layout.addWidget(radio)
         radio.click()
 
         radio = PyQt5.QtGui.QRadioButton("csv")
+        radio.setToolTip('Batch process outputs files in csv format')
         radio.clicked.connect(self.set_output_csv)
         filetype_layout.addWidget(radio)
 
         radio = PyQt5.QtGui.QRadioButton("same as input")
+        radio.setToolTip('Each batch process output file uses the same format as the corresponding input file')
         radio.clicked.connect(self.set_output_input)
         filetype_layout.addWidget(radio)
 
@@ -96,6 +100,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         # OUTPUT FILENAME POSTFIX
         postfix_layout = PyQt5.QtGui.QHBoxLayout()
         postfix_label = PyQt5.QtGui.QLabel("output suffix:")
+        postfix_label.setToolTip('Suffix appended to input file names to construct batch processing output file names')
         postfix_layout.addWidget(postfix_label)
 
         self.postfix_textbox = PyQt5.QtGui.QLineEdit("_processed")
@@ -114,6 +119,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         mode_box = PyQt5.QtGui.QGroupBox("Process mode")
 
         radio = PyQt5.QtGui.QRadioButton("Use current data")
+        radio.setToolTip('Apply the filter to the current data buffer')
         radio.clicked.connect(self.set_single_mode)
         mode_layout.addWidget(radio);
         if(self.data.has_data()):
@@ -122,6 +128,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             radio.setEnabled(False)
 
         radio = PyQt5.QtGui.QRadioButton("Batch process")
+        radio.setToolTip('Apply the filter to one or more saved files')
         radio.clicked.connect(self.set_batch_mode)
         mode_layout.addWidget(radio)
         if(not self.data.has_data()):
@@ -140,15 +147,18 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         radio = PyQt5.QtGui.QRadioButton("DSF")
         radio.clicked.connect(lambda: self.set_algorithm('dsf'))
+        radio.setToolTip('Use the Dynamic Snap Free method')
         algorithm_layout.addWidget(radio)
         radio.click()  # OUR'S IS THE BEST...
 
         radio = PyQt5.QtGui.QRadioButton("Madgwick")
         radio.clicked.connect(lambda: self.set_algorithm('madgwick'))
+        radio.setToolTip('Use the Madgwick (2010) orientation filter')
         algorithm_layout.addWidget(radio)
 
         radio = PyQt5.QtGui.QRadioButton("Simple integration")
         radio.clicked.connect(lambda: self.set_algorithm('integrate'))
+        radio.setToolTip('Naively integrate over time; the Madgwick filter with beta=0')
         algorithm_layout.addWidget(radio)
 
         algorithm_box.setLayout(algorithm_layout)
@@ -160,6 +170,7 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
 
         calibration_layout = PyQt5.QtGui.QVBoxLayout()
         select_calibration_btn = PyQt5.QtGui.QPushButton('Parse calibration file')
+        select_calibration_btn.setToolTip('Select and parse a calibration file')
         select_calibration_btn.clicked.connect(self.parse_calibration)
         calibration_layout.addWidget(select_calibration_btn)
 
@@ -169,12 +180,15 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
         button_layout = PyQt5.QtGui.QHBoxLayout()
 
         cancel_btn = PyQt5.QtGui.QPushButton('Cancel')
+        cancel_btn.setToolTip('Cancel data processing')
         cancel_btn.clicked.connect(self.close)
         button_layout.addWidget(cancel_btn)
 
-        process_btn = PyQt5.QtGui.QPushButton('Process')
-        process_btn.clicked.connect(self.run_process)
-        button_layout.addWidget(process_btn)
+        self.process_btn = PyQt5.QtGui.QPushButton('Process')
+        self.process_btn.setToolTip('Apply the filter, using the loaded calibration file, to the specified data')
+        self.process_btn.clicked.connect(self.run_process)
+        button_layout.addWidget(self.process_btn)
+        self.process_btn.setEnabled(False)
  
 
         top_layout.addWidget(algorithm_box, 0, 0)
@@ -311,10 +325,11 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             return
 
         intervals = self.get_basis.get_intervals(calib_data)
-        basis_vector = numpy.array(self.get_basis.get_basis_vector(calib_data, intervals))
+        basis_vector = self.get_basis.get_basis_vector(calib_data, intervals)
 
 
-        if (basis_vector is not None):
+        if basis_vector is not None:
+            basis_vector = numpy.array(basis_vector)
             logging.info("extracted basis vector:\n" + str(basis_vector[0]) + "\n" + str(basis_vector[1]) + "\n" + str(basis_vector[2]))
             self.basis_vector = basis_vector
             
@@ -327,12 +342,15 @@ class Am_process_dialog(PyQt5.QtGui.QWidget):
             self.calib_initial_gravity = numpy.mean(calib_accel[still_start:still_end], axis=0)
             self.calib_still_accel = numpy.array(calib_accel[still_start:still_end])
             self.calib_still_gyro = numpy.array(calib_gyro[still_start:still_end])
+
+            self.process_btn.setEnabled(True)
         else:
             logging.error("failed to extract basis vector")
 
 
 
-        
+
+
 
     def run_process(self):
         if(self.basis_vector is not None):

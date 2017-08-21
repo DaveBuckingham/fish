@@ -167,7 +167,7 @@ class Am_process():
         acc  = self.filter(acc, filter_num_samples)
         gyro = self.filter(gyro, filter_num_samples)
 
-        # CONVERT ACCEL DATA TO TO GS
+        # CONVERT ACCEL DATA TO GS
         acc = acc / 9.81
 
         # GET TIME IN MS
@@ -177,20 +177,16 @@ class Am_process():
         time = time / 1000.0
 
         qchip2world = quaternion.from_rotation_matrix(chip2world_rot)
-        gyrorad = gyro
-        betarad = numpy.deg2rad(beta)
 
         qorient = numpy.zeros_like(time, dtype=numpy.quaternion)
-        qgyro = numpy.zeros_like(time, dtype=numpy.quaternion)
 
         sampfreq = 1.0/numpy.mean(numpy.diff(time))
 
         dt = 1.0 / sampfreq
 
-        isfirst = time <= time[0] + initwindow
         qorient[0] = qchip2world.conj()
 
-        for i, gyro1 in enumerate(gyrorad[1:, :], start=1):
+        for i, gyro1 in enumerate(gyro[1:, :], start=1):
             qprev = qorient[i-1]
 
             acc1 = acc[i, :]
@@ -198,7 +194,6 @@ class Am_process():
 
             # QUATERNION ANGULAR CHANGE FROM THE GRYO
             qdotgyro = 0.5 * (qprev * numpy.quaternion(0, *gyro1))
-            qgyro[i] = qprev + qdotgyro * dt
 
             if beta > 0:
                 # GRADIENT DESCENT ALGORITHM CORRECTIVE STEP
@@ -214,7 +209,7 @@ class Am_process():
                 step = step / numpy.linalg.norm(step)
                 step = numpy.quaternion(*step)
 
-                qdot = qdotgyro - betarad * step
+                qdot = qdotgyro - numpy.deg2rad(beta) * step
             else:
                 qdot = qdotgyro
 
@@ -348,30 +343,6 @@ class Am_process():
         psi   =  numpy.arctan2(rotm[0, 1], rotm[0, 0])
         return (phi, theta, psi)
 
-    def _rotm2quat(self, R):
-        if R[1, 1] > -R[2, 2] and R[0, 0] > -R[1, 1] and R[0, 0] > -R[2, 2]:
-            a = numpy.sqrt(1 + R[0, 0] + R[1, 1] + R[2, 2])
-            q = 0.5 * numpy.quaternion(a, (R[1, 2] - R[2, 1]) / a, (R[2, 0] - R[0, 2]) / a, (R[0, 1] - R[1, 0]) / a)
-        elif R[1, 1] < -R[2, 2] and R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
-            a = numpy.sqrt(1 + R[0, 0] - R[1, 1] - R[2, 2])
-            q = 0.5 * numpy.quaternion((R[1, 2] - R[2, 1]) / a, a, (R[0, 1] + R[1, 0]) / a, (R[2, 0] + R[0, 2]) / a)
-        elif R[1, 1] > R[2, 2] and R[0, 0] < R[1, 1] and R[0, 0] < -R[2, 2]:
-            a = numpy.sqrt(1 - R[0, 0] + R[1, 1] - R[2, 2])
-            q = 0.5 * numpy.quaternion((R[2, 0] - R[0, 2]) / a, (R[0, 1] + R[1, 0]) / a, a, (R[1, 2] + R[2, 1]) / a)
-        elif R[1, 1] < R[2, 2] and R[0, 0] < -R[1, 1] and R[0, 0] < R[2, 2]:
-            a = numpy.sqrt(1 - R[0, 0] - R[1, 1] + R[2, 2])
-            q = 0.5 * numpy.quaternion((R[0, 1] - R[1, 0]) / a, (R[2, 0] + R[0, 2]) / a, (R[1, 2] + R[2, 1]) / a, a)
-
-        return q
-
-    def _eul2quat(self, x):
-        phi, theta, psi = x
-
-        q_yaw   =  numpy.quaternion(numpy.cos(0.5*psi), 0, 0, numpy.sin(0.5*psi))
-        q_pitch =  numpy.quaternion(numpy.cos(0.5*theta), 0, numpy.sin(0.5*theta), 0)
-        q_roll  =  numpy.quaternion(numpy.cos(0.5*phi), numpy.sin(0.5*phi), 0, 0)
-
-        return q_roll * q_pitch * q_yaw
 
 
     def _stack_matrices(self, M):

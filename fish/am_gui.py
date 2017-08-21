@@ -115,13 +115,13 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         self.buttons['process'] = PyQt5.QtGui.QPushButton('Process')
         self.buttons['process'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.buttons['process'].setToolTip('Process the current data by applying a filtering algorithm.')
+        self.buttons['process'].setToolTip('Process the current data by applying a filtering algorithm')
         self.buttons['process'].clicked.connect(self.process_button_slot)
         button_layout.addWidget(self.buttons['process'])
 
         self.buttons['save'] = PyQt5.QtGui.QPushButton('Save')
         self.buttons['save'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
-        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file.')
+        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
@@ -134,6 +134,7 @@ class Am_gui(PyQt5.QtGui.QWidget):
 
         self.buttons['quit'] = PyQt5.QtGui.QPushButton('Quit')
         self.buttons['quit'].setMaximumWidth(Am_gui.BUTTON_WIDTH)
+        self.buttons['quit'].setToolTip('Exit the program')
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
         button_layout.addWidget(self.buttons['quit'])
 

@@ -13,21 +13,18 @@ class Am_get_basis(object):
     def __init__(self):
         self.MAX_INTERVALS = 5
 
-        # WE CAN TELL THE USER TO HOLD CHIP IN EACH ORIENTATION FOR
-        # AT LEAST 5 SECONDS AND STRICTLY LESS THAN 8 SECONDS.
-        # THUS, WE HAVE AT LEAST A 1 SECOND BUFFER TO SETTLE DOWN
-        # AND WE DONT RISK FINDING TWO WINDOWS IN ONE ORIENTATION
-        self.HOLD_MIN = 800               # minimum window size. 800 samples ~ 4 seconds
-        
+
         # THESE VALUES WORK WITH MEASUREMENTS TAKEN AT DESK WITH CHIP ON A BOARD
+        #self.HOLD_MIN = 800               # minimum window size. 800 samples ~ 4 seconds
         #self.GYRO_THRESHOLD = 0.1         # max absolute value in window. degrees per second.
         #self.ACCEL_DELTA_THRESHOLD = 0.5  # max difference in window. meters per second squared.
         #self.ORTHOGONAL_THRESHOLD = 0.1   # max distance from right angle (in radians) between two vectors. 0.1 rad ~ 5.7 degs.
 
-        # DOUBLE ALL THE THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
-        self.GYRO_THRESHOLD = 0.2
-        self.ACCEL_DELTA_THRESHOLD = 1.0
-        self.ORTHOGONAL_THRESHOLD = 0.2
+        # TRIPPLE ALL THE THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
+        self.HOLD_MIN = 600               # minimum window size. 600 samples ~ 3 seconds
+        self.GYRO_THRESHOLD = 0.6
+        self.ACCEL_DELTA_THRESHOLD = 1.5
+        self.ORTHOGONAL_THRESHOLD = 0.3
 
 
     # ARE TWO 3D VECTORS ORTHOGONAL?

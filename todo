@@ -1,41 +1,27 @@
 TODO:
 
 gui user can specify filter number of samples
+use specify processing parameters
 
-hdf5 section names: remove capse, t -> time
 
-toggle units:
-    m/s^2 vs Gs for accelerometer
-    radians/sec vs degs/sec for gyro
 
 update author names in setup.py
 
-am_data.py line 65, change assert to error message
-am_rx.py line 384, error message
-
-COMMENTS!!!!!!!!!!!!!!!!!!!!!!!!!!
+am_data.py change asserts to error message in add_sample()
 
 manual: discuss timestamp (pc receive time. capture time = 200/s by arduino clock)
 
-what happens if recording starts with trigger on? make sure
-its correct in the manual
-
-fewer messages in textbox
+what happens if recording starts with trigger on? make sure its correct in the manual
 
 downsample plotting data when it gets big so no slowdown
 
-test port detection on windows
+test/fix port detection on windows. can't find arduino on windows
 
 process:
     calls refreshes on cancel
-    can click 'process' button even if no data loaded
     breaks (no trigger read) if empty
 
-can't find arduino on windows
-
 when fail to start due to trigger, tell user why
-
-more tooltips 
 
 better mutex
 
@@ -53,16 +39,10 @@ make sure num_imus doesn't change for one dataset
 
 better default save directory
 
-ASA
-disable record button during test   ( DIFFICULT )
-text window breaks when it gets too full
+
 tests:
+    disable record button during test   ( DIFFICULT )
     imus self-test
     magnetometer
 
 
-DONE
-
-need to include in documentation: random trigger values if unplugged.
-
-replot after process

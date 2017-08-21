@@ -63,6 +63,7 @@ class Am_data(PyQt5.QtCore.QObject):
         self.data_lock[0] = False
         self.num_imus = num_imus
 
+
     def add_sample(self, sample, limit):
         if (Am_data.USE_ENCODER):
             assert(len(sample) == 3)
@@ -177,16 +178,16 @@ class Am_data(PyQt5.QtCore.QObject):
     def load_hdf5_file(self, filename):
         with h5py.File(filename, 'r') as datafile:
             self.imu_data = {}
-            self.imu_data['timestamps'] = datafile.get('data/t')[()]
+            self.imu_data['timestamps'] = datafile.get('data/time')[()]
             self.imu_data['imus'] = []
 
             i = 0
             ext = ""
-            while ('data/Accel' + ext in datafile and 'data/Gyro' + ext in datafile and 'data/Mag' + ext in datafile):
+            while ('data/accel' + ext in datafile and 'data/gyro' + ext in datafile and 'data/mag' + ext in datafile):
                 self.imu_data['imus'].append({})
-                self.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/Accel' + ext)[()])))
-                self.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/Gyro' + ext)[()])))
-                self.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/Mag' + ext)[()])))
+                self.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/accel' + ext)[()])))
+                self.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/gyro' + ext)[()])))
+                self.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/mag' + ext)[()])))
                 i += 1
                 ext = str(i + 1)
 
@@ -202,18 +203,18 @@ class Am_data(PyQt5.QtCore.QObject):
         with h5py.File(filename, 'w') as datafile:
             save_data = datafile.create_group("data")
 
-            save_data.create_dataset('t', data=self.imu_data['timestamps'])
+            # save_data.create_dataset('t', data=self.imu_data['timestamps'])
+            save_data.create_dataset('time', data=self.imu_data['timestamps'])
+
             for i in range(0, len(self.imu_data['imus'])):
                 imu = self.imu_data['imus'][i]
-                extension = "" if i < 1 else str(i + 1)
 
-                #save_data.create_dataset('Accel' + extension, data=list(zip(*self.imu_data['imus'][i]['accel'])))
-                #save_data.create_dataset('Gyro'  + extension, data=list(zip(*self.imu_data['imus'][i]['gyro'])))
-                #save_data.create_dataset('Mag'   + extension, data=list(zip(*self.imu_data['imus'][i]['mag'])))
+                # extension = "" if i < 1 else str(i + 1)
+                extension = str(i + 1)
 
-                save_data.create_dataset('Accel' + extension, data=self.as_list_of_triples(i, 'accel'))
-                save_data.create_dataset('Gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
-                save_data.create_dataset('Mag' + extension, data=self.as_list_of_triples(i, 'mag'))
+                save_data.create_dataset('accel' + extension, data=self.as_list_of_triples(i, 'accel'))
+                save_data.create_dataset('gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
+                save_data.create_dataset('mag' + extension, data=self.as_list_of_triples(i, 'mag'))
 
             if (Am_data.USE_ENCODER):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
