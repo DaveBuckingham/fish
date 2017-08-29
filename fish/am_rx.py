@@ -181,7 +181,7 @@ class Am_rx(PyQt5.QtCore.QObject):
         logging.info("establishing serial connection...")
         
         # FIND A PORT CONNECTED TO AN ARDUINO
-        arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer)) ]
+        arduino_ports = [ p.device for p in serial.tools.list_ports.comports() if (p.manufacturer and ('Arduino' in p.manufacturer or 'Microsoft' in p.manufacturer)) ]
         if not arduino_ports:
             logging.warning('no Arduino found')
             return False
