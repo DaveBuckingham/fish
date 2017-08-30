@@ -48,7 +48,7 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 
 
 
-\newcommand{\name}{PROGRAM\_NAME}
+\newcommand{\name}{IMU-Capture}
 \newcommand{\programVersion}{0.1}
 \newcommand{\manualVersion}{0.1}
 \newcommand{\email}{eric.tytell@tufts.edu}
@@ -81,9 +81,11 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 }
 
 {\LARGE
-%User manual version \manualVersion{} \\
-User manual \\
+User manual
 }
+
+\today
+
 \vspace*{\fill}
 
 }
@@ -103,7 +105,7 @@ User manual \\
 \chapter{Copyright and License}
 
 \name{}: a tool for collecting IMU measurements.
-Copyright (C) 2017 \textbf{Authors???}/
+Copyright (C) 2017 David Buckingham, Eric Tytell, Vishesh Vikas
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -127,11 +129,11 @@ along with this program.  If not, see \url{http://www.gnu.org/licenses/}.
 \chapter{Introduction}
 
 \name{} is an application for recording and processing data from inertial
-measurement units (IMUs). It consists of two parts. Microcontroller code running
-on an Arduino board collects data from the IMUs and transmits it to a PC. A
-Python program running on the PC receives data from the Arduino and provides
-users with a graphical interface. This interface allows users to interact with
-the Arduino and to view and manipulate IMU data.
+measurement units (IMUs). The software has two parts. Microcontroller code
+running on an Arduino board collects data from the IMUs and transmits it to a
+PC. A Python program running on the PC receives data from the Arduino and
+provides users with a graphical interface. This interface allows users to
+interact with the IMU via the Arduino and to view and manipulate IMU data.
 
 
 
@@ -142,16 +144,17 @@ the Arduino and to view and manipulate IMU data.
 \chapter{Hardware}
 
 \name{} interconnects three pieces of computational hardware: a PC, an Arduino,
-between 1 and 3 IMUs.
+and between 1 and 3 IMUs.
+
 
 \section{PC}
 \name{} has been tested on PCs running Linux Mint 18 Sarah, OS X El Capitan
-10.11, and Windows 10. It is expected to work with other versions of these
-operating systems and with other Linux distributions.
+10.11, and Windows 10. It may work with other operating systems.
+
 
 \section{Arduino}
-\name{} has been tested with an Arduino UNO. It may work on other
-models with a 16MHz clock speed and sufficient storage.
+\name{} has been tested with an Arduino UNO. It may work on other models that
+use a 16MHz clock speed and have sufficient storage.
 
 
 \section{IMUs}
@@ -171,8 +174,8 @@ mounted on a circuit-board can be used with \name{}.
 \section{SPI}
 The Arduino communicates with the IMUs using the Serial Peripheral Interface bus
 (SPI) protocol. With SPI, one or more slave devices (IMUs in this application)
-exchange data with a master device (the Arduino) over a single shared bus,
-consisting of 2 data lines and a clock line. Each slave has a separate
+exchange data with a master device (the Arduino) over a single bus consisting of
+2 data lines and a clock line. In addition, each slave device has a separate
 \emph{chip select} line, used to control access to the shared bus.
 
 \section{Wiring the Arduino}
@@ -185,13 +188,13 @@ data traveling from the Arduino to the IMUs, i.e. Master-Out, Slave-In (MOSI).
 Pin 12 carries data traveling from the IMUs to the Arduino, i.e. Master-In,
 Slave Out (MISO). Pin 13 carries a clock signal which regulates timing of the
 communication protocol.  Each IMU should be connected to 3.3V power (available
-on the Arduino) and to ground.
+on the Arduino Uno) and to ground.
 
 If using a trigger, connect it to Pin 4 and to ground.
 
 Connect the Arduino to the PC with a USB cable.  To ensure adequate power,
-especially if using multiple IMUs, it is recommended to power the Arduino with
-an external power source instead of relying on the USB port.
+especially if using multiple IMUs, it is recommended to connect the Arduino to
+an external power source instead of relying on the USB port for power.
 
 \begin{table}
 \centering
@@ -210,12 +213,13 @@ ground & GND & black & GND \\
 trigger &  &  & 4 \\
 \bottomrule
 \end{tabular}
+
 \caption{Instructions for wiring the IMUs to the Arduino. The first column
 describes the purpose of each line. The second column provides names commonly
-used to describe each line. For example, if the IMU is mounted on a board, the
-board's pins might have labels matching these values. The third column provides
-the colors specified in the \textbf{Document Name} manual. The fourth column
-specifies pins on the Arduino Uno.}
+used to describe each line. The third column lists the colors specified in the
+\textbf{Document Name} manual. The fourth column specifies pins on the Arduino
+Uno.}
+
 \label{tab:wiring}
 \end{table}
 
@@ -236,16 +240,16 @@ specifies pins on the Arduino Uno.}
 \chapter{Installation}
 
 \section{Arduino IDE}
-While there are many tools for installing program code onto the Arduino, we have
-tested \name{} using the Arduino IDE version 1.8.1.
-Earlier versions might lack some of library definitions used by \name{}.
+While there are many ways to install program code onto the Arduino, we have
+tested \name{} using the Arduino IDE version 1.8.1. Earlier versions may lack
+some of library definitions used by \name{}.
 
-The software can be downloaded from:
+The Arduino IDE can be downloaded from:
 \url{https://www.arduino.cc/en/Main/Software}
 
-If your operating system has a package management system, it might be able
-to install the Arduino IDE. For example, on a Debian-based system you can use
-\texttt{apt}:
+If your operating system has a package management system, it might be able to
+install the Arduino IDE automatically. For example, on a Debian-based system you
+can use \texttt{apt}:
 \begin{verbatim}
 # apt install Arduino-core
 \end{verbatim}
@@ -264,17 +268,22 @@ can be used to program the Arduino directly from the command line:
 For more information about the Arduino command line interface, see:
 \url{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
+
 \section{PC}
 \label{sec:installPc}
+
 \name{} requires Python 3. It has been tested with Python version 3.5. Thus, it
-is recommended to use Python version 3.5 or later.
+is recommended to use Python version 3.5 or later. On windows, \name{} has been
+succesfully installed with the Anaconda Python distribution
+(\url{https://www.anaconda.com}), but tetsts failed to install \name{} with a
+standalone Python installation.
 
 Consider using \texttt{virtualenv} to isolate your installation of \name{} from
 other packages and from other Python versions:
 \url{https://pypi.python.org/pypi/virtualenv}
 
-We recommend using pip to install \name{}:
-\url{https://pypi.python.org/pypi/pip}
+It is recommended to use using pip (the Python Package Index) to install
+\name{}: \url{https://pypi.python.org/pypi/pip}
 
 \begin{verbatim}
 # cd PROGRAM_NAME
@@ -289,6 +298,8 @@ Pip will automatically install any of the following dependencies if needed:
 \item pyqtgraph
 \item pyserial
 \item pyqt5
+\item scipy
+\item numpy-quaternion
 \end{itemize}
 
 Once \name{} has been installed, it can be started from the command line:\\
@@ -296,27 +307,37 @@ Once \name{} has been installed, it can be started from the command line:\\
 \# \name{}
 }
 
+On Windows, informational and error messages will not be displayed unless
+\name{} is invoked by the Python interpreter explicitely:
+\texttt{
+\# python \name{}
+}
+
+When \name{} starts, the main control panel will be visible (Figure
+\ref{fig:control}).
+
 \begin{figure}[]
     \begin{center}
         \includegraphics[height=3in]{screenshot_panel}
     \end{center}
     \caption{Control panel} 
+    \label{fig:control}
 \end{figure}
 
 
-\chapter{The data buffer}
-\name{} uses a single data buffer to hold IMU data. When data is recorded from
-the IMUs, the data buffer is first erased. Then each sample is added to the
-buffer as it is recorded. The buffer can be saved to a file, or a file can be
-loaded into the buffer, erasing any previous contents. Data processing
-operations can be performed on the data buffer, altering it irreversibly.
-Therefore, any time the data buffer contains valuable data it is recommended to
-save it to file before collecting new data, loading another file, or executing
-data processing operations.
+\chapter{The data buffer} \name{} uses a single data buffer to hold IMU data.
+When data is recorded from the IMUs, the data buffer is first erased. Then each
+sample is added to the buffer as it is recorded. When data is not being
+recorded, the buffer can be saved to a file, or a file can be loaded into the
+buffer, erasing any previous contents. Data processing operations can be
+performed on the data buffer, altering it irreversibly.  Therefore, any time the
+data buffer contains valuable data it is recommended to save it to file before
+collecting new data, loading another file, or executing data processing
+operations.
 
 The \emph{data buffer length (\# samples)} slider adjusts the size of the data
 buffer. When each new sample is received, it is added to the data buffer. If the
-buffer was already full (the number of samples in the buffer was equal to the
+buffer is already full (the number of samples in the buffer is equal to the
 size of the buffer), the oldest sample in the buffer is deleted. If the size of
 the buffer is adjust to be smaller than the number of samples in the buffer, the
 oldest samples in the buffer are deleted until the number of samples in the
@@ -340,8 +361,7 @@ respectively.
 
 The \emph{stop} button (or the trigger, as described in Section \ref{sec:trigger}),
 causes the PC first to instruct the Arduino to stop collecting data and then to
-halt communication with the Arduino. The \emph{stop} button changes back into the
-\emph{record} button.
+halt communication with the Arduino.
 
 \begin{figure}[]
     \begin{center}
@@ -358,7 +378,7 @@ halt communication with the Arduino. The \emph{stop} button changes back into th
 Optionally, a trigger attached to the Arduino (Section \ref{sec:wiring}) can be
 used to stop recording.  If the \emph{use trigger} checkbox is not checked, the
 trigger is ignored. Otherwise, if an active trigger is detected, recording will
-stop, i.e., the same effect as pressing the \emph{stop} button during recording.
+stop, i.e. the same effect as pressing the \emph{stop} button during recording.
 If the \emph{Record} is pressed while the \emph{use trigger} checkbox is checked
 and the trigger is active, the recording immediately ends with zero data stored.
 
@@ -367,9 +387,9 @@ active when the associated Arduino pin is set high. If the \emph{invert trigger}
 checkbox is checked, the trigger is considered active when the associated
 Arduino pin is set low.
 
-If no trigger is connected then the value of the pin is undefined.  Thus, to
-ensure reliable behavior, the \emph{use trigger} checkbox should not be checked
-unless there is a trigger connected to the Arduino.
+If no trigger is connected, the value of the pin is undefined.  Thus, to ensure
+reliable behavior, the \emph{use trigger} checkbox should be unchecked unless
+there is a trigger connected to the Arduino.
 
 
 
@@ -384,9 +404,9 @@ samples and commas to delimit measurements within each sample.  \name{} uses the
 CSV module in the Python Standard Library with default formatting parameters:
 \url{https://docs.python.org/3/library/csv.html}
 
-The \hdf{} format is designed to store large amounts of data. It is generally more
-compact than \csv{}. \name{} uses the h5py package to read and write \hdf{} files:
-\url{http://www.h5py.org/}
+The \hdf{} format is designed to store large amounts of data. It is generally
+more compact than \csv{}. \name{} uses the h5py Python package to read and write
+\hdf{} files: \url{http://www.h5py.org/}
 
 
 \section{Saving}
@@ -405,28 +425,28 @@ data buffer, overwriting any data stored there.  The \emph{load} button is
 disabled while data is being recorded.
 
 
-\chapter{Processing data}
+\chapter{Filter data}
 
 \begin{figure}[]
     \begin{center}
         \includegraphics[height=3in]{screenshot_process}
     \end{center}
     \caption{Data processing control panel} 
-    \label{fig:control}
+    \label{fig:filter}
 \end{figure}
 
-The \emph{process} button opens the data processing control panel (Figure
-\ref{fig:control}).
+The \emph{filter} button opens the data processing control panel (Figure
+\ref{fig:filter}).
 
-\section{Process mode}
-All data transformation algorithms are applied to the data buffer. If the \emph{Use
+\section{Filter mode}
+All data filtering algorithms are applied to the data buffer. If the \emph{Use
 current data} radio button is selected, the current contents of the data buffer
 are used. This option is not available when the data buffer is empty.
 
 Alternatively, if the \emph{Batch process} radio button is selected, the current
 contents of the data buffer are ignored. Instead, batch processing iterates over
 a list of one or more input files, loading each file into the data buffer,
-applying a transformation algorithm, and saving the result to a new output file
+applying a filtering algorithm, and saving the result to a new output file
 before proceeding to the next input file in the list. The \emph{Select files}
 button launches a dialog for selecting input files for batch processing.  The
 batch processing output filetype can be set, or can vary to match the filetype
@@ -436,21 +456,22 @@ output suffix string is empty and the output filetype matches the input
 filetype, then the input file is overwritten.
 
 With either processing mode, the contents of the data buffer are overwritten by
-any data processing.
+any data filtering.
 
 \section{Integration algorithm}
 
-The \emph{Integration algorithm} radio buttons select the data transformation
+The \emph{Integration algorithm} radio buttons select the data filtering
 algorithm.
 
 \begin{description}
 
+\item[DSF]
+The Dynamic Snap Free algorithm developed by Vikas: (cite])
 \item[Madgwick]
-We need to write about what this does.
+An implementation of the filter developed by Madgwick: 
+\url{http://x-io.co.uk/res/doc/madgwick_internal_report.pdf}
 \item[Simple integration]
-We need to write about what this does.
-\item[Extended Kalman]
-We need to write about what this does.
+Use the Madgwick algorithm with the beta parameter set to 0.
 
 \end{description}
 
@@ -475,8 +496,7 @@ that the correct code is installed on the Arduino (Section
 \ref{sec:installarduinocode}).}
 
 This section provides explanation and troubleshooting tips for each error
-message produced by \name{}. Error messages are printed in red type in the main
-text window.
+message produced by \name{}.
 
 \begin{description}
 
@@ -485,7 +505,7 @@ For each magnetometer axis, a sensitivity adjustment value (ASA) is stored in
 ROM by the manufacturer.  This error message is reported when the Arduino is
 unable to read the ASA values from an IMU.  It likely indicates that the Arduino
 is not communicating correctly with the magnetometer.  Any magnetometer data
-recorded despite this message should be discarded.
+recorded after this message should be discarded.
 \genericFix{}
 
 \item[failed to create connection, aborting]
@@ -497,6 +517,12 @@ Even though the PC may have established a valid serial connection to the
 Arduino, the data exchange protocol used by \name{} failed to establish a
 communication handshake with the Arduino.
 \genericFix{}
+It is possible the \name{} incorrectly identified a serial device as the
+Arduino. Any device that the pySerial library
+(\url{https://pythonhosted.org/pyserial/#}) identifies as manufactured either by
+``Arduino'' or by ``Microsoft'' will be identified as an arduino by \name{}. Try
+disconnecting all serial devices and then reconnecting them, starting with the
+Arduino.
 
 \item[invalid csv file]
 The program attempted to read a .csv file (Section \ref{sec:fileformats}), but
@@ -509,8 +535,8 @@ There was an attempt either to save or to load a filetype other than
 
 \item[no Arduino found]
 The program searched for Arduinos on all serial ports but didn't find any.
-\name{} uses \texttt{serial.tools.list\_ports} to scan for Arduinos:
-\url{http://pyserial.readthedocs.io/en/latest/tools.html}
+\name{} uses the pySerial library to scan for Arduinos:
+\url{https://pythonhosted.org/pyserial/#}
 
 \item[no IMUs detected, aborting]
 The Arduino did not detect any attached IMUs.  After the Arduino is initialized,
@@ -522,8 +548,8 @@ error is reported if the Arduino does not receive any WHOAMI responses.
 
 \item[rx failed, no data read from serial]
 The PC expected to receive data from the Arduino but failed. Perhaps no data was
-transmitted, or perhaps only data that violates the communication protocol used
-by \name{} was received.
+transmitted, or perhaps data that violates the communication protocols used by
+\name{} was received.
 \genericFix{}
 
 \item[unknown sample received:\dots]
@@ -546,6 +572,23 @@ the number of IMUs detected.
 \end{description}
 
 
+\chapter{Files}
+
+This sections briefly describes each of the source code files for \name{}.
+
+\begin{description}
+
+\item[ic\_data.py]
+\item[ic\_get\_basis.py]
+\item[ic\_gui.py]
+\item[ic\_plot.py]
+\item[ic\_process\_dialog.py]
+\item[ic\_process.py]
+\item[ic\_rx.py]
+\item[ic\_settings.py]
+\item[ic\_tx/ic\_tx.ino]
+
+\end{description}
 
 
 \end{document}
