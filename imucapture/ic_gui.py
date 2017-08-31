@@ -11,16 +11,15 @@ import logging
 import PyQt5.QtCore
 import PyQt5.QtGui
 
-from fish.ic_rx import Ic_rx
-from fish.ic_data import Ic_data
-from fish.ic_plot import Ic_plot
-from fish.ic_settings import Ic_settings
-from fish.ic_process_dialog import Ic_process_dialog
+from imucapture.ic_rx import Ic_rx
+from imucapture.ic_data import Ic_data
+from imucapture.ic_plot import Ic_plot
+from imucapture.ic_settings import Ic_settings
+from imucapture.ic_process_dialog import Ic_process_dialog
+from imucapture.ic_global import *
 
 class Ic_gui(PyQt5.QtGui.QWidget):
 
-    # DISPLAYED IN WINDOW HEADER AND SUCH
-    APPLICATION_NAME = 'IMU Collect 0.01'
 
     FREQ_AVERAGE_WINDOW = 100
 
@@ -33,6 +32,9 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+
+        # SET WINDOW TITLE
+        self.setWindowTitle(Ic_global.APPLICATION_FULL_NAME) 
 
 
 
@@ -53,8 +55,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         # MEASURED FREQUENCY OF DATA COLLECTED
         self.true_frequency = 0.0
-
-        self.last_data_path = ''
 
 
         self.plots = []
@@ -183,8 +183,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
         self.buttons['record'].setFocus()
 
 
-        # SET WINDOW TITLE
-        self.setWindowTitle(Ic_gui.APPLICATION_NAME) 
 
 
 
@@ -303,11 +301,15 @@ class Ic_gui(PyQt5.QtGui.QWidget):
     def save_button_slot(self):
 
         options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, filetype = PyQt5.QtGui.QFileDialog.getSaveFileName(self, "Save data", self.last_data_path, "*.csv;;*.hdf5", options=options)
+        filename, filetype = PyQt5.QtGui.QFileDialog.getSaveFileName(parent=self,
+                                                                     caption="Save data",
+                                                                     directory=Ic_global.last_file_path,
+                                                                     filter="*.csv;;*.hdf5",
+                                                                     options=options)
 
         if filename:
             filename = str(filename)
-            self.last_data_path = os.path.dirname(filename)
+            Ic_global.last_data_path = os.path.dirname(filename)
 
             if (filetype == "*.hdf5"):
                 if '.' not in filename:
@@ -333,14 +335,18 @@ class Ic_gui(PyQt5.QtGui.QWidget):
     def load_button_slot(self):
 
         options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, searchtype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", self.last_data_path, "*.csv *.hdf5", options=options)
+        filename, searchtype = PyQt5.QtGui.QFileDialog.getOpenFileName(parent=self,
+                                                                       caption="Choose a file",
+                                                                       directory=Ic_global.last_file_path,
+                                                                       filter="*.csv *.hdf5",
+                                                                       options=options)
 
         if filename:
             filename = str(filename)
             logging.info("loading " + filename)
 
             prefix, extension = os.path.splitext(filename)
-            self.last_data_path = os.path.dirname(filename)
+            Ic_global.last_data_path = os.path.dirname(filename)
 
 
             if (extension == '.hdf5'):

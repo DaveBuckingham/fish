@@ -1,5 +1,5 @@
 import sys
-from fish import ic_gui
+from imucapture import ic_gui
 
 def main(args=None):
     if args is None:

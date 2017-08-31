@@ -257,12 +257,12 @@ can use \texttt{apt}:
 \section{Install \name{} on the Arduino}
 \label{sec:installarduinocode}
 
-Transfer the file \verb|am_tx/am_tx.ino| onto Arduino.  This can be accomplished
+Transfer the file \verb|ic_tx/ic_tx.ino| onto Arduino.  This can be accomplished
 using the Arduino IDE graphical user interface.  Alternatively, the Arduino IDE
 can be used to program the Arduino directly from the command line:
 
 \begin{verbatim}
-# arduino --upload am_tx/am_tx.ino
+# arduino --upload ic_tx/ic_tx.ino
 \end{verbatim}
 
 For more information about the Arduino command line interface, see:
@@ -274,8 +274,8 @@ For more information about the Arduino command line interface, see:
 
 \name{} requires Python 3. It has been tested with Python version 3.5. Thus, it
 is recommended to use Python version 3.5 or later. On windows, \name{} has been
-succesfully installed with the Anaconda Python distribution
-(\url{https://www.anaconda.com}), but tetsts failed to install \name{} with a
+successfully installed with the Anaconda Python distribution
+(\url{https://www.anaconda.com}), but tests failed to install \name{} with a
 standalone Python installation.
 
 Consider using \texttt{virtualenv} to isolate your installation of \name{} from
@@ -291,10 +291,9 @@ It is recommended to use using pip (the Python Package Index) to install
 # pip install ./
 \end{verbatim}
 
-Pip will automatically install any of the following dependencies if needed:
+Pip will automatically install any of the following dependencies, and any of their sub-dependencies, if needed:
 \begin{itemize}
 \item h5py
-\item numpy
 \item pyqtgraph
 \item pyserial
 \item pyqt5
@@ -303,12 +302,14 @@ Pip will automatically install any of the following dependencies if needed:
 \end{itemize}
 
 Once \name{} has been installed, it can be started from the command line:\\
+
 \texttt{
 \# \name{}
 }
 
 On Windows, informational and error messages will not be displayed unless
-\name{} is invoked by the Python interpreter explicitely:
+\name{} is invoked by the Python interpreter explicitly:
+
 \texttt{
 \# python \name{}
 }
@@ -352,6 +353,33 @@ Arduino and instructs it to begin collecting data from the IMUs at 200Hz. This
 sample rate is hard-coded, and was determined to be near the maximum possible
 with the Arduino Uno.
 
+
+
+The \emph{stop} button (or the trigger, as described in Section \ref{sec:trigger}),
+causes the PC first to instruct the Arduino to stop collecting data and then to
+halt communication with the Arduino.
+
+Table \ref{tab:units} lists the units used for each sensor modality.
+\begin{table}
+\centering
+\begin{tabular}{@{}*3l@{}}
+\toprule
+instrument & modality & units \\
+\midrule 
+accelerometer & acceleration          & meters per second squared \\
+gyroscope     & rotational speed      & radians per second\\
+magnetometer  & magnetic flux density & microteslas \\
+\bottomrule
+\end{tabular}
+\caption{Units used by \name{}}
+\label{tab:units}
+\end{table}
+
+
+
+\section{Plots}
+\label{sec:plots}
+
 As samples received from the Arduino are recorded in the data buffer, they
 become visible in the data visualization plots. For each IMU, one row of three
 plots is displayed. The left-most plot shows accelerometer data, the center plot
@@ -359,16 +387,15 @@ shows gyroscope data, and the right-most plot shows magnetometer data. For each
 plot, red, green, and blue lines show x, y, and z axis measurements,
 respectively.
 
-The \emph{stop} button (or the trigger, as described in Section \ref{sec:trigger}),
-causes the PC first to instruct the Arduino to stop collecting data and then to
-halt communication with the Arduino.
-
 \begin{figure}[]
     \begin{center}
         \includegraphics[width=\textwidth]{screenshot_plots}
     \end{center}
     \caption{Collecting data from a single IMU} 
 \end{figure}
+
+Each plot will scale automatically as the data buffer is updated. Plots can also
+be adjusted manually using the mouse.
 
 
 
@@ -411,15 +438,15 @@ more compact than \csv{}. \name{} uses the h5py Python package to read and write
 
 \section{Saving}
 
-The \emph{save} button opens a dialog allowing the user to select a filesystem
-location, a filename, and a filetype (either \csv{} or \hdf{}).  The the data
+The \emph{save} button opens a dialog allowing the user to select a file system
+location, a file name, and a file type (either \csv{} or \hdf{}).  The the data
 buffer is saved to file according to the selections made in the dialog. The
 \emph{save} button is disabled when the data buffer is empty or while data is
 being recorded.
 
 \section{Loading}
 
-The \emph{load} button opens a dialog allowing the user to select a filetype
+The \emph{load} button opens a dialog allowing the user to select a file type
 (either \csv{} or \hdf{}) and a file to load. The file will be loaded into the
 data buffer, overwriting any data stored there.  The \emph{load} button is
 disabled while data is being recorded.
@@ -427,16 +454,61 @@ disabled while data is being recorded.
 
 \chapter{Filter data}
 
+Due to factors such as the effect of gravity upon the accelerometer, sensor
+drift, and noise, the raw data collected by \name{} will not reflect the actual
+dynamics of the IMUs. \name{} includes several algorithms that can be applied to
+IMU data after it has been recorded. Currently, it is not possible to apply
+these algorithms in real time as the data is recorded. Running one of these
+algorithms will have to main effects upon recorded data: 1) The effect of
+gravity is removed from the acceleration data, leaving only \emph{dynamic}
+acceleration. 2) The rotational speed data is converted into rotational angle
+data, that is, the rotation of the IMUs is integrated over time.
+
+Currently, filtering algorithms only apply to a single IMU.
+
+The \emph{filter} button opens the data processing control panel (Figure
+\ref{fig:filter}).
+
 \begin{figure}[]
     \begin{center}
         \includegraphics[height=3in]{screenshot_process}
     \end{center}
-    \caption{Data processing control panel} 
+    \caption{Data filtering control panel} 
     \label{fig:filter}
 \end{figure}
 
-The \emph{filter} button opens the data processing control panel (Figure
-\ref{fig:filter}).
+
+\section{Calibration}
+
+Before any of the filtering algorithms can be applied, it is necessary to load a
+calibration file by clicking the \emph{Parse calibration file} button. Three
+main pieces of information are extracted from the calibration file:
+\begin{enumerate}
+\item Three orthogonal orientations are used to construct a set of basis vectors
+\item The first of the three orientations is used to determine the initial gravity vector
+\item The first of the three orientations is used to determine noise covariance matrices
+\end{enumerate}
+
+
+Follow these steps to create a calibration file.
+
+\begin{enumerate}
+\item Wire up the IMU as you will use it to collect data
+\item Hold the IMU in an orientation to be considered ``upright''
+\item Begin recording
+\item Hold the IMU upright, in the first orthogonal orientation, for about 5 seconds
+\item Rotate the IMU 90 degrees so that the new orientation is orthogonal to the first
+\item Hold the IMU in the second orthogonal orientation for about 5 seconds
+\item Rotate the IMU 90 degrees again so that the new orientation is orthogonal to both previous orientations
+\item Hold the IMU in the third orthogonal orientation for about 5 seconds
+\item Stop recording
+\end{enumerate}
+
+If \name{} is unable to load a calibration file, error messages explaining why
+can help determine if there are problems with the file and help to record a
+correct calibration file. See Section \ref{sec:calibErrorMessages} for more
+discussion about these messages.
+
 
 \section{Filter mode}
 All data filtering algorithms are applied to the data buffer. If the \emph{Use
@@ -449,11 +521,11 @@ a list of one or more input files, loading each file into the data buffer,
 applying a filtering algorithm, and saving the result to a new output file
 before proceeding to the next input file in the list. The \emph{Select files}
 button launches a dialog for selecting input files for batch processing.  The
-batch processing output filetype can be set, or can vary to match the filetype
-of each input file. The output suffix string is appended to the filename of each
-input file (before the file extension) to compose the output filename. If the
-output suffix string is empty and the output filetype matches the input
-filetype, then the input file is overwritten.
+batch processing output file type can be set, or can vary to match the file type
+of each input file. The output suffix string is appended to the file name of each
+input file (before the file extension) to compose the output file name. If the
+output suffix string is empty and the output file type matches the input
+file type, then the input file is overwritten.
 
 With either processing mode, the contents of the data buffer are overwritten by
 any data filtering.
@@ -466,11 +538,11 @@ algorithm.
 \begin{description}
 
 \item[DSF]
-The Dynamic Snap Free algorithm developed by Vikas: (cite])
-\item[Madgwick]
+The Dynamic Snap Free algorithm developed by Vikas: (cite)
+\item[Madgwick] \hfill
 An implementation of the filter developed by Madgwick: 
 \url{http://x-io.co.uk/res/doc/madgwick_internal_report.pdf}
-\item[Simple integration]
+\item[Simple integration] \hfill
 Use the Madgwick algorithm with the beta parameter set to 0.
 
 \end{description}
@@ -488,7 +560,11 @@ If you encounter problems during installation, make sure you are using Python
 using \texttt{virtualenv} as discussed in Section \ref{sec:installPc}.
 
 
-\section{Error messages}
+\section{General error messages}
+
+This sections discusses some of the error messages that may be reported by
+\name{}.
+
 
 \newcommand{\genericFix}{Try resetting the Arduino.  Make sure that the Arduino
 is correctly powered and connected to the PC (Section \ref{sec:wiring}), and
@@ -520,7 +596,7 @@ communication handshake with the Arduino.
 It is possible the \name{} incorrectly identified a serial device as the
 Arduino. Any device that the pySerial library
 (\url{https://pythonhosted.org/pyserial/#}) identifies as manufactured either by
-``Arduino'' or by ``Microsoft'' will be identified as an arduino by \name{}. Try
+``Arduino'' or by ``Microsoft'' will be identified as an Arduino by \name{}. Try
 disconnecting all serial devices and then reconnecting them, starting with the
 Arduino.
 
@@ -529,7 +605,7 @@ The program attempted to read a .csv file (Section \ref{sec:fileformats}), but
 the format of the data in the file was not valid.
 
 \item[invalid file type:\ldots]
-There was an attempt either to save or to load a filetype other than
+There was an attempt either to save or to load a file type other than
 \csv{} and \hdf{}. As discussed in Section \ref{sec:fileformats},
 \csv{} and \hdf{} are the only file formats supported by \name.
 
@@ -568,28 +644,44 @@ command to the Arduino to initialize, but does not receive a message reporting
 the number of IMUs detected.
 \genericFix{}
 
-
 \end{description}
 
+\section{Calibration error messages}
+\label{sec:calibErrorMessages}
 
-\chapter{Files}
-
-This sections briefly describes each of the source code files for \name{}.
+This section discusses error messages that may be reported when \name{} fails
+to load a calibration file.
 
 \begin{description}
 
-\item[ic\_data.py]
-\item[ic\_get\_basis.py]
-\item[ic\_gui.py]
-\item[ic\_plot.py]
-\item[ic\_process\_dialog.py]
-\item[ic\_process.py]
-\item[ic\_rx.py]
-\item[ic\_settings.py]
-\item[ic\_tx/ic\_tx.ino]
+\item[fewer than 3 steady intervals]
+A ``steady interval'' is a contiguous duration of at least 3 seconds when the
+change in accelerometer measurement remains below a threshold and and the
+gyroscope measurement remains below a threshold. Possibly the IMU was not held
+still enough, or the duration of one or more hold was too short.
+
+\item[too many steady intervals, the limit is\ldots]
+See the discussion for ``fewer than 3 steady intervals'' for a definition of
+``steady interval''.  \name{} can remove some some extra steady intervals if
+they are not part of a triple of orthogonal vectors, but too many will cause
+this error. When recording the calibration file, start recording when with the
+IMU in the first orientation, end recording immediately after 5 seconds of the
+third orientation, and make smooth, quick, transitions between the orientations.
+
+\item[found more than 1 triple of orthogonal vectors]
+More than three orientations were recorded, and more than one triple of
+orthogonal vectors can be identified.  This is similar to ``too many steady
+intervals, the limit is\ldots''. See the discussion of that message for possible
+solutions.
+
+\item[could not find 3 orthogonal vectors]
+Even though at least 3 ``steady intervals'' (see the discussion of the ``fewer
+than 3 steady intervals'' message) were found, no 3 intervals are orthogonal.
+That is, the difference between 90 degrees and the angles separating the
+intervals was greater than a threshold. When recording the calibration file,
+ensure that that three orientations are mutually orthogonal.
+
 
 \end{description}
 
-
 \end{document}
-

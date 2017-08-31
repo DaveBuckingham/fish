@@ -6,7 +6,9 @@ import struct
 import logging
 import serial.tools.list_ports
 
-from fish.ic_data import Ic_data
+from imucapture.ic_data import Ic_data
+
+from imucapture.ic_global import *
 
 import PyQt5.QtCore
 
@@ -18,8 +20,6 @@ except ImportError:
 
 class Ic_rx(PyQt5.QtCore.QObject):
 
-    USE_ENCODER = False
-    #USE_ENCODER = True
 
     COM_FLAG_START                  = 0x7E
     COM_FLAG_END                    = 0x7F
@@ -297,7 +297,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
         self.numimus_signal.emit(self.data.num_imus)
 
         self.sample_length = 4 + (18 * num_imus) + 1
-        if (Ic_rx.USE_ENCODER):
+        if (Ic_global.USE_ENCODER):
             self.sample_length += 2
 
         time.sleep(2)
@@ -405,7 +405,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
                 if (self.settings.invert_trigger):
                     self.trigger_state = not self.trigger_state
 
-                if (Ic_rx.USE_ENCODER):
+                if (Ic_global.USE_ENCODER):
                     # TWO BYTES FOR ENCODER
                     (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
                     enc *= 0.3515625  # 360/1024

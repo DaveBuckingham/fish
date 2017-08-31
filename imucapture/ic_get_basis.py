@@ -20,7 +20,7 @@ class Ic_get_basis(object):
         #self.ACCEL_DELTA_THRESHOLD = 0.5  # max difference in window. meters per second squared.
         #self.ORTHOGONAL_THRESHOLD = 0.1   # max distance from right angle (in radians) between two vectors. 0.1 rad ~ 5.7 degs.
 
-        # TRIPPLE ALL THE THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
+        # RELAX ALL THE THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
         self.HOLD_MIN = 600               # minimum window size. 600 samples ~ 3 seconds
         self.GYRO_THRESHOLD = 0.6
         self.ACCEL_DELTA_THRESHOLD = 1.5

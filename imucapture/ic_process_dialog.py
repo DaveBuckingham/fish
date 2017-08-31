@@ -5,9 +5,10 @@ import PyQt5.QtCore
 import PyQt5.QtGui
 import logging
 
-from fish.ic_data import Ic_data
-from fish.ic_get_basis import Ic_get_basis
-from fish.ic_process import Ic_process
+from imucapture.ic_data import Ic_data
+from imucapture.ic_get_basis import Ic_get_basis
+from imucapture.ic_process import Ic_process
+from imucapture.ic_global import *
 
 try:
     from PyQt5.QtCore import QString
@@ -20,13 +21,16 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
     finished_signal = PyQt5.QtCore.pyqtSignal()
 
 
-    #def __init__(self, current_data=False, parent=None):
     def __init__(self, data):
+
 
         ########################################
         #               SETUP                  #
         ########################################
         super(Ic_process_dialog, self).__init__()
+
+        # SET WINDOW TITLE
+        self.setWindowTitle(Ic_global.APPLICATION_FULL_NAME) 
 
         self.data=data
 
@@ -233,8 +237,14 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
     def select_files(self):
         options = PyQt5.QtGui.QFileDialog.Options()
         options |= PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        (self.filename_list, searchtypes) = PyQt5.QtGui.QFileDialog.getOpenFileNames(self, "Select files to process", "", "*.csv *.hdf5", options=options)
+        (self.filename_list, searchtypes) = PyQt5.QtGui.QFileDialog.getOpenFileNames(parent=self,
+                                                                                     caption="Select files to process",
+                                                                                     directory=Ic_global.last_file_path,
+                                                                                     filter="*.csv *.hdf5",
+                                                                                     options=options)
         self.num_files_label.setText('%d files selected' % len(self.filename_list))
+
+        # STORE SOMETHING IN Ic_globa.last_file_path ???
 
 
     def process_current_dataset(self, algorithm):
@@ -305,10 +315,15 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
         calib_data = Ic_data()
 
         options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, searchtype = PyQt5.QtGui.QFileDialog.getOpenFileName(self, "Choose a file", filter="*.csv *.hdf5", options=options)
+        filename, searchtype = PyQt5.QtGui.QFileDialog.getOpenFileName(parent=self, 
+                                                                       caption="Choose a file",
+                                                                       directory=Ic_global.last_file_path,
+                                                                       filter="*.csv *.hdf5",
+                                                                       options=options)
 
         if filename:
             filename = str(filename)
+            Ic_global.last_data_path = os.path.dirname(filename)
             prefix, extension = os.path.splitext(filename)
 
             logging.info("loading " + filename)

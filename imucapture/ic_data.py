@@ -3,6 +3,8 @@ import csv
 
 import PyQt5.QtCore
 
+from imucapture.ic_global import *
+
 
 try:
     from PyQt5.QtCore import QString
@@ -12,12 +14,8 @@ except ImportError:
 
 class Ic_data(PyQt5.QtCore.QObject):
 
-    USE_ENCODER = False
-    #USE_ENCODER = True
 
     mag_asas = []
-
-
 
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
@@ -58,14 +56,14 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]} for i in range(num_imus)]
 
 
-        if (Ic_data.USE_ENCODER):
+        if (Ic_global.USE_ENCODER):
             self.imu_data['encoder'] = []
         self.data_lock[0] = False
         self.num_imus = num_imus
 
 
     def add_sample(self, sample, limit):
-        if (Ic_data.USE_ENCODER):
+        if (Ic_global.USE_ENCODER):
             assert(len(sample) == 3)
         else:
             assert(len(sample) == 2)
@@ -93,7 +91,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                 (self.imu_data['imus'][i]['mag'][2]).append(sample[1][i][2][2])
 
 
-            if (Ic_data.USE_ENCODER):
+            if (Ic_global.USE_ENCODER):
                 self.imu_data['encoder'].append(sample[2])
 
 
@@ -114,7 +112,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                     self.imu_data['imus'][i]['mag'][2] = self.imu_data['imus'][i]['mag'][2][-limit:]
 
 
-                if (Ic_data.USE_ENCODER):
+                if (Ic_global.USE_ENCODER):
                     self.imu_data['encoder'] = self.imu_data['encoder'][-limit:]
 
 
@@ -135,7 +133,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
     def load_csv_file(self, filename):
 
-        if (Ic_data.USE_ENCODER):
+        if (Ic_global.USE_ENCODER):
             expected_non_imu_columns = 2
         else:
             expected_non_imu_columns = 1
@@ -169,7 +167,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                     self.imu_data['imus'][i]['mag'][2].append(row[j+8])
                     j+=9
 
-                if (Ic_data.USE_ENCODER):
+                if (Ic_global.USE_ENCODER):
                     self.imu_data['encoder'].append(row[-1])
             return True
         return False
@@ -193,7 +191,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             self.num_imus = i
 
-            if (Ic_data.USE_ENCODER):
+            if (Ic_global.USE_ENCODER):
                 self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
             return True
         return False
@@ -215,7 +213,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                 save_data.create_dataset('gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
                 save_data.create_dataset('mag' + extension, data=self.as_list_of_triples(i, 'mag'))
 
-            if (Ic_data.USE_ENCODER):
+            if (Ic_global.USE_ENCODER):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
 
 
@@ -236,7 +234,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                     row.append(self.imu_data['imus'][j]['mag'][1][i])
                     row.append(self.imu_data['imus'][j]['mag'][2][i])
 
-                if (Ic_data.USE_ENCODER):
+                if (Ic_global.USE_ENCODER):
                     row.append(self.imu_data['encoder'][i])
                 writer.writerow(row)
 
