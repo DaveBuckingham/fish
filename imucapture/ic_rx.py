@@ -322,8 +322,8 @@ class Ic_rx(PyQt5.QtCore.QObject):
                     #asa.append(((float(received[j] - 128) / 256) + 1) * Ic_rx.MAGNETOMETER_SCALE_FACTOR)
                 Ic_rx.mag_asas.append(asa)
             else:
-                print(str(message_type))
-                print(str(len(received)))
+                logging.warning(str(message_type))
+                logging.warning(str(len(received)))
                 logging.warning("ASA read failed, using 1 adjustment")
                 Ic_rx.mag_asas.append([1,1,1])
 
@@ -409,7 +409,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
                     # TWO BYTES FOR ENCODER
                     (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
                     enc *= 0.3515625  # 360/1024
-                    print(enc)
+                    #print(enc)
                     sample.append(enc)
 
                 self.data.add_sample(sample, self.settings.data_buffer_len)

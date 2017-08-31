@@ -13,12 +13,16 @@ import sys
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+package_name = 'imucapture'
+
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
-with open('VERSION') as version_file:
+with open(os.path.join(here, package_name, 'VERSION')) as version_file:
     read_version = version_file.read().strip()
+
+
 
 setup(
     name='IMUCapture',
@@ -70,7 +74,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=["imucapture"],
+    packages=[package_name],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
