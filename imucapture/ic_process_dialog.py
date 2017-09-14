@@ -328,11 +328,11 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
 
             logging.info("loading " + filename)
 
-            if (extension == "*.hdf5"):
+            if (extension == ".hdf5"):
                 if not calib_data.load_hdf5_file(filename):
                     logging.error("load failed\n")
                     return
-            elif (extension == "*.csv"):
+            elif (extension == ".csv"):
                 if not calib_data.load_csv_file(filename):
                     logging.error("load failed\n")
                     return
