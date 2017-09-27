@@ -19,6 +19,10 @@ class Ic_global():
     APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
 
 
+    DATA_BUFFER_MIN = 1                  # >0
+    DATA_BUFFER_MAX = 10000
+
+
 
 
     # VARIABLES

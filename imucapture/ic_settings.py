@@ -3,21 +3,19 @@
 import PyQt5.QtCore
 import PyQt5.QtGui
 
+from imucapture.ic_global import *
+
 class Ic_settings(PyQt5.QtGui.QWidget):
 
     def __init__(self, parent=None):
 
 
         ########################################
-        #              COSNTANTS               #
+        #              CONSTANTS               #
         ########################################
-        self.DATA_BUFFER_MIN = 1                  # >0
-        self.DATA_BUFFER_MAX = 10000
-
-        
         self.use_trigger = False
         self.invert_trigger = False
-        self.data_buffer_len = int((self.DATA_BUFFER_MAX - self.DATA_BUFFER_MIN + 1) / 2)
+        self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
 
 
         ########################################
@@ -59,8 +57,8 @@ class Ic_settings(PyQt5.QtGui.QWidget):
 
         # SLIDER
         self.buffer_slider = PyQt5.QtGui.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.buffer_slider.setMinimum(self.DATA_BUFFER_MIN)
-        self.buffer_slider.setMaximum(self.DATA_BUFFER_MAX)
+        self.buffer_slider.setMinimum(Ic_global.DATA_BUFFER_MIN)
+        self.buffer_slider.setMaximum(Ic_global.DATA_BUFFER_MAX)
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
         self.buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
@@ -74,7 +72,7 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         self.buffer_textbox = PyQt5.QtGui.QLineEdit(str(self.data_buffer_len), self)
         #self.buffer_textbox.setMaximumWidth(50)
         self.buffer_textbox.setFixedWidth(60)
-        validator = PyQt5.QtGui.QIntValidator(self.DATA_BUFFER_MIN, self.DATA_BUFFER_MAX)
+        validator = PyQt5.QtGui.QIntValidator(Ic_global.DATA_BUFFER_MIN, Ic_global.DATA_BUFFER_MAX)
         self.buffer_textbox.setValidator(validator)
         self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)
         buffer_layout.addWidget(self.buffer_textbox, 2, 2)

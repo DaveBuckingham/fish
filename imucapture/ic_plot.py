@@ -2,6 +2,8 @@ import pyqtgraph as pg
 
 import PyQt5.QtGui
 
+from imucapture.ic_global import *
+
 
 class Ic_plot(pg.PlotWidget):
 
@@ -21,8 +23,6 @@ class Ic_plot(pg.PlotWidget):
                        PyQt5.QtGui.QColor(0, 200, 0), \
                        PyQt5.QtGui.QColor(30, 30, 255)]
 
-        self.MAX_SAMPLES = 1000   # approx.
-
         self.setMinimumWidth(250)
 
 
@@ -37,6 +37,9 @@ class Ic_plot(pg.PlotWidget):
         self.curve_y_green = self.plot([], [], pen=(0, 255, 0, 155), name='y')
         self.curve_z_blue  = self.plot([], [], pen=(30, 60, 255, 210), name='z')
 
+        self.x_range = [x * 0.005 for x in range(0, Ic_global.DATA_BUFFER_MAX)]
+
+
 
     def downsample(self, data, num):
         indices = range(0, len(data))
@@ -50,9 +53,9 @@ class Ic_plot(pg.PlotWidget):
     def plot_slot(self):
 
         if (not self.lock[0]):
-            self.curve_x_red.setData(self.plot_data[0])
-            self.curve_y_green.setData(self.plot_data[1])
-            self.curve_z_blue.setData(self.plot_data[2])
+            self.curve_x_red.setData(self.x_range[:len(self.plot_data[0])], self.plot_data[0])
+            self.curve_y_green.setData(self.x_range[:len(self.plot_data[1])], self.plot_data[1])
+            self.curve_z_blue.setData(self.x_range[:len(self.plot_data[2])], self.plot_data[2])
 
         else:
             print("LOCKED")

@@ -408,7 +408,12 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         # CALCULATE AND DISPLAY THE ACTUAL CURRENT MEASUREMENT FREQUENCY
         if (num_samples > Ic_gui.FREQ_AVERAGE_WINDOW):
-            window = timestamps[-(Ic_gui.FREQ_AVERAGE_WINDOW):]
+        
+            # DOESN'T WORK WITH DEQUE
+            #window = timestamps[-(Ic_gui.FREQ_AVERAGE_WINDOW):]
+
+            window = [timestamps[i] for i in range(len(timestamps)-(Ic_gui.FREQ_AVERAGE_WINDOW), len(timestamps))]
+
             differences = [j-i for i, j in zip(window[:-1], window[1:])]
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
