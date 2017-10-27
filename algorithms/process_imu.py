@@ -8,6 +8,8 @@ import re
 import matplotlib.pyplot as plt
 
 class IMU(object):
+    """NB: Internal storage of time, acceleration, and gyro data is in sec, m/sec^2, and rad/sec"""
+
     def __init__(self):
         self.t = []
         self.gyro = []
@@ -34,7 +36,7 @@ class IMU(object):
         self.gyro = self._filter_gyro(t, gyro)
 
     def load(self, filename, t_dataset='/data/t', gyro_dataset='/data/Gyro', accel_dataset='/data/Accel',
-             resamplefreq=None, t_units='ms'):
+             resamplefreq=None, t_units='ms', acc_units='m/s^2', gyro_units='rad/s'):
         """Loads IMU data from an HDF5 file, potentially resampling.
 
         Arguments:
@@ -45,47 +47,46 @@ class IMU(object):
             resamplefreq - If not None, resample data at a constant sampling frequency. Could be a number in Hz or
                 'mean' to resample at the mean rate. (default None)
             t_units - Units of the time dataset. Will convert to seconds. (default 'ms')
+            acc_units - Units of the acceleration dataset in the file. Will convert to m/s^2. (options are 'g' or
+                'm/s^2'; default 'm/s^2')
+            gyro_units - Units of the gyro dataset in the file. Will convert to rad/s. (options are 'deg/s' or
+                'rad/s'; default 'rad/s')
         """
 
         with h5py.File(filename, 'r') as h5file:
             acc = np.array(h5file[accel_dataset])
             gyro = np.array(h5file[gyro_dataset])
-            t0 = np.array(h5file[t_dataset])
+            t0 = np.array(h5file[t_dataset]).astype(float)
 
-            if t_units == 'ms' or t_units == 'msec':
-                t0 /= 1000.0
-            elif t_units == 's' or t_units == 'sec':
-                pass
-            else:
-                raise ValueError('Unrecognized unit for time: {}'.format(t_units))
+        t0, acc, gyro = self._convert_units(t0, acc, gyro, t_units, acc_units, gyro_units)
 
-            if resamplefreq is not None:
-                if isinstance(resamplefreq, basestring):
-                    if resamplefreq == 'mean':
-                        resamplefreq = np.around(1.0 / np.mean(np.diff(t0)), decimals=-1)
-                    else:
-                        raise ValueError('Unrecognized resampling option: {}'.format(resamplefreq))
+        if resamplefreq is not None:
+            if isinstance(resamplefreq, str):
+                if resamplefreq == 'mean':
+                    resamplefreq = np.around(1.0 / np.mean(np.diff(t0)), decimals=-1)
+                else:
+                    raise ValueError('Unrecognized resampling option: {}'.format(resamplefreq))
 
-                self.t_irr = t0
-                self.gyro_irr = gyro
-                self.acc_irr = acc
+            self.t_irr = t0
+            self.gyro_irr = gyro
+            self.acc_irr = acc
 
-                t = np.arange(t0[0], t0[-1], 1.0/resamplefreq)
+            t = np.arange(t0[0], t0[-1], 1.0/resamplefreq)
 
-                gyro = interpolate.interp1d(t0, gyro, axis=0)(t)
-                acc = interpolate.interp1d(t0, acc, axis=0)(t)
-                sampfreq = resamplefreq
-            else:
-                t = t0
-                sampfreq = 1.0/np.mean(np.diff(t0))
+            gyro = interpolate.interp1d(t0, gyro, axis=0)(t)
+            acc = interpolate.interp1d(t0, acc, axis=0)(t)
+            sampfreq = resamplefreq
+        else:
+            t = t0
+            sampfreq = 1.0/np.mean(np.diff(t0))
 
-            self.t0 = t
-            self.t = t
-            self.acc0 = acc
-            self.acc = self.acc0
-            self.gyro0 = gyro
-            self.gyro = self.gyro0
-            self.sampfreq = sampfreq
+        self.t0 = t
+        self.t = t
+        self.acc0 = acc
+        self.acc = self.acc0
+        self.gyro0 = gyro
+        self.gyro = self.gyro0
+        self.sampfreq = sampfreq
 
     def filter(self, order=None, gyro_cutoff=None, acc_cutoff=None, nsamp=None, method='butter'):
         """Filter IMU data using either a butterworth filter or a running mean.
@@ -143,7 +144,7 @@ class IMU(object):
                     acc_hi = acc_cutoff[1]
                     acc_lo = acc_cutoff[0]
                     islofreq = True
-                    acc = self.acc0 - acclo
+                    acc = self.acc0
                 else:
                     raise ValueError('Unrecognized frequency range {}'.format(acc_cutoff))
 
@@ -172,7 +173,7 @@ class IMU(object):
         N = len(t)
 
         nblocks = int(np.ceil(float(N)/n))
-        print "dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks)
+        print("dt={}, dur={}, N={}, n={}, nblocks={}".format(dt, dur,N,n,nblocks))
 
         pad = n*nblocks - N
 
@@ -189,7 +190,7 @@ class IMU(object):
         ctrind = np.concatenate(([0], ctrind, [N-1]))
         ind = np.arange(N)
 
-        print "nblocks={}, ymn.shape={}".format(nblocks, ymn.shape)
+        print("nblocks={}, ymn.shape={}".format(nblocks, ymn.shape))
         ylo = interpolate.interp1d(ctrind, ymn, kind='cubic', axis=0)(ind)
         return ylo
 
@@ -214,7 +215,7 @@ class IMU(object):
 
         return t, gyro
 
-    def get_orientation(self, method='madgwick', initwindow=0.5, beta=2.86, lCa=(0.0, -0.3, -0.7), Ca=None,
+    def get_orientation(self, method='madgwick', initwindow=0.5, beta=0.05,
                         gain=0.5, gainrange=(0.1, 0.2), epsilon=0.9):
         """Get orientation and dynamic acceleration from IMU data.
 
@@ -226,29 +227,20 @@ class IMU(object):
             method - Algorithm ('madgwick', 'integrate_gyro', or 'dsf')
             initwindow - Initial time window to average to get the initial orientation.
             beta - Madgwick beta parameter. beta=0 is equivalent to integrating the gyros
-            lCa - log10 of the Ca parameter.  Makes it easier to give values for Ca that are close to but not
-                equal to zero.  lCa overrides Ca if you give both.
-            Ca - Dynamic acceleration drift parameter. Roughly related to the frequency range of dynamic acceleartion.
-                Small values (close to zero) mean that dynamic acceleration will be relatively smooth, while larger
-                 values (> 1) mean that dynamic acceleration will track the overall acceleration more closely
-            
+
             Valenti algorithm:
             gain - Gain parameter, between 0 and 1.  gain=0 is gyro integration; gain=1 is assuming the
                 accelerometer always reads gravity exactly (ie, no dynamic acceleration)
             gainrange - Adaptive gain range. Default = (0.1, 0.2).  Gain = gain below gainrange[0]; gain = 0 above
                 gainrange[1], and linear interpolation between the two
             epsilon - Accelerometer interpolation parameter. Default = 0.9
+
+        NB: Internal time, accelerometer, and gyro data should be in sec, m/s^2, and rad/s.
         """
 
         if method.lower() == 'dsf':
             dt = np.mean(np.diff(self.t))
-            if Ca is None:
-                Ca = np.power(10, np.array(lCa)) / dt
-            else:
-                Ca = np.array(Ca) / dt
-            self._get_orientation_dsf(Ca=Ca)
-
-            g0 = np.array([0, 0, 1.0])
+            self._get_orientation_dsf()
 
             orient_world = []
             accdyn_world = []
@@ -267,9 +259,9 @@ class IMU(object):
                 accdyn_world.append(R.T.dot(adyn1))
 
             self.orient_world = np.array(orient_world)
+            self.orient = self.orient_world
             self.orient_world_rotm = np.array(rotm_world)
-            self.accdyn_sensor /= 9.81
-            self.accdyn_world = np.array(accdyn_world) / 9.81
+            self.accdyn_world = np.array(accdyn_world)
             self.accdyn = self.accdyn_world
 
         elif method.lower() == 'valenti':
@@ -313,18 +305,51 @@ class IMU(object):
 
         return self.orient_world
 
-    def calibrate(self, filename):
+    def _convert_units(self, t=None, acc=None, gyro=None, t_units='ms', acc_units='m/s^2', gyro_units='rad/s'):
+        ret = []
+        if t is not None:
+            if t_units == 'ms' or t_units == 'msec':
+                t /= 1000.0
+            elif t_units == 's' or t_units == 'sec':
+                pass
+            else:
+                raise ValueError('Unrecognized unit for time: {}'.format(t_units))
+            ret.append(t)
+
+        if acc is not None:
+            if acc_units.lower() in ['g']:
+                acc *= 9.81
+            elif acc_units.lower() in ['m/s^2', 'ms2', 'm/sec^2']:
+                pass
+            else:
+                raise ValueError('Unrecognized unit for acceleration: {}'.format(acc_units))
+            ret.append(acc)
+
+        if gyro is not None:
+            if gyro_units.lower() in ['deg/s', 'deg/sec', 'degs']:
+                gyro *= np.pi/180.0
+            elif gyro_units.lower() in ['rad/s', 'rad/sec', 'rads']:
+                pass
+            else:
+                raise ValueError('Unrecognized unit for gyroscope: {}'.format(gyro_units))
+            ret.append(gyro)
+
+        if len(ret) == 1:
+            return ret[0]
+        else:
+            return tuple(ret)
+
+    def calibrate(self, filename, acc_units='m/s^2', gyro_units='rad/s'):
         """Get initial noise covariances, based on a static recording"""
         with h5py.File(filename, 'r') as h5calib:
             gyro = np.array(h5calib['/data/Gyro'])
-            # convert file data from deg/sec to rad/sec
-            gyro = np.deg2rad(gyro)
+            accel = np.array(h5calib['/data/Accel'])
 
-            accel = 9.81 * np.array(h5calib['/data/Accel'])
+        accel, gyro = self._convert_units(acc=accel, gyro=gyro, acc_units=acc_units, gyro_units=gyro_units)
 
-            self._calibrate(accel, gyro)
+        self._calibrate(accel, gyro)
 
-    def _calibrate(self, accel, gyro):
+    def _calibrate(self, accel, gyro, accdynmag=200.0):
         """Get initial covariances.
         gyro in rad/sec
         accel in m/s^2"""
@@ -339,23 +364,36 @@ class IMU(object):
 
         # dynamic acceleration covariance
         # this may be wrong
-        self.Qdyn = self._stack_matrices([[self.Qacc, np.zeros((3,3))],
-                                          [np.zeros((3,3)), self.Qacc]])
+        self.Qdyn = accdynmag * self._stack_matrices([[self.Qacc, np.zeros((3,3))],
+                                                      [np.zeros((3,3)), self.Qacc]])
 
         # gyro noise
         self.gyro_noise = np.std(gyro, axis=0)
 
-    def get_inertial_coords(self, filename, method='mean accel', g=None):
+    def estimate_beta(self, filename, gyro_units='rad/s'):
+        """Get initial noise covariances, based on a static recording"""
+        with h5py.File(filename, 'r') as h5calib:
+            gyro = np.array(h5calib['/data/Gyro'])
+
+        gyro = self._convert_units(gyro=gyro, gyro_units=gyro_units)
+        beta = np.sqrt(3.0/4.0) * np.max(np.std(gyro, axis=0))
+
+        return beta
+
+    def get_inertial_coords(self, filename, method='mean accel', g=None, acc_units='m/s^2', gyro_units='rad/s'):
         """Get the initial gravity vector"""
         with h5py.File(filename, 'r') as h5inertial:
-            accel = 9.81 * np.array(h5inertial['/data/Accel'])
+            accel = np.array(h5inertial['/data/Accel'])
 
-            if g is not None:
-                self.gN = g
-            elif method == 'mean accel':
-                self.gN = np.mean(accel, axis=0)
+        accel = self._convert_units(acc=accel, acc_units=acc_units)
 
-    def get_world_coordinates(self, filename=None, axes=('z'), times=None, averagedur=0.1, acc=None, t=None):
+        if g is not None:
+            self.gN = g
+        elif method == 'mean accel':
+            self.gN = np.mean(accel, axis=0)
+
+    def get_world_coordinates(self, filename=None, axes=('z'), times=None, averagedur=0.1, acc=None, t=None,
+                              t_units='ms', acc_units='m/s^2', gyro_units='rad/s'):
         """Get the world coordinates.
 
         Uses a file where the chip is oriented so that gravity points along what we want as the world axes,
@@ -364,11 +402,30 @@ class IMU(object):
         """
         axinddict = {'x': 0, 'y': 1, 'z': 2}
 
-        if acc is None:
-            with h5py.File(filename, 'r') as h5calib:
-                acc = np.array(h5calib['/data/Accel'])
-                t = np.array(h5calib['/data/t'])
+        if times is not None:
+            times = np.array(times)
 
+        if acc is None:
+            if isinstance(filename, str):
+                with h5py.File(filename, 'r') as h5calib:
+                    acc = np.array(h5calib['/data/Accel'])
+                    t = np.array(h5calib['/data/t']).astype(float)
+                t, acc = self._convert_units(t=t, acc=acc, t_units=t_units, acc_units=acc_units)
+            else:
+                tmax = 0
+                t = np.array([])
+                acc = np.zeros((0, 3))
+                for i, fn in enumerate(filename):
+                    with h5py.File(fn, 'r') as h5calib:
+                        acc1 = np.array(h5calib['/data/Accel'])
+                        t1 = np.array(h5calib['/data/t']).astype(float)
+
+                    t1, acc1 = self._convert_units(t=t1, acc=acc1, t_units=t_units, acc_units=acc_units)
+
+                    acc = np.append(acc, acc1, axis=0)
+                    t = np.append(t, t1+tmax)
+                    times[i] += tmax
+                    tmax += np.max(t1)
         gax = np.eye(3)
 
         if len(axes) == 1:
@@ -430,7 +487,7 @@ class IMU(object):
 
         return V
 
-    def _get_orientation_dsf(self, Ca):
+    def _get_orientation_dsf(self):
         """Dynamic snap free Kalman filter for sensor fusion
         x is the state: [theta, bias, adyn]^T
         where theta are the Euler """
@@ -440,7 +497,6 @@ class IMU(object):
             raise ValueError('Inertial reference frame is not yet set')
 
         xkm1 = np.zeros((12,))
-        xkm1[-3:] = Ca
         dt = np.diff(self.t)
         dt = np.insert(dt, 0, dt[0:0])
         dt1 = dt[0]
@@ -453,8 +509,8 @@ class IMU(object):
 
         N = self.gyro.shape[0]
 
-        gyro = np.deg2rad(self.gyro) - self.bias_gyro
-        acc = 9.81*self.acc
+        gyro = self.gyro - self.bias_gyro
+        acc = self.acc
 
         eulerEKF = []
         aD = []
@@ -464,7 +520,7 @@ class IMU(object):
         Rk = self.Qacc
 
         for dt1, omegak, accel in zip(dt, gyro, acc):
-            Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1, Ca)
+            Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1)
 
             Qk = self._stack_matrices([
                 [Bk.dot(self.Qgyro + self.Qbias).dot(Bk.T)*dt1**2,    -Bk.dot(self.Qbias)*dt1,  np.zeros((3, 6))],
@@ -504,7 +560,7 @@ class IMU(object):
             qorient.append(quaternion.from_euler_angles(*o1))
         self.qorient = np.array(qorient)
 
-    def _system_dynamics(self, xk, omegak, dt, Ca):
+    def _system_dynamics(self, xk, omegak, dt):
         phi, theta, psi = xk[:3]
         biask = xk[3:6]
 
@@ -661,20 +717,19 @@ class IMU(object):
 
         return rpycorr
 
-
     def _stack_matrices(self, M):
         m = []
         for row in M:
             m.append(np.hstack(tuple(row)))
         return np.vstack(tuple(m))
 
-    def _get_orientation_madgwick(self, initwindow=0.5, beta=2.86):
-        gyrorad = np.deg2rad(self.gyro)
-        betarad = np.deg2rad(beta)
+    def _get_orientation_madgwick(self, initwindow=0.5, beta=0.05):
+        """beta in rad"""
+        gyrorad = self.gyro
+        betarad = beta
 
         qorient = np.zeros_like(self.t, dtype=np.quaternion)
         qgyro = np.zeros_like(self.t, dtype=np.quaternion)
-        gvec = np.zeros_like(self.gyro)
 
         dt = 1.0 / self.sampfreq
 
@@ -685,6 +740,7 @@ class IMU(object):
         for i, gyro1 in enumerate(gyrorad[1:, :], start=1):
             qprev = qorient[i-1]
 
+            # acc is turned into a unit vector, so it doesn't matter what units it's in
             acc1 = self.acc[i, :]
             acc1 = acc1 / np.linalg.norm(acc1)
 
@@ -715,12 +771,12 @@ class IMU(object):
 
         # get the gravity vector
         # gravity is +Z
-        gvec = [(q.conj() * np.quaternion(0, 0, 0, 1) * q).components[1:] for q in qorient]
+        gvec = np.array([(q.conj() * np.quaternion(0, 0, 0, 1) * q).components[1:] for q in qorient])
 
         self.qorient = qorient
         self.orient_sensor = np.array([self._rotm2eul(quaternion.as_rotation_matrix(self.qchip2world * q1))
                                        for q1 in qorient])
-        self.gvec = gvec
+        self.gvec = 9.81 * gvec
         self.accdyn_sensor = self.acc - gvec
 
     def _get_orientation_valenti(self, initwindow=0.5, gain=0.5, gainrange=(0.1, 0.2), epsilon=0.9):
@@ -809,12 +865,11 @@ class IMU(object):
         self.qorient = qorient
         self.orient_sensor = np.array([self._rotm2eul(quaternion.as_rotation_matrix(self.qchip2world * q1))
                                        for q1 in qorient])
-        self.gvec = gvec
+        self.gvec = 9.81 * gvec
         self.accdyn_sensor = self.acc - gvec
 
     def integrate_gyro(self, initwindow=0.5):
-        # convert gyro to rad/sec
-        gyrorad = self.gyro * np.pi/180.0
+        gyrorad = self.gyro
 
         qorient = np.zeros_like(self.t, dtype=np.quaternion)
         gvec = np.zeros_like(self.gyro)
@@ -831,12 +886,12 @@ class IMU(object):
             qdotgyro = 0.5 * (qprev * np.quaternion(0, *gyro1))
             qorient[i] = qprev + qdotgyro * dt
 
-            g1 = qorient[i].conj() * np.quaternion(0, 0, 0, -1) * qorient[i]
+            g1 = qorient[i].conj() * np.quaternion(0, 0, 0, 1) * qorient[i]
             gvec[i, :] = g1.components[1:]
 
         self.qorient = qorient
         self.orient_sensor = quaternion.as_euler_angles(qorient)
-        self.gvec = gvec
+        self.gvec = 9.81 * gvec
         self.accdyn_sensor = self.acc - gvec
 
     def orientation_from_accel(self, acc):
@@ -893,7 +948,7 @@ def main():
     # fig, ax = plt.subplots()
     # ax.plot(t, enc)
 
-    imu.get_orientation(method='dsf', Ca=(0.0, 0.0, 0.0))
+    imu.get_orientation(method='dsf')
     orient_dsf = copy(imu.orient_world)
     accd1 = copy(imu.accdyn)
 
