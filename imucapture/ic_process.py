@@ -21,6 +21,7 @@ class Ic_process():
 
 
     def get_chip_to_world_rotation_matrix(self, acc, time):
+        # TODO: I'm pretty sure this function should not be used.  The matrix should be the basis vectors from ic_get_basis.get_basis_vector
         z_axis_index = 2
 
         averagedur = 4*time[-1]
@@ -52,7 +53,13 @@ class Ic_process():
 
 
 
-    def get_orientation_dsf(self, Ca_arg, initial_gravity, chip2world_rot, still_accel, still_gyro, data, filter_num_samples):
+    def get_orientation_dsf(self, Ca_arg, initial_gravity, chip2world_rot, still_accel, still_gyro, data, filter_num_samples,
+                            accdynmag=200.0):
+        """Dynamic snap free Kalman filter for sensor fusion
+        x is the state: [theta, bias, adyn, jerk]^T
+        where theta are the Euler angles"""
+
+        # TODO: Ca_arg parameter is no longer needed.  Remove
 
         # GET ACC IN MPS2
         acc  = numpy.array(data.as_list_of_triples(0, 'accel'))
@@ -76,53 +83,60 @@ class Ic_process():
         bias_gyro = numpy.mean(still_gyro, axis=0)
 
         # GET NOISE COVARIANCES
-        gyro_noise_covariance_q = numpy.cov(still_gyro, rowvar=False)
-        accel_noise_covariance_q = numpy.cov(still_accel, rowvar=False)
+        Qgyro = numpy.cov(still_gyro, rowvar=False)
+        Qacc = numpy.cov(still_accel, rowvar=False)
 
         # BIAS NOISE COVARIANCE (ASSUMING LOW DRIFT)
-        Qbias = 1e-10 * accel_noise_covariance_q
+        Qbias = 1e-10 * Qacc
 
-        Ca = numpy.array(Ca_arg) / numpy.mean(numpy.diff(time))
+        Qdyn = accdynmag * self._stack_matrices([[Qacc, numpy.zeros((3, 3))],
+                                                 [numpy.zeros((3, 3)), Qacc]])
 
-        Qdyn = numpy.diag(Ca).dot(accel_noise_covariance_q)
-
-        xkm1 = numpy.zeros((9,))
+        xkm1 = numpy.zeros((12,))
         dt = numpy.diff(time)
         dt = numpy.insert(dt, 0, dt[0:0])
         dt1 = dt[0]
 
-        # MAKE 9 X 9 MATRIX
+        # MAKE 12 X 12 MATRIX
         Pkm1 = self._stack_matrices([
-            [(gyro_noise_covariance_q + Qbias)*dt1**2,  -Qbias*dt1,          numpy.zeros((3, 3))],
-            [-Qbias*dt1,               Qbias,              numpy.zeros((3, 3))],
-            [numpy.zeros((3, 3)),         numpy.zeros((3, 3)),   Qdyn]])
+            [(Qgyro + Qbias)*dt1**2,  -Qbias*dt1,               numpy.zeros((3, 6))],
+            [-Qbias*dt1,               Qbias,                   numpy.zeros((3, 6))],
+            [numpy.zeros((6, 3)),      numpy.zeros((6, 3)),     Qdyn]])
 
-        biased_gyro = gyro - bias_gyro
+        gyro_unbiased = gyro - bias_gyro
 
         eulerEKF = []
         aD = []
+        err = []
+        PkEKF = []
         xkEKF = []
+        Rk = Qacc
 
-        for dt1, omegak, accel in zip(dt, biased_gyro, acc):
-            Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1, Ca)
+        for dt1, omegak, accel in zip(dt, gyro_unbiased, acc):
+            Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1)
 
             Qk = self._stack_matrices([
-                [Bk.dot(gyro_noise_covariance_q + Qbias).dot(Bk.T)*dt1**2,  -Bk.dot(Qbias)*dt1,  numpy.zeros((3,3))],
-                [-Qbias.dot(Bk.T)*dt1,                     Qbias,              numpy.zeros((3,3))],
-                [numpy.zeros((3,3)),                          numpy.zeros((3,3)),    Qdyn]])
+                [Bk.dot(Qgyro + Qbias).dot(Bk.T)*dt1**2,  -Bk.dot(Qbias)*dt1,  numpy.zeros((3, 6))],
+                [-Qbias.dot(Bk.T)*dt1,                     Qbias,              numpy.zeros((3, 6))],
+                [numpy.zeros((6,6)),                                           Qdyn]])
 
             PkM = Fk.dot(Pkm1).dot(Fk.T) + Qk
             hk, Jh = self._observation_dynamics(xkM, initial_gravity)
 
-            Sk = Jh.dot(PkM).dot(Jh.T) + accel_noise_covariance_q
-            Kk = PkM.dot(Jh.T).dot(numpy.linalg.pinv(Sk))
+            Hk = Jh
+
+            Sk = Hk.dot(PkM).dot(Hk.T) + Rk
+            Kk = PkM.dot(Hk.T).dot(numpy.linalg.pinv(Sk))
             xk = xkM + Kk.dot(accel - hk)
-            Pk = (numpy.eye(9) - Kk.dot(Jh)).dot(PkM)
+            Pk = (numpy.eye(12) - Kk.dot(Hk)).dot(PkM)
 
             QT = self._eul2rotm(xk[:3])
 
             eulerEKF.append(xk[:3])
-            aD.append(QT.T.dot(xk[6:]))
+            aD.append(QT.T.dot(xk[6:9]))
+            err.append(accel - ((QT.dot(initial_gravity) + xk[6:9])))
+
+            PkEKF.append(Pk)
             xkEKF.append(xk)
 
             Pkm1 = Pk
@@ -131,29 +145,21 @@ class Ic_process():
         orient_sensor = numpy.pad(numpy.array(eulerEKF), ((1, 0), (0, 0)), mode='edge')
         accdyn_sensor = numpy.pad(numpy.array(aD), ((1, 0), (0, 0)), mode='edge')
 
-        qorient = []
-        for o1 in orient_sensor:
-            qorient.append(quaternion.from_euler_angles(*o1))
-        qorient = numpy.array(qorient)
-
         orient_world = []
         accdyn_world = []
-        qorient_world = []
+        rotm_world = []
         for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
             Rchip = self._eul2rotm(chiprpy)
             R = Rchip.dot(chip2world_rot)
 
-            worldrotm = chip2world_rot.T.dot(R)
-            orient_world.append(self._rotm2eul(worldrotm))
+            rotm_world1 = chip2world_rot.T.dot(R)
+            orient_world.append(self._rotm2eul(rotm_world1))
+            rotm_world.append(rotm_world1)
 
             # rotate the dynamic acceleration into the world coordinates
             accdyn_world.append(R.T.dot(adyn1))
 
-
-        return (accdyn_world, orient_world)
-
-
-
+        return (accdyn_world, orient_world, rotm_world)
 
     def get_orientation_madgwick(self, chip2world_rot, data, filter_num_samples, initwindow=0.5, beta=2.86):
 
@@ -236,7 +242,7 @@ class Ic_process():
         # CONVERT ACCEL DATA BACK TO MPS2
         accdyn_world = [i * 9.81 for i in accdyn_world]
 
-        return (accdyn_world, orient_world)
+        return (accdyn_world, orient_world, orient_world_rotm)
 
 
 
@@ -245,7 +251,7 @@ class Ic_process():
 
 
 
-    def _system_dynamics(self, xk, omegak, dt, Ca):
+    def _system_dynamics(self, xk, omegak, dt):
         phi, theta, psi = xk[:3]
         biask = xk[3:6]
 
@@ -276,12 +282,16 @@ class Ic_process():
                                 numpy.dot(Bk_theta, unbiased_omegak),
                                 numpy.dot(Bk_psi, unbiased_omegak)))
 
-        Fk = self._stack_matrices([
-            [numpy.eye(3) + Bkomega*dt, -Bk*dt, numpy.zeros((3,3))],
-            [numpy.zeros((3, 3)), numpy.eye(3), numpy.zeros((3, 3))],
-            [numpy.zeros((3, 3)), numpy.zeros((3, 3)), numpy.eye(3)]])
+        jerk = xk[9:]
 
-        xkp1 = numpy.hstack((xk[:3] + numpy.dot(Bk, unbiased_omegak).squeeze()*dt, xk[3:6], xk[6:] + Ca*dt))
+        Fk = self._stack_matrices([
+            [numpy.eye(3) + Bkomega*dt, -Bk*dt, numpy.zeros((3, 6))],
+            [numpy.zeros((3, 3)), numpy.eye(3), numpy.zeros((3, 6))],
+            [numpy.zeros((3, 6)), numpy.eye(3), numpy.eye(3)*dt],
+            [numpy.zeros((3, 6)), numpy.zeros((3, 3)), numpy.eye(3)]])
+
+        xkp1 = numpy.hstack((xk[:3] + numpy.dot(Bk, unbiased_omegak).squeeze()*dt, xk[3:6],
+                             xk[6:9] + jerk*dt, xk[9:]))
 
         return Fk, xkp1, Bk
 
@@ -317,8 +327,9 @@ class Ic_process():
         QT_pitch = Rx_roll.dot(Ry_pitch_rate).dot(Rz_yaw)
         QT_yaw   = Rx_roll.dot(Ry_pitch).dot(Rz_yaw_rate)
 
-        Jh = numpy.vstack((QT_roll.dot(gN), QT_pitch.dot(gN), QT_yaw.dot(gN), numpy.zeros((3, 3)), numpy.eye(3))).T
-        hk = QT.dot(gN) + xk[6:]
+        Jh = numpy.vstack((QT_roll.dot(gN), QT_pitch.dot(gN), QT_yaw.dot(gN), numpy.zeros((3, 3)),
+                           numpy.eye(3), numpy.zeros((3, 3)))).T
+        hk = QT.dot(gN) + xk[6:9]
 
         return hk, Jh
 

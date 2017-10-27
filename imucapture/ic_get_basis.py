@@ -81,6 +81,9 @@ class Ic_get_basis(object):
 
         for i in range(k):
             V[:, i] /= numpy.linalg.norm(V[:, i])
+
+        for i in range(k):
+            V[:, i] /= numpy.linalg.norm(V[:, i])
             for j in range(i+1, k):
                 proj = numpy.dot(V[:, i], V[:, j]) * V[:, i]
                 V[:, j] -= proj
@@ -92,6 +95,7 @@ class Ic_get_basis(object):
         return -Q
 
     def get_intervals(self, data):
+        # TODO: This would be way faster with a bisection algorithm
         intervals = []
         mean_accels = []
         start = 0
@@ -115,6 +119,7 @@ class Ic_get_basis(object):
 
 
     def get_basis_vector(self, data, intervals=None):
+        # TODO: This fails for data from multiple IMUs.  Should treat the IMUs separately and return multiple sets of vectors
         if (intervals is None):
             intervals = self.get_intervals(data)
 
@@ -151,9 +156,8 @@ class Ic_get_basis(object):
 
         # MAKE SURE THE BASIS IS RIGHT-HANDED
         if(numpy.dot(numpy.cross(orthonormal[0], orthonormal[1]), orthonormal[2]) < 0):
-            orthonormal[0,:], orthonormal[1,:] = orthonormal[1,:], orthonormal[0,:].copy()
-            # OR
-            # orthonormal[:, 2] = -orthonormal[:, 2]
+            # don't swap the axes!  orthonormal[0,:], orthonormal[1,:] = orthonormal[1,:], orthonormal[0,:].copy()
+            orthonormal[:, 2] = -orthonormal[:, 2]
         assert(numpy.dot(numpy.cross(orthonormal[:,0], orthonormal[:,1]), orthonormal[:,2]) > 0)
 
         as_tuple = tuple(map(tuple, orthonormal))

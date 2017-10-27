@@ -1,5 +1,8 @@
 import h5py
 import csv
+import logging
+
+import numpy
 
 import PyQt5.QtCore
 
@@ -55,6 +58,7 @@ class Ic_data(PyQt5.QtCore.QObject):
         # THIS WORKS
         self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]} for i in range(num_imus)]
 
+        # Q: Why don't you use numpy arrays?  It'll make the math *way* faster, and probably pyqtgraph too
 
         if (Ic_global.USE_ENCODER):
             self.imu_data['encoder'] = []
@@ -73,10 +77,12 @@ class Ic_data(PyQt5.QtCore.QObject):
         if(self.data_lock[0]):
             logging.info("WRITE LOCKED Ic_rx")
         else:
+            # Q: are you aiming for a real thread safe lock here? This might not work
             self.data_lock[0] = True
 
             self.imu_data['timestamps'].append(sample[0])
 
+            # Q: If appending data is the reason not to use numpy arrays, could collect preallocate blocks and assign
             for i in (range(0, self.num_imus)):
                 (self.imu_data['imus'][i]['accel'][0]).append(sample[1][i][0][0])
                 (self.imu_data['imus'][i]['accel'][1]).append(sample[1][i][0][1])
@@ -175,9 +181,21 @@ class Ic_data(PyQt5.QtCore.QObject):
 
     def load_hdf5_file(self, filename):
         with h5py.File(filename, 'r') as datafile:
+            if datafile is None:
+                logging.debug('datafile is None')
+                return False
+
             self.imu_data = {}
-            self.imu_data['timestamps'] = datafile.get('data/time')[()]
+            if '/data/time' in datafile:
+                self.imu_data['timestamps'] = datafile.get('data/time')[()]
+            elif '/data/t' in datafile:
+                self.imu_data['timestamps'] = datafile.get('data/t')[()]
+            else:
+                return False
+
             self.imu_data['imus'] = []
+
+            logging.debug('datafile: /data/ {}'.format(datafile.keys()))
 
             i = 0
             ext = str(i + 1)
@@ -190,6 +208,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                 ext = str(i + 1)
 
             self.num_imus = i
+            logging.debug('Loaded {} IMUs'.format(self.num_imus))
 
             if (Ic_global.USE_ENCODER):
                 self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
@@ -238,3 +257,31 @@ class Ic_data(PyQt5.QtCore.QObject):
                     row.append(self.imu_data['encoder'][i])
                 writer.writerow(row)
 
+
+    def rotate(self, R, imunum=0):
+        acc = self.as_list_of_triples(imunum, 'accel')
+        gyro = self.as_list_of_triples(imunum, 'gyro')
+        mag = self.as_list_of_triples(imunum, 'mag')
+
+        accr = [[],[],[]]
+        gyror = [[],[],[]]
+        magr = [[],[],[]]
+        for a, g, m in zip(acc, gyro, mag):
+            a1 = R.dot(numpy.array(a))
+            accr[0].append(a1[0])
+            accr[1].append(a1[1])
+            accr[2].append(a1[2])
+
+            g1 = R.dot(numpy.array(g))
+            gyror[0].append(g1[0])
+            gyror[1].append(g1[1])
+            gyror[2].append(g1[2])
+
+            m1 = R.dot(numpy.array(m))
+            magr[0].append(m1[0])
+            magr[1].append(m1[1])
+            magr[2].append(m1[2])
+
+        self.imu_data['imus'][imunum]['accel'] = accr
+        self.imu_data['imus'][imunum]['gyro'] = gyror
+        self.imu_data['imus'][imunum]['mag'] = magr

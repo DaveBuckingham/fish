@@ -6,7 +6,7 @@ class Ic_global():
 
     # CONSTANTS
 
-    USE_ENCODER = False
+    USE_ENCODER = True
 
     APPLICATION_NAME = 'IMU-Capture'
 
