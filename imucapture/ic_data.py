@@ -8,6 +8,8 @@ import PyQt5.QtCore
 
 from imucapture.ic_global import *
 
+import collections
+
 
 try:
     from PyQt5.QtCore import QString
@@ -30,7 +32,7 @@ class Ic_data(PyQt5.QtCore.QObject):
         super(Ic_data, self).__init__()
 
         self.imu_data = {}
-        self.imu_data['timestamps'] = []
+        self.imu_data['timestamps'] = collections.deque()
 
         self.data_lock = [False]
 
@@ -50,13 +52,18 @@ class Ic_data(PyQt5.QtCore.QObject):
         # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
         self.data_lock[0] = True
         self.imu_data = {}
-        self.imu_data['timestamps'] = []
+        self.imu_data['timestamps'] = collections.deque()
 
         # THIS DOESN'T WORK! * OPERATOR DOESN'T CREATE SEPARATE OBJECTS
         #self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * num_imus
 
         # THIS WORKS
-        self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]} for i in range(num_imus)]
+        self.imu_data['imus'] = [{'accel': [collections.deque(), collections.deque(), collections.deque()],
+                                  'gyro':  [collections.deque(), collections.deque(), collections.deque()], 
+                                  'mag':   [collections.deque(), collections.deque(), collections.deque()]
+                                 }
+                                 for i in range(num_imus)
+                                ]
 
         # Q: Why don't you use numpy arrays?  It'll make the math *way* faster, and probably pyqtgraph too
 
@@ -101,25 +108,25 @@ class Ic_data(PyQt5.QtCore.QObject):
                 self.imu_data['encoder'].append(sample[2])
 
 
-            if (len(self.imu_data['timestamps']) > limit):
-                self.imu_data['timestamps'] = self.imu_data['timestamps'][-limit:]
+            while (len(self.imu_data['timestamps']) > limit):
+                self.imu_data['timestamps'].popleft()
 
                 for i in (range(0, self.num_imus)):
-                    self.imu_data['imus'][i]['accel'][0] = self.imu_data['imus'][i]['accel'][0][-limit:]
-                    self.imu_data['imus'][i]['accel'][1] = self.imu_data['imus'][i]['accel'][1][-limit:]
-                    self.imu_data['imus'][i]['accel'][2] = self.imu_data['imus'][i]['accel'][2][-limit:]
+                    self.imu_data['imus'][i]['accel'][0].popleft()
+                    self.imu_data['imus'][i]['accel'][1].popleft()
+                    self.imu_data['imus'][i]['accel'][2].popleft()
 
-                    self.imu_data['imus'][i]['gyro'][0] = self.imu_data['imus'][i]['gyro'][0][-limit:]
-                    self.imu_data['imus'][i]['gyro'][1] = self.imu_data['imus'][i]['gyro'][1][-limit:]
-                    self.imu_data['imus'][i]['gyro'][2] = self.imu_data['imus'][i]['gyro'][2][-limit:]
+                    self.imu_data['imus'][i]['gyro'][0].popleft()
+                    self.imu_data['imus'][i]['gyro'][1].popleft()
+                    self.imu_data['imus'][i]['gyro'][2].popleft()
 
-                    self.imu_data['imus'][i]['mag'][0] = self.imu_data['imus'][i]['mag'][0][-limit:]
-                    self.imu_data['imus'][i]['mag'][1] = self.imu_data['imus'][i]['mag'][1][-limit:]
-                    self.imu_data['imus'][i]['mag'][2] = self.imu_data['imus'][i]['mag'][2][-limit:]
+                    self.imu_data['imus'][i]['mag'][0].popleft()
+                    self.imu_data['imus'][i]['mag'][1].popleft()
+                    self.imu_data['imus'][i]['mag'][2].popleft()
 
 
                 if (Ic_global.USE_ENCODER):
-                    self.imu_data['encoder'] = self.imu_data['encoder'][-limit:]
+                    self.imu_data['encoder'].popleft()
 
 
 
