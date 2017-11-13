@@ -157,6 +157,7 @@ class Ic_get_basis(object):
         # MAKE SURE THE BASIS IS RIGHT-HANDED
         if(numpy.dot(numpy.cross(orthonormal[0], orthonormal[1]), orthonormal[2]) < 0):
             # don't swap the axes!  orthonormal[0,:], orthonormal[1,:] = orthonormal[1,:], orthonormal[0,:].copy()
+            logging.debug('Basis is not right handed!  Flipping z axis')
             orthonormal[:, 2] = -orthonormal[:, 2]
         assert(numpy.dot(numpy.cross(orthonormal[:,0], orthonormal[:,1]), orthonormal[:,2]) > 0)
 
