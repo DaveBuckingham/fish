@@ -36,7 +36,7 @@ class Ic_process():
         axord = numpy.concatenate((axord, numpy.setdiff1d(range(3), axord)))
         axrevord = numpy.argsort(numpy.arange(3)[axord])
 
-        basis = self._gramschmidt(gax[:, axord])
+        basis = gramschmidt(gax[:, axord])
         basis = basis[:, axrevord]
 
         # CHECK FOR RIGHT HANDED-NESS
@@ -89,7 +89,7 @@ class Ic_process():
         # BIAS NOISE COVARIANCE (ASSUMING LOW DRIFT)
         Qbias = 1e-10 * Qacc
 
-        Qdyn = accdynmag * self._stack_matrices([[Qacc, numpy.zeros((3, 3))],
+        Qdyn = accdynmag * stack_matrices([[Qacc, numpy.zeros((3, 3))],
                                                  [numpy.zeros((3, 3)), Qacc]])
 
         xkm1 = numpy.zeros((12,))
@@ -98,7 +98,7 @@ class Ic_process():
         dt1 = dt[0]
 
         # MAKE 12 X 12 MATRIX
-        Pkm1 = self._stack_matrices([
+        Pkm1 = stack_matrices([
             [(Qgyro + Qbias)*dt1**2,  -Qbias*dt1,               numpy.zeros((3, 6))],
             [-Qbias*dt1,               Qbias,                   numpy.zeros((3, 6))],
             [numpy.zeros((6, 3)),      numpy.zeros((6, 3)),     Qdyn]])
@@ -115,7 +115,7 @@ class Ic_process():
         for dt1, omegak, accel in zip(dt, gyro_unbiased, acc):
             Fk, xkM, Bk = self._system_dynamics(xkm1, omegak, dt1)
 
-            Qk = self._stack_matrices([
+            Qk = stack_matrices([
                 [Bk.dot(Qgyro + Qbias).dot(Bk.T)*dt1**2,  -Bk.dot(Qbias)*dt1,  numpy.zeros((3, 6))],
                 [-Qbias.dot(Bk.T)*dt1,                     Qbias,              numpy.zeros((3, 6))],
                 [numpy.zeros((6,6)),                                           Qdyn]])
@@ -130,7 +130,7 @@ class Ic_process():
             xk = xkM + Kk.dot(accel - hk)
             Pk = (numpy.eye(12) - Kk.dot(Hk)).dot(PkM)
 
-            QT = self._eul2rotm(xk[:3])
+            QT = eul2rotm(xk[:3])
 
             eulerEKF.append(xk[:3])
             aD.append(QT.T.dot(xk[6:9]))
@@ -149,17 +149,17 @@ class Ic_process():
         accdyn_world = []
         rotm_world = []
         for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
-            Rchip = self._eul2rotm(chiprpy)
+            Rchip = eul2rotm(chiprpy)
             R = Rchip.dot(chip2world_rot)
 
             rotm_world1 = chip2world_rot.T.dot(R)
-            orient_world.append(self._rotm2eul(rotm_world1))
+            orient_world.append(rotm2eul(rotm_world1))
             rotm_world.append(rotm_world1)
 
             # rotate the dynamic acceleration into the world coordinates
             accdyn_world.append(R.T.dot(adyn1))
 
-        return (accdyn_world, orient_world, rotm_world)
+        return accdyn_world, orient_world, rotm_world
 
     def get_orientation_madgwick(self, chip2world_rot, data, filter_num_samples, initwindow=0.5, beta=2.86):
 
@@ -232,7 +232,7 @@ class Ic_process():
         # qchip2world IS THE QUATERNION THAT ROTATES FROM THE INITIAL CHIP ORIENTATION TO THE WORLD FRAME
         qorient_world = [qchip2world.conj() * q1.conj() for q1 in qorient]
         orient_world_rotm = [quaternion.as_rotation_matrix(q1) for q1 in qorient_world]
-        orient_world = [self._rotm2eul(R1) for R1 in orient_world_rotm]
+        orient_world = [rotm2eul(R1) for R1 in orient_world_rotm]
 
 
         # ROTATE ACCDYN INTO THE WORLD COORDINATE SYSTEM
@@ -284,7 +284,7 @@ class Ic_process():
 
         jerk = xk[9:]
 
-        Fk = self._stack_matrices([
+        Fk = stack_matrices([
             [numpy.eye(3) + Bkomega*dt, -Bk*dt, numpy.zeros((3, 6))],
             [numpy.zeros((3, 3)), numpy.eye(3), numpy.zeros((3, 6))],
             [numpy.zeros((3, 6)), numpy.eye(3), numpy.eye(3)*dt],
@@ -333,48 +333,49 @@ class Ic_process():
 
         return hk, Jh
 
-    def _eul2rotm(self, x):
-        (phi, theta, psi) = x
 
-        Rz_yaw =    numpy.array([[numpy.cos(psi),     numpy.sin(psi),    0],
-                             [-numpy.sin(psi),     numpy.cos(psi),    0],
-                             [0,                0,              1]])
-        Ry_pitch = numpy.array([[numpy.cos(theta),    0,              -numpy.sin(theta)],
-                             [0,                1,              0],
-                             [numpy.sin(theta),    0,              numpy.cos(theta)]])
-        Rx_roll =  numpy.array([[1,                0,              0],
-                             [0,                numpy.cos(phi),    numpy.sin(phi)],
-                             [0,                -numpy.sin(phi),   numpy.cos(phi)]])
-        return Rx_roll.dot(Ry_pitch.dot(Rz_yaw))
-
-
-    def _rotm2eul(self, rotm, singularity=0.001):
-        phi   =  numpy.arctan2(rotm[1, 2], rotm[2, 2])
-        theta =  numpy.arcsin(rotm[0, 2])
-        psi   =  numpy.arctan2(rotm[0, 1], rotm[0, 0])
-        return (phi, theta, psi)
+def stack_matrices(M):
+    m = []
+    for row in M:
+        m.append(numpy.hstack(tuple(row)))
+    return numpy.vstack(tuple(m))
 
 
 
-    def _stack_matrices(self, M):
-        m = []
-        for row in M:
-            m.append(numpy.hstack(tuple(row)))
-        return numpy.vstack(tuple(m))
+def gramschmidt(U):
+    k = U.shape[1]
+    V = copy(U)
+
+    for i in range(k):
+        V[:, i] /= numpy.linalg.norm(V[:, i])
+
+        for j in range(i+1, k):
+            proj = numpy.dot(V[:, i], V[:, j]) * V[:, i]
+            V[:, j] -= proj
+
+    return V
 
 
+def eul2rotm(x):
+    (phi, theta, psi) = x
 
-    def _gramschmidt(self, U):
-        k = U.shape[1]
-        V = copy(U)
+    Rz_yaw =    numpy.array([[numpy.cos(psi),     numpy.sin(psi),    0],
+                         [-numpy.sin(psi),     numpy.cos(psi),    0],
+                         [0,                0,              1]])
+    Ry_pitch = numpy.array([[numpy.cos(theta),    0,              -numpy.sin(theta)],
+                         [0,                1,              0],
+                         [numpy.sin(theta),    0,              numpy.cos(theta)]])
+    Rx_roll =  numpy.array([[1,                0,              0],
+                         [0,                numpy.cos(phi),    numpy.sin(phi)],
+                         [0,                -numpy.sin(phi),   numpy.cos(phi)]])
+    return Rx_roll.dot(Ry_pitch.dot(Rz_yaw))
 
-        for i in range(k):
-            V[:, i] /= numpy.linalg.norm(V[:, i])
 
-            for j in range(i+1, k):
-                proj = numpy.dot(V[:, i], V[:, j]) * V[:, i]
-                V[:, j] -= proj
+def rotm2eul(rotm, singularity=0.001):
+    phi   =  numpy.arctan2(rotm[1, 2], rotm[2, 2])
+    theta =  -numpy.arcsin(rotm[0, 2])
+    psi   =  numpy.arctan2(rotm[0, 1], rotm[0, 0])
+    return (phi, theta, psi)
 
-        return V
 
 
