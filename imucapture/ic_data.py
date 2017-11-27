@@ -186,33 +186,56 @@ class Ic_data(PyQt5.QtCore.QObject):
         return False
 
 
-    def load_hdf5_file(self, filename):
+    def load_hdf5_file(self, filename, root_group='/data', accelerometer_group='accel', gyroscope_group='gyro',
+                       magnetometer_group='mag', time_group='time'):
         with h5py.File(filename, 'r') as datafile:
             if datafile is None:
                 logging.debug('datafile is None')
                 return False
 
+            timepath = '/'.join([root_group, time_group])
             self.imu_data = {}
-            if '/data/time' in datafile:
-                self.imu_data['timestamps'] = datafile.get('data/time')[()]
-            elif '/data/t' in datafile:
-                self.imu_data['timestamps'] = datafile.get('data/t')[()]
+            if timepath in datafile:
+                self.imu_data['timestamps'] = datafile.get(timepath)[()]
             else:
                 return False
 
             self.imu_data['imus'] = []
 
-            logging.debug('datafile: /data/ {}'.format(datafile.keys()))
-
             i = 0
-            ext = str(i + 1)
-            while ('data/accel' + ext in datafile and 'data/gyro' + ext in datafile and 'data/mag' + ext in datafile):
-                self.imu_data['imus'].append({})
-                self.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get('data/accel' + ext)[()])))
-                self.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get('data/gyro' + ext)[()])))
-                self.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get('data/mag' + ext)[()])))
-                i += 1
+            done = False
+
+            while not done:
                 ext = str(i + 1)
+
+                accelpath = '/'.join([root_group, accelerometer_group])
+                gyropath = '/'.join([root_group, gyroscope_group])
+                magpath = '/'.join([root_group, magnetometer_group])
+
+                a1, g1, m1 = None, None, None
+                if accelpath + ext in datafile:
+                    a1 = list(map(list, zip(*datafile.get(accelpath + ext)[()])))
+                elif (i == 0) and (accelpath in datafile):              # for the first IMU, the path may not have a number
+                    a1 = list(map(list, zip(*datafile.get(accelpath)[()])))
+
+                if gyropath + ext in datafile:
+                    g1 = list(map(list, zip(*datafile.get(gyropath + ext)[()])))
+                elif (i == 0) and (gyropath in datafile):              # for the first IMU, the path may not have a number
+                    g1 = list(map(list, zip(*datafile.get(gyropath)[()])))
+
+                if magpath + ext in datafile:
+                    m1 = list(map(list, zip(*datafile.get(magpath + ext)[()])))
+                elif (i == 0) and (magpath in datafile):              # for the first IMU, the path may not have a number
+                    m1 = list(map(list, zip(*datafile.get(magpath)[()])))
+
+                if a1 is None and g1 is None:
+                    done = True
+                else:
+                    self.imu_data['imus'].append({})
+                    self.imu_data['imus'][i]['accel'] = a1
+                    self.imu_data['imus'][i]['gyro'] = g1
+                    self.imu_data['imus'][i]['mag'] = m1
+                    i += 1
 
             self.num_imus = i
             logging.debug('Loaded {} IMUs'.format(self.num_imus))
