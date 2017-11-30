@@ -40,7 +40,8 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
-        self.basis_vector = None
+        #self.basis_vector = None
+        self.imu_bases = None
 
         #self.setMaximumWidth(300)
 
@@ -257,16 +258,15 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
 
                 if (algorithm == 'integrate'):
                     filter_samples = 10
-                    (solution_accel, solution_gyro) = self.process.get_orientation_integrate(self.basis_vector, self.data, filter_samples)
+                    (solution_accel, solution_gyro) = self.process.get_orientation_integrate(self.imu_bases[i], self.data, i, filter_samples)
 
                 elif (algorithm == 'madgwick'):
                     filter_samples = 10
-                    (solution_accel, solution_gyro) = self.process.get_orientation_madgwick(self.basis_vector, self.data, filter_samples)
+                    (solution_accel, solution_gyro) = self.process.get_orientation_madgwick(self.imu_bases[i], self.data, i, filter_samples)
 
                 elif (algorithm == 'dsf'):
                     filter_samples = 10
-                    ca = (1.0, 1.0, 1.0)
-                    (solution_accel, solution_gyro) = self.process.get_orientation_dsf(ca, self.calib_initial_gravity, self.basis_vector, self.calib_still_accel, self.calib_still_gyro, self.data, filter_samples)
+                    (solution_accel, solution_gyro) = self.process.get_orientation_dsf(self.calib_initial_gravity, self.imu_bases[i], self.calib_still_accel, self.calib_still_gyro, self.data, i, filter_samples)
 
                 
                 else:
@@ -343,13 +343,14 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
             return
 
         intervals = self.get_basis.get_intervals(calib_data)
-        basis_vector = self.get_basis.get_basis_vector(calib_data, intervals)
+        #basis_vector = self.get_basis.get_basis_vector(calib_data, intervals)
+        imu_bases = self.get_basis.get_bases(calib_data, intervals)
 
 
-        if basis_vector is not None:
-            basis_vector = numpy.array(basis_vector)
+        if ((imu_bases is not None) and (len(imu_bases) == self.data.num_imus)):
+            #basis_vector = numpy.array(basis_vector)
             logging.info("extracted basis vector:\n" + str(basis_vector[0]) + "\n" + str(basis_vector[1]) + "\n" + str(basis_vector[2]))
-            self.basis_vector = basis_vector
+            self.imu_bases = imu_bases
             
             still_start = intervals[0][0]
             still_end = intervals[0][1]
@@ -363,7 +364,7 @@ class Ic_process_dialog(PyQt5.QtGui.QWidget):
 
             self.process_btn.setEnabled(True)
         else:
-            logging.error("failed to extract basis vector")
+            logging.error("failed to extract bases for every imu")
 
 
 
