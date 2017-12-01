@@ -1,12 +1,15 @@
 import os
 import sys
 
+import PyQt5.QtCore
+import PyQt5.QtGui
+
 
 class Ic_global():
 
     # CONSTANTS
 
-    USE_ENCODER = True
+    USE_ENCODER = False
 
     APPLICATION_NAME = 'IMU-Capture'
 
@@ -20,7 +23,7 @@ class Ic_global():
 
 
     DATA_BUFFER_MIN = 1                  # >0
-    DATA_BUFFER_MAX = 10000
+    DATA_BUFFER_MAX = 20000
 
 
 
@@ -30,3 +33,11 @@ class Ic_global():
     last_file_path = ''
 
 
+    # FUNCTIONS
+    def enable_layout(layout, state):
+        items = (layout.itemAt(i) for i in range(layout.count())) 
+        for w in items:
+            if isinstance(w, PyQt5.QtGui.QLayout):
+                Ic_global.enable_layout(w, state)
+            else:
+                w.widget().setEnabled(state)

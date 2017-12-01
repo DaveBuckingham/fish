@@ -28,7 +28,7 @@ class Ic_data(PyQt5.QtCore.QObject):
     timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
 
 
-    def __init__(self):
+    def __init__(self, processed=False):
         super(Ic_data, self).__init__()
 
         self.imu_data = {}
@@ -39,6 +39,19 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.saved = True
 
         self.total_samples = 0
+
+        if(processed):
+            self.data_description_string = 'filtered data'
+            self.accel_units_string = 'Dynamic acceleration (meters per second squared)'
+            self.gyro_units_string  = 'Orientation (radians)'
+            self.mag_units_string   = 'Magnetometer (microteslas)'
+        else:
+            self.data_description_string = 'raw data'
+            self.accel_units_string = 'Acceleration (meters per second squared)'
+            self.gyro_units_string  = 'Gyroscope (radians per second)'
+            self.mag_units_string   = 'Magnetometer (microteslas)'
+
+
         
 
     def has_data(self):
@@ -53,9 +66,6 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.data_lock[0] = True
         self.imu_data = {}
         self.imu_data['timestamps'] = collections.deque()
-
-        # THIS DOESN'T WORK! * OPERATOR DOESN'T CREATE SEPARATE OBJECTS
-        #self.imu_data['imus'] = [{'accel': [[],[],[]], 'gyro': [[],[],[]], 'mag': [[],[],[]]}] * num_imus
 
         # THIS WORKS
         self.imu_data['imus'] = [{'accel': [collections.deque(), collections.deque(), collections.deque()],
@@ -144,47 +154,6 @@ class Ic_data(PyQt5.QtCore.QObject):
     #            LOAD AND SAVE FILES                 #
     ##################################################
 
-    def load_csv_file(self, filename):
-
-        if (Ic_global.USE_ENCODER):
-            expected_non_imu_columns = 2
-        else:
-            expected_non_imu_columns = 1
-
-        self.num_imus = None
-        with open(filename, 'r') as datafile:
-            reader = csv.reader(datafile, delimiter=',')
-            for row in reader:
-                if (len(row) % 9 != expected_non_imu_columns):
-                    return False
-                row_num_imus = (len(row) - expected_non_imu_columns) // 9       # // for integer division in python3
-                if self.num_imus is None:       # READING FIRST LINE OF CSV
-                    self.num_imus = row_num_imus
-                    self.reset_data(row_num_imus)
-                else:
-                    if (len(row) != (self.num_imus * 9) + expected_non_imu_columns):
-                        return False
-                row = list(map(lambda x: float(x) if ('.' in x) else int(x), row))
-                self.imu_data['timestamps'].append(row[0])
-
-                j = 1
-                for i in range(0, row_num_imus):
-                    self.imu_data['imus'][i]['accel'][0].append(row[j])
-                    self.imu_data['imus'][i]['accel'][1].append(row[j+1])
-                    self.imu_data['imus'][i]['accel'][2].append(row[j+2])
-                    self.imu_data['imus'][i]['gyro'][0].append(row[j+3])
-                    self.imu_data['imus'][i]['gyro'][1].append(row[j+4])
-                    self.imu_data['imus'][i]['gyro'][2].append(row[j+5])
-                    self.imu_data['imus'][i]['mag'][0].append(row[j+6])
-                    self.imu_data['imus'][i]['mag'][1].append(row[j+7])
-                    self.imu_data['imus'][i]['mag'][2].append(row[j+8])
-                    j+=9
-
-                if (Ic_global.USE_ENCODER):
-                    self.imu_data['encoder'].append(row[-1])
-            return True
-        return False
-
 
     def load_hdf5_file(self, filename, root_group='/data', accelerometer_group='accel', gyroscope_group='gyro',
                        magnetometer_group='mag', time_group='time'):
@@ -245,6 +214,45 @@ class Ic_data(PyQt5.QtCore.QObject):
             return True
         return False
 
+    
+    def simple_load_hdf5_file(self, filename):
+        with h5py.File(filename, 'r') as datafile:
+            if datafile is None:
+                logging.debug('datafile is None')
+                return False
+
+            timepath = '/'.join([root_group, time_group])
+            self.imu_data = {}
+            self.imu_data['timestamps'] = datafile.get('time')[()]
+            self.imu_data['imus'] = []
+
+            i = 0
+            ext = str(i + 1)
+            while ('imu' + ext in datafile):
+                self.imu_data['imus'].append({})
+                self.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get(('imu' + ext)/accel)[()])))
+                self.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get(('imu' + ext)/gyro)[()])))
+                self.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get(('imu' + ext)/mag)[()])))
+                i += 1
+                ext = str(i + 1)
+
+            self.data_description_string = datafile.attrs['description']
+            self.accel_units_string      = accel_dataset.attrs['description']
+            self.gyro_units_string       = gyro_dataset.attrs['description']
+            self.mag_units_string        = mag_dataset.attrs['description']
+
+            self.num_imus = i
+            logging.debug('Loaded {} IMUs'.format(self.num_imus))
+
+            if (Ic_global.USE_ENCODER):
+                self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+            return True
+        return False
+
+
+
+
+
 
     def save_hdf5_file(self, filename):
         with h5py.File(filename, 'w') as datafile:
@@ -266,52 +274,32 @@ class Ic_data(PyQt5.QtCore.QObject):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
 
 
-    def save_csv_file(self, filename):
-        with open(filename, 'w') as datafile:
-            writer = csv.writer(datafile, delimiter=',')
-
-            for i in range(0, len(self.imu_data['timestamps'])):
-                row = [self.imu_data['timestamps'][i]]
-                for j in range(0, len(self.imu_data['imus'])):
-                    row.append(self.imu_data['imus'][j]['accel'][0][i])
-                    row.append(self.imu_data['imus'][j]['accel'][1][i])
-                    row.append(self.imu_data['imus'][j]['accel'][2][i])
-                    row.append(self.imu_data['imus'][j]['gyro'][0][i])
-                    row.append(self.imu_data['imus'][j]['gyro'][1][i])
-                    row.append(self.imu_data['imus'][j]['gyro'][2][i])
-                    row.append(self.imu_data['imus'][j]['mag'][0][i])
-                    row.append(self.imu_data['imus'][j]['mag'][1][i])
-                    row.append(self.imu_data['imus'][j]['mag'][2][i])
-
-                if (Ic_global.USE_ENCODER):
-                    row.append(self.imu_data['encoder'][i])
-                writer.writerow(row)
 
 
-    def rotate(self, R, imunum=0):
-        acc = self.as_list_of_triples(imunum, 'accel')
-        gyro = self.as_list_of_triples(imunum, 'gyro')
-        mag = self.as_list_of_triples(imunum, 'mag')
-
-        accr = [[],[],[]]
-        gyror = [[],[],[]]
-        magr = [[],[],[]]
-        for a, g, m in zip(acc, gyro, mag):
-            a1 = R.dot(numpy.array(a))
-            accr[0].append(a1[0])
-            accr[1].append(a1[1])
-            accr[2].append(a1[2])
-
-            g1 = R.dot(numpy.array(g))
-            gyror[0].append(g1[0])
-            gyror[1].append(g1[1])
-            gyror[2].append(g1[2])
-
-            m1 = R.dot(numpy.array(m))
-            magr[0].append(m1[0])
-            magr[1].append(m1[1])
-            magr[2].append(m1[2])
-
-        self.imu_data['imus'][imunum]['accel'] = accr
-        self.imu_data['imus'][imunum]['gyro'] = gyror
-        self.imu_data['imus'][imunum]['mag'] = magr
+#    def rotate(self, R, imunum=0):
+#        acc = self.as_list_of_triples(imunum, 'accel')
+#        gyro = self.as_list_of_triples(imunum, 'gyro')
+#        mag = self.as_list_of_triples(imunum, 'mag')
+#
+#        accr = [[],[],[]]
+#        gyror = [[],[],[]]
+#        magr = [[],[],[]]
+#        for a, g, m in zip(acc, gyro, mag):
+#            a1 = R.dot(numpy.array(a))
+#            accr[0].append(a1[0])
+#            accr[1].append(a1[1])
+#            accr[2].append(a1[2])
+#
+#            g1 = R.dot(numpy.array(g))
+#            gyror[0].append(g1[0])
+#            gyror[1].append(g1[1])
+#            gyror[2].append(g1[2])
+#
+#            m1 = R.dot(numpy.array(m))
+#            magr[0].append(m1[0])
+#            magr[1].append(m1[1])
+#            magr[2].append(m1[2])
+#
+#        self.imu_data['imus'][imunum]['accel'] = accr
+#        self.imu_data['imus'][imunum]['gyro'] = gyror
+#        self.imu_data['imus'][imunum]['mag'] = magr

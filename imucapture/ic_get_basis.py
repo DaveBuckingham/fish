@@ -165,7 +165,7 @@ class Ic_get_basis(object):
 
             # CAN SKIP TUPLE?
             as_tuple = tuple(map(tuple, orthonormal))
-            imu_bases.append(numpy.array(as_tuple)))))
+            imu_bases.append(numpy.array(as_tuple))
 
         return imu_bases
 
