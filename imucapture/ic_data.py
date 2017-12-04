@@ -204,6 +204,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             i = 0
             done = False
+            shapewarning = False
 
             while not done:
                 ext = str(i + 1)
@@ -212,21 +213,41 @@ class Ic_data(PyQt5.QtCore.QObject):
                 gyropath = '/'.join([root_group, gyroscope_group])
                 magpath = '/'.join([root_group, magnetometer_group])
 
-                a1, g1, m1 = None, None, None
-                if accelpath + ext in datafile:
-                    a1 = list(map(list, zip(*datafile.get(accelpath + ext)[()])))
-                elif (i == 0) and (accelpath in datafile):              # for the first IMU, the path may not have a number
-                    a1 = list(map(list, zip(*datafile.get(accelpath)[()])))
+                a1 = datafile.get(accelpath + ext)
+                if (i == 0) and (a1 is None):
+                    a1 = datafile.get(accelpath)
+                if a1 is not None:
+                    a1 = numpy.array(a1)
+                    if a1.shape[0] == 3:
+                        shapewarning = True
+                        a1 = a1.T
+                    elif a1.shape[1] != 3:
+                        raise ValueError("Accelerometer data does not have the right structure (should be Nx3)")
+                    a1 = a1.T.tolist()
 
-                if gyropath + ext in datafile:
-                    g1 = list(map(list, zip(*datafile.get(gyropath + ext)[()])))
-                elif (i == 0) and (gyropath in datafile):              # for the first IMU, the path may not have a number
-                    g1 = list(map(list, zip(*datafile.get(gyropath)[()])))
+                g1 = datafile.get(gyropath + ext)
+                if (i == 0) and (g1 is None):
+                    g1 = datafile.get(gyropath)
+                if g1 is not None:
+                    g1 = numpy.array(g1)
+                    if g1.shape[0] == 3:
+                        shapewarning = True
+                        g1 = g1.T
+                    elif g1.shape[1] != 3:
+                        raise ValueError("Gyroscope data does not have the right structure (should be Nx3)")
+                    g1 = g1.T.tolist()
 
-                if magpath + ext in datafile:
-                    m1 = list(map(list, zip(*datafile.get(magpath + ext)[()])))
-                elif (i == 0) and (magpath in datafile):              # for the first IMU, the path may not have a number
-                    m1 = list(map(list, zip(*datafile.get(magpath)[()])))
+                m1 = datafile.get(magpath + ext)
+                if (i == 0) and (m1 is None):
+                    m1 = datafile.get(magpath)
+                if m1 is not None:
+                    m1 = numpy.array(m1)
+                    if m1.shape[0] == 3:
+                        shapewarning = True
+                        m1 = m1.T
+                    elif m1.shape[1] != 3:
+                        raise ValueError("Magnetometer data does not have the right structure (should be Nx3)")
+                    m1 = m1.T.tolist()
 
                 if a1 is None and g1 is None:
                     done = True
@@ -237,11 +258,14 @@ class Ic_data(PyQt5.QtCore.QObject):
                     self.imu_data['imus'][i]['mag'] = m1
                     i += 1
 
+            if shapewarning:
+                logging.warning("Data is shaped incorrectly (should be Nx3). Attempting to load anyway")
+
             self.num_imus = i
             logging.debug('Loaded {} IMUs'.format(self.num_imus))
 
-            if (Ic_global.USE_ENCODER):
-                self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+            if (Ic_global.USE_ENCODER) and '/data/Encoder' in datafile:
+                self.imu_data['encoder'] = datafile.get('/data/Encoder')[()]
             return True
         return False
 
