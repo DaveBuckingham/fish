@@ -118,8 +118,9 @@ class Ic_get_basis(object):
         return intervals
 
 
-    def get_basis_vector(self, data, intervals=None):
+    def get_bases(self, data, intervals=None):
         # TODO: This fails for data from multiple IMUs.  Should treat the IMUs separately and return multiple sets of vectors
+        # working on fixing this -db
         if (intervals is None):
             intervals = self.get_intervals(data)
 
@@ -134,34 +135,38 @@ class Ic_get_basis(object):
             return None
 
 
-        means = []
-        for start, end in intervals:
-            for imu in range(0, data.num_imus):
+        imu_bases = []
+        for imu in range(0, data.num_imus):
+
+            means = []
+            for start, end in intervals:
                 mean_x = self._mean(data.imu_data['imus'][imu]['accel'][0][start:end])
                 mean_y = self._mean(data.imu_data['imus'][imu]['accel'][1][start:end])
                 mean_z = self._mean(data.imu_data['imus'][imu]['accel'][2][start:end])
                 means.append((mean_x, mean_y, mean_z))
                 
-        original = self._find_orthogonal_triple(means)
+            original = self._find_orthogonal_triple(means)
 
-        if original is None:
-            return None
+            if original is None:
+                return None
 
-        logging.info("found approximately orthogonal vectors:\n" + str(original[0]) + "\n" + str(original[1]) + "\n" + str(original[2]))
-        logging.info("applying Gram-Schmidt")
+            logging.info("found approximately orthogonal vectors for imu " + str(imu) + ":\n" + str(original[0]) + "\n" + str(original[1]) + "\n" + str(original[2]))
+            logging.info("applying Gram-Schmidt")
 
-        # TAKE SOME APPROXMATELY ORTHOGONAL VECTORS AND MAKE THEM EXACTLY ORTHOGONAL
-        # ALSO NORMALIZE
-        orthonormal = self._gram_schmidt(numpy.asarray(original))
+            # TAKE SOME APPROXMATELY ORTHOGONAL VECTORS AND MAKE THEM EXACTLY ORTHOGONAL
+            # ALSO NORMALIZE
+            orthonormal = self._gram_schmidt(numpy.asarray(original))
 
-        # MAKE SURE THE BASIS IS RIGHT-HANDED
-        if(numpy.dot(numpy.cross(orthonormal[0], orthonormal[1]), orthonormal[2]) < 0):
-            # don't swap the axes!  orthonormal[0,:], orthonormal[1,:] = orthonormal[1,:], orthonormal[0,:].copy()
-            logging.debug('Basis is not right handed!  Flipping z axis')
-            orthonormal[:, 2] = -orthonormal[:, 2]
-        assert(numpy.dot(numpy.cross(orthonormal[:,0], orthonormal[:,1]), orthonormal[:,2]) > 0)
+            # MAKE SURE THE BASIS IS RIGHT-HANDED
+            if(numpy.dot(numpy.cross(orthonormal[0], orthonormal[1]), orthonormal[2]) < 0):
+                logging.debug('Basis is not right handed!  Flipping z axis')
+                orthonormal[:, 2] = -orthonormal[:, 2]
+            assert(numpy.dot(numpy.cross(orthonormal[:,0], orthonormal[:,1]), orthonormal[:,2]) > 0)
 
-        as_tuple = tuple(map(tuple, orthonormal))
-        return as_tuple
+            # CAN SKIP TUPLE?
+            as_tuple = tuple(map(tuple, orthonormal))
+            imu_bases.append(numpy.array(as_tuple))
+
+        return imu_bases
 
 

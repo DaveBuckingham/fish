@@ -1,0 +1,28 @@
+\BOOKMARK [0][-]{chapter.1}{Copyright and License}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Introduction}{}% 2
+\BOOKMARK [0][-]{chapter.3}{Hardware}{}% 3
+\BOOKMARK [1][-]{section.3.1}{PC}{chapter.3}% 4
+\BOOKMARK [1][-]{section.3.2}{Arduino}{chapter.3}% 5
+\BOOKMARK [1][-]{section.3.3}{IMUs}{chapter.3}% 6
+\BOOKMARK [1][-]{section.3.4}{SPI}{chapter.3}% 7
+\BOOKMARK [1][-]{section.3.5}{Wiring the Arduino}{chapter.3}% 8
+\BOOKMARK [0][-]{chapter.4}{Installation}{}% 9
+\BOOKMARK [1][-]{section.4.1}{Arduino IDE}{chapter.4}% 10
+\BOOKMARK [1][-]{section.4.2}{Install IMU-Capture on the Arduino}{chapter.4}% 11
+\BOOKMARK [1][-]{section.4.3}{PC}{chapter.4}% 12
+\BOOKMARK [0][-]{chapter.5}{The data buffer}{}% 13
+\BOOKMARK [0][-]{chapter.6}{Collecting data}{}% 14
+\BOOKMARK [1][-]{section.6.1}{Plots}{chapter.6}% 15
+\BOOKMARK [1][-]{section.6.2}{Trigger}{chapter.6}% 16
+\BOOKMARK [0][-]{chapter.7}{Saving and loading}{}% 17
+\BOOKMARK [1][-]{section.7.1}{File formats}{chapter.7}% 18
+\BOOKMARK [1][-]{section.7.2}{Saving}{chapter.7}% 19
+\BOOKMARK [1][-]{section.7.3}{Loading}{chapter.7}% 20
+\BOOKMARK [0][-]{chapter.8}{Filter data}{}% 21
+\BOOKMARK [1][-]{section.8.1}{Calibration}{chapter.8}% 22
+\BOOKMARK [1][-]{section.8.2}{Filter mode}{chapter.8}% 23
+\BOOKMARK [1][-]{section.8.3}{Integration algorithm}{chapter.8}% 24
+\BOOKMARK [0][-]{chapter.9}{Troubleshooting}{}% 25
+\BOOKMARK [1][-]{section.9.1}{Installation}{chapter.9}% 26
+\BOOKMARK [1][-]{section.9.2}{General error messages}{chapter.9}% 27
+\BOOKMARK [1][-]{section.9.3}{Calibration error messages}{chapter.9}% 28

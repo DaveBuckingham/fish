@@ -14,7 +14,8 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         #              CONSTANTS               #
         ########################################
         self.use_trigger = False
-        self.invert_trigger = False
+        #self.invert_trigger = False
+        self.rising_edge = True
         self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
 
 
@@ -39,9 +40,33 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         trigger_checkbox.setToolTip('Stop recording on trigger signal')
         trigger_checkbox.stateChanged.connect(self.toggle_trigger)
 
-        self.invert_checkbox = PyQt5.QtGui.QCheckBox('invert trigger', self)
-        self.invert_checkbox.setToolTip('Trigger activates on pin low')
-        self.invert_checkbox.stateChanged.connect(self.toggle_invert)
+        #self.invert_checkbox = PyQt5.QtGui.QCheckBox('invert trigger', self)
+        #self.invert_checkbox.setToolTip('Trigger activates on pin low')
+        #self.invert_checkbox.stateChanged.connect(self.toggle_invert)
+
+        trigger_edge_box = PyQt5.QtGui.QGroupBox()
+        self.trigger_edge_layout = PyQt5.QtGui.QVBoxLayout()
+
+        radio = PyQt5.QtGui.QRadioButton("rising edge")
+        radio.setToolTip('Trigger is activated by a rising edge')
+        radio.clicked.connect(self.set_trigger_rising_edge)
+        self.trigger_edge_layout.addWidget(radio)
+        radio.click()
+
+        radio = PyQt5.QtGui.QRadioButton("falling edge")
+        radio.setToolTip('Trigger is activated by a falling edge')
+        radio.clicked.connect(self.set_trigger_falling_edge)
+        self.trigger_edge_layout.addWidget(radio)
+
+        trigger_edge_box.setLayout(self.trigger_edge_layout)
+
+
+        Ic_global.enable_layout(self.trigger_edge_layout, self.use_trigger)
+
+
+
+
+
 
 
         ########################################
@@ -80,7 +105,8 @@ class Ic_settings(PyQt5.QtGui.QWidget):
 
         trigger_layout = PyQt5.QtGui.QHBoxLayout()
         trigger_layout.addWidget(trigger_checkbox)
-        trigger_layout.addWidget(self.invert_checkbox)
+        #trigger_layout.addWidget(self.invert_checkbox)
+        trigger_layout.addWidget(trigger_edge_box)
 
 
         ########################################
@@ -97,9 +123,17 @@ class Ic_settings(PyQt5.QtGui.QWidget):
     ########################################
     def toggle_trigger(self, state):
         self.use_trigger = not self.use_trigger
+        Ic_global.enable_layout(self.trigger_edge_layout, self.use_trigger)
 
-    def toggle_invert(self, state):
-        self.invert_trigger = not self.invert_trigger
+    def set_trigger_rising_edge(self):
+        self.rising_edge = True
+
+    def set_trigger_falling_edge(self):
+        self.rising_edge = False
+
+
+    #def toggle_invert(self, state):
+    #    self.invert_trigger = not self.invert_trigger
 
           
     ########################################

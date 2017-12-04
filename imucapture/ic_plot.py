@@ -7,7 +7,7 @@ from imucapture.ic_global import *
 
 class Ic_plot(pg.PlotWidget):
 
-    def __init__(self, plot_data, lock, parent=None):
+    def __init__(self, plot_data, lock, legend, parent=None):
 
         super(Ic_plot, self).__init__()
 
@@ -31,11 +31,21 @@ class Ic_plot(pg.PlotWidget):
         self.setMenuEnabled(enableMenu=True)
 
 
-        self.addLegend()
+        if(legend):
+            self.addLegend()
 
-        self.curve_x_red   = self.plot([], [], pen=(255, 0, 0, 165), name='x')
-        self.curve_y_green = self.plot([], [], pen=(0, 255, 0, 155), name='y')
-        self.curve_z_blue  = self.plot([], [], pen=(30, 60, 255, 210), name='z')
+        # DOWNSAMPLING SEEMS TO DO SOMETHING LIKE:
+        # dx = float(x[-1]-x[0]) / (len(x)-1)
+        # THUS TO AVOID OUT-OF-BOUNDS OR DIVIDE-BY-ZERO ERRORS, WE PUT A COUPLE ELEMENTS TO START
+        self.curve_x_red   = self.plot([0,0], pen=(255, 0, 0, 165),   name='x', downsampleMethod='peak', autoDownsample=True)
+        self.curve_y_green = self.plot([0,0], pen=(0, 255, 0, 155),   name='y', downsampleMethod='peak', autoDownsample=True)
+        self.curve_z_blue  = self.plot([0,0], pen=(30, 60, 255, 210), name='z', downsampleMethod='peak', autoDownsample=True)
+
+
+        # WITHOUT DOWNSAMPLING?
+        # self.curve_x_red   = self.plot([], [], pen=(255, 0, 0, 165), name='x')
+        # self.curve_y_green = self.plot([], [], pen=(0, 255, 0, 155), name='y')
+        # self.curve_z_blue  = self.plot([], [], pen=(30, 60, 255, 210), name='z')
 
         self.x_range = [x * 0.005 for x in range(0, Ic_global.DATA_BUFFER_MAX)]
 

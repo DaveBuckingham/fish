@@ -20,52 +20,49 @@ class Ic_process():
 
 
 
-    def get_chip_to_world_rotation_matrix(self, acc, time):
-        # TODO: I'm pretty sure this function should not be used.  The matrix should be the basis vectors from ic_get_basis.get_basis_vector
-        z_axis_index = 2
-
-        averagedur = 4*time[-1]
-
-        ist = numpy.logical_and(time >= -(averagedur/2), time <= (averagedur/2))
-        ax = numpy.mean(acc[ist, :], axis=0)
-
-        gax = numpy.eye(3)
-        gax[:, z_axis_index] = ax
-
-        axord = [z_axis_index]
-        axord = numpy.concatenate((axord, numpy.setdiff1d(range(3), axord)))
-        axrevord = numpy.argsort(numpy.arange(3)[axord])
-
-        basis = gramschmidt(gax[:, axord])
-        basis = basis[:, axrevord]
-
-        # CHECK FOR RIGHT HANDED-NESS
-        assert(numpy.dot(numpy.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) > 0.9)
-
-        return basis
+#    def get_chip_to_world_rotation_matrix(self, acc, time):
+#        # TODO: I'm pretty sure this function should not be used.  The matrix should be the basis vectors from ic_get_basis.get_basis_vector
+#        z_axis_index = 2
+#
+#        averagedur = 4*time[-1]
+#
+#        ist = numpy.logical_and(time >= -(averagedur/2), time <= (averagedur/2))
+#        ax = numpy.mean(acc[ist, :], axis=0)
+#
+#        gax = numpy.eye(3)
+#        gax[:, z_axis_index] = ax
+#
+#        axord = [z_axis_index]
+#        axord = numpy.concatenate((axord, numpy.setdiff1d(range(3), axord)))
+#        axrevord = numpy.argsort(numpy.arange(3)[axord])
+#
+#        basis = gramschmidt(gax[:, axord])
+#        basis = basis[:, axrevord]
+#
+#        # CHECK FOR RIGHT HANDED-NESS
+#        assert(numpy.dot(numpy.cross(basis[:, 0], basis[:, 1]), basis[:, 2]) > 0.9)
+#
+#        return basis
 
 
 
     
-    def get_orientation_integrate(self, chip2world_rot, data, filter_num_samples, initwindow=0.5):
-        return self.get_orientation_madgwick(chip2world_rot, data, filter_num_samples, initwindow=initwindow, beta=0.0)
+    def get_orientation_integrate(self, chip2world_rot, data, imu, filter_num_samples, initwindow=0.5):
+        return self.get_orientation_madgwick(chip2world_rot, data, imu, filter_num_samples, initwindow=initwindow, beta=0.0)
 
 
 
 
-    def get_orientation_dsf(self, Ca_arg, initial_gravity, chip2world_rot, still_accel, still_gyro, data, filter_num_samples,
-                            accdynmag=200.0):
+    def get_orientation_dsf(self, initial_gravity, chip2world_rot, still_accel, still_gyro, data, imu, filter_num_samples, accdynmag=200.0):
         """Dynamic snap free Kalman filter for sensor fusion
         x is the state: [theta, bias, adyn, jerk]^T
         where theta are the Euler angles"""
 
-        # TODO: Ca_arg parameter is no longer needed.  Remove
-
         # GET ACC IN MPS2
-        acc  = numpy.array(data.as_list_of_triples(0, 'accel'))
+        acc  = numpy.array(data.as_list_of_triples(imu, 'accel'))
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = numpy.array(data.as_list_of_triples(0, 'gyro'))
+        gyro = numpy.array(data.as_list_of_triples(imu, 'gyro'))
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -161,13 +158,13 @@ class Ic_process():
 
         return accdyn_world, orient_world, rotm_world
 
-    def get_orientation_madgwick(self, chip2world_rot, data, filter_num_samples, initwindow=0.5, beta=2.86):
+    def get_orientation_madgwick(self, chip2world_rot, data, imu, filter_num_samples, initwindow=0.5, beta=2.86):
 
         # GET ACC IN MPS2
-        acc  = numpy.array(data.as_list_of_triples(0, 'accel'))
+        acc  = numpy.array(data.as_list_of_triples(imu, 'accel'))
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = numpy.array(data.as_list_of_triples(0, 'gyro'))
+        gyro = numpy.array(data.as_list_of_triples(imu, 'gyro'))
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)

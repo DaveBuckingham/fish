@@ -16,6 +16,7 @@ from imucapture.ic_data import Ic_data
 from imucapture.ic_plot import Ic_plot
 from imucapture.ic_settings import Ic_settings
 from imucapture.ic_process_dialog import Ic_process_dialog
+from imucapture.ic_plot_window import Ic_plot_window
 from imucapture.ic_global import *
 
 class Ic_gui(PyQt5.QtGui.QWidget):
@@ -156,7 +157,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
         stats_layout.addWidget(self.stats_num_samples_recorded)
         stats_layout.addWidget(self.stats_num_samples_buffer)
 
-        self.plots_layout = PyQt5.QtGui.QGridLayout()
 
         # ADD WIDGETS TO LAYOUT
 
@@ -171,7 +171,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         top_layout = PyQt5.QtGui.QHBoxLayout()
         top_layout.addStretch()
-        top_layout.addLayout(self.plots_layout)
         top_layout.addLayout(panel_layout)
 
 
@@ -226,42 +225,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
                     self.clearLayout(item.layout())
 
 
-    def make_plots(self):
-
-        self.clear_layout(self.plots_layout)
-
-        label = PyQt5.QtGui.QLabel("Accel.")
-        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 1)
-
-        label = PyQt5.QtGui.QLabel("Gyro.")
-        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 2)
-
-        label = PyQt5.QtGui.QLabel("Mag.")
-        label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
-        self.plots_layout.addWidget(label, 0, 3)
-
-        self.plots = []
-        for i in (range(0, self.data.num_imus)):
-            plot_a = Ic_plot(self.data.imu_data['imus'][i]['accel'], self.data.data_lock, self)
-            plot_g = Ic_plot(self.data.imu_data['imus'][i]['gyro'], self.data.data_lock, self)
-            plot_m = Ic_plot(self.data.imu_data['imus'][i]['mag'], self.data.data_lock, self)
-            self.plots.append(plot_a)
-            self.plots.append(plot_g)
-            self.plots.append(plot_m)
-            self.plots_layout.addWidget(plot_a, i+1, 1)
-            self.plots_layout.addWidget(plot_g, i+1, 2)
-            self.plots_layout.addWidget(plot_m, i+1, 3)
-
-            label = PyQt5.QtGui.QLabel("IMU " + str(i+1))
-            label.setAlignment(PyQt5.QtCore.Qt.AlignVCenter | PyQt5.QtCore.Qt.AlignCenter)
-            self.plots_layout.addWidget(label, i+1, 0)
-
-
-
-
-
 
 
 
@@ -272,12 +235,9 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
     def filter_button_slot(self):
 
-        self.w = Ic_process_dialog(self.data)
-        #self.w.setGeometry(QRect(100, 100, 400, 200))
-        
-        self.w.finished_signal.connect(self.update)
-
-        self.w.show()
+        process_dialog = Ic_process_dialog(self.data)
+        process_dialog.finished_signal.connect(self.update)
+        process_dialog.show()
 
 
     def quit_button_slot(self):
@@ -362,8 +322,6 @@ class Ic_gui(PyQt5.QtGui.QWidget):
                 return
 
             self.make_plots()
-            for p in self.plots:
-                p.plot_slot()
 
             logging.info(filename + " loaded")
             self.data.saved = True
@@ -418,15 +376,12 @@ class Ic_gui(PyQt5.QtGui.QWidget):
             self.true_frequency = 1000 / (sum(differences) / len(differences))
             self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
 
-        # REFRESH ALL PLOTS
-        for p in self.plots:
-            p.plot_slot()
+        self.raw_plot_window.update()
 
 
     # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS
     def numimus_slot(self, num_imus):
         self.num_imus = num_imus
-        self.make_plots()
 
 
 
@@ -436,6 +391,8 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
     def start_plot_slot(self):
         self.timer.start(Ic_gui.PLOT_DELAY_MS)
+        self.raw_plot_window = Ic_plot_window(self.data)
+        self.raw_plot_window.show()
 
     # START RECORDING DATA
     def record(self):

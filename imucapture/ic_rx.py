@@ -402,7 +402,8 @@ class Ic_rx(PyQt5.QtCore.QObject):
                 # ONE BYTE FOR TRIGGER
                 (self.trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
 
-                if (self.settings.invert_trigger):
+                #if (self.settings.invert_trigger):
+                if (not self.settings.rising_edge):
                     self.trigger_state = not self.trigger_state
 
                 if (Ic_global.USE_ENCODER):
