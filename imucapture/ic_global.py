@@ -7,9 +7,22 @@ import PyQt5.QtGui
 
 class Ic_global():
 
+    data_window_list = []
+
     # CONSTANTS
 
     USE_ENCODER = False
+
+    SAMPLE_FREQ_HZ = 200                             # EXPECTED SAMPLES PER SECOND
+    SECONDS_PER_SAMPLE = 1 / SAMPLE_FREQ_HZ          # 0.005
+    MS_PER_SAMPLE = int(SECONDS_PER_SAMPLE * 1000)   # 5, MUST BE AN INTEGER
+
+
+
+
+
+
+
 
     APPLICATION_NAME = 'IMU-Capture'
 
@@ -18,8 +31,10 @@ class Ic_global():
     with open(os.path.join(here, 'VERSION')) as version_file:
         VERSION = version_file.read().strip()
 
-
     APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
+
+
+
 
 
     DATA_BUFFER_MIN = 1                  # >0

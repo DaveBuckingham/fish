@@ -1,9 +1,19 @@
 TODO:
 
+grey out more buttons while recording
+
+global constant for capture rate 200hz
+
+select axis order x-y-z
+
+recover csv save/load
+
+
+
+
+
 gui user can specify filter number of samples
 use specify processing parameters
-
-
 
 update author names in setup.py
 
@@ -12,8 +22,6 @@ am_data.py change asserts to error message in add_sample()
 manual: discuss timestamp (pc receive time. capture time = 200/s by arduino clock)
 
 what happens if recording starts with trigger on? make sure its correct in the manual
-
-downsample plotting data when it gets big so no slowdown
 
 test/fix port detection on windows. can't find arduino on windows
 
@@ -39,10 +47,9 @@ make sure num_imus doesn't change for one dataset
 
 better default save directory
 
-
 tests:
     disable record button during test   ( DIFFICULT )
     imus self-test
     magnetometer
 
-
+die gracefully if no VERSION file found

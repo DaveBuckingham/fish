@@ -25,18 +25,15 @@ class Ic_data(PyQt5.QtCore.QObject):
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
 
-    timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
+    data_frequency = None
 
 
     def __init__(self, processed=False):
         super(Ic_data, self).__init__()
 
         self.imu_data = {}
-        self.imu_data['timestamps'] = collections.deque()
 
         self.data_lock = [False]
-
-        self.saved = True
 
         self.total_samples = 0
 
@@ -51,28 +48,30 @@ class Ic_data(PyQt5.QtCore.QObject):
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
 
-
         
+        #self.num_imus = 0
+        #self.num_samples = 0
+        self.reset_data(0)
 
     def has_data(self):
-        return (len(self.imu_data['timestamps']) > 0)
-
-    def num_samples(self):
-        return len(self.imu_data['timestamps'])
+         return (self.num_samples > 0)
 
 
     def reset_data(self, num_imus):
+        #self.has_data = False
+        self.num_samples = 0
+        self.num_imus = num_imus
+
         # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
         self.data_lock[0] = True
         self.imu_data = {}
-        self.imu_data['timestamps'] = collections.deque()
 
         # THIS WORKS
         self.imu_data['imus'] = [{'accel': [collections.deque(), collections.deque(), collections.deque()],
                                   'gyro':  [collections.deque(), collections.deque(), collections.deque()], 
                                   'mag':   [collections.deque(), collections.deque(), collections.deque()]
                                  }
-                                 for i in range(num_imus)
+                                 for i in range(self.num_imus)
                                 ]
 
         # Q: Why don't you use numpy arrays?  It'll make the math *way* faster, and probably pyqtgraph too
@@ -80,16 +79,13 @@ class Ic_data(PyQt5.QtCore.QObject):
         if (Ic_global.USE_ENCODER):
             self.imu_data['encoder'] = []
         self.data_lock[0] = False
-        self.num_imus = num_imus
 
 
-    def add_sample(self, sample, limit):
+    def add_sample(self, sample, limit='inf'):
         if (Ic_global.USE_ENCODER):
-            assert(len(sample) == 3)
+            assert(len(sample) == self.num_imus + 1)
         else:
-            assert(len(sample) == 2)
-        assert(len(sample[1]) == self.num_imus)
-
+            assert(len(sample) == self.num_imus)
 
         if(self.data_lock[0]):
             logging.info("WRITE LOCKED Ic_rx")
@@ -97,29 +93,30 @@ class Ic_data(PyQt5.QtCore.QObject):
             # Q: are you aiming for a real thread safe lock here? This might not work
             self.data_lock[0] = True
 
-            self.imu_data['timestamps'].append(sample[0])
+            #self.imu_data['timestamps'].append(sample[0])
 
             # Q: If appending data is the reason not to use numpy arrays, could collect preallocate blocks and assign
+            self.num_samples += 1
             for i in (range(0, self.num_imus)):
-                (self.imu_data['imus'][i]['accel'][0]).append(sample[1][i][0][0])
-                (self.imu_data['imus'][i]['accel'][1]).append(sample[1][i][0][1])
-                (self.imu_data['imus'][i]['accel'][2]).append(sample[1][i][0][2])
 
-                (self.imu_data['imus'][i]['gyro'][0]).append(sample[1][i][1][0])
-                (self.imu_data['imus'][i]['gyro'][1]).append(sample[1][i][1][1])
-                (self.imu_data['imus'][i]['gyro'][2]).append(sample[1][i][1][2])
+                (self.imu_data['imus'][i]['accel'][0]).append(sample[i][0][0])
+                (self.imu_data['imus'][i]['accel'][1]).append(sample[i][0][1])
+                (self.imu_data['imus'][i]['accel'][2]).append(sample[i][0][2])
 
-                (self.imu_data['imus'][i]['mag'][0]).append(sample[1][i][2][0])
-                (self.imu_data['imus'][i]['mag'][1]).append(sample[1][i][2][1])
-                (self.imu_data['imus'][i]['mag'][2]).append(sample[1][i][2][2])
+                (self.imu_data['imus'][i]['gyro'][0]).append(sample[i][1][0])
+                (self.imu_data['imus'][i]['gyro'][1]).append(sample[i][1][1])
+                (self.imu_data['imus'][i]['gyro'][2]).append(sample[i][1][2])
+
+                (self.imu_data['imus'][i]['mag'][0]).append(sample[i][2][0])
+                (self.imu_data['imus'][i]['mag'][1]).append(sample[i][2][1])
+                (self.imu_data['imus'][i]['mag'][2]).append(sample[i][2][2])
 
 
             if (Ic_global.USE_ENCODER):
-                self.imu_data['encoder'].append(sample[2])
+                self.imu_data['encoder'].append(sample[-1])
 
 
-            while (len(self.imu_data['timestamps']) > limit):
-                self.imu_data['timestamps'].popleft()
+            while (self.num_samples > limit):
 
                 for i in (range(0, self.num_imus)):
                     self.imu_data['imus'][i]['accel'][0].popleft()
@@ -133,6 +130,8 @@ class Ic_data(PyQt5.QtCore.QObject):
                     self.imu_data['imus'][i]['mag'][0].popleft()
                     self.imu_data['imus'][i]['mag'][1].popleft()
                     self.imu_data['imus'][i]['mag'][2].popleft()
+
+                self.num_samples -= 1
 
 
                 if (Ic_global.USE_ENCODER):
@@ -164,16 +163,18 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             timepath = '/'.join([root_group, time_group])
             self.imu_data = {}
-            if timepath in datafile:
-                self.imu_data['timestamps'] = datafile.get(timepath)[()]
-            else:
-                return False
+
+            #if timepath in datafile:
+            #    self.imu_data['timestamps'] = datafile.get(timepath)[()]
+            #else:
+            #    return False
 
             self.imu_data['imus'] = []
 
             i = 0
             done = False
 
+            self.num_samples = None
             while not done:
                 ext = str(i + 1)
 
@@ -211,6 +212,15 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             if (Ic_global.USE_ENCODER):
                 self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+
+            self.num_samples = len(self.imu_data['imus'][0]['accel'][0])
+            for imu in range(0, self.num_imus):
+                for mode in (['accel', 'gyro', 'mag']):
+                    for axis in range(0, 3):
+                        if (self.num_samples != len(self.imu_data['imus'][imu][mode][axis])):
+                            logging.error("data loaded with uneven lengths")
+                            return False
+
             return True
         return False
 
@@ -223,7 +233,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             timepath = '/'.join([root_group, time_group])
             self.imu_data = {}
-            self.imu_data['timestamps'] = datafile.get('time')[()]
+            #self.imu_data['timestamps'] = datafile.get('time')[()]
             self.imu_data['imus'] = []
 
             i = 0
@@ -246,6 +256,15 @@ class Ic_data(PyQt5.QtCore.QObject):
 
             if (Ic_global.USE_ENCODER):
                 self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
+
+            self.num_samples = len(self.imu_data['imus'][0]['accel'][0])
+            for imu in range(0, self.num_imus):
+                for mode in (['accel', 'gyro', 'mag']):
+                    for axis in range(0, 3):
+                        if (self.num_samples != len(self.imu_data['imus'][imu][mode][axis])):
+                            logging.error("data loaded with uneven lengths")
+                            return False
+
             return True
         return False
 
@@ -258,8 +277,8 @@ class Ic_data(PyQt5.QtCore.QObject):
         with h5py.File(filename, 'w') as datafile:
             save_data = datafile.create_group("data")
 
-            # save_data.create_dataset('t', data=self.imu_data['timestamps'])
-            save_data.create_dataset('time', data=self.imu_data['timestamps'])
+            #save_data.create_dataset('time', data=self.imu_data['timestamps'])
+            save_data.create_dataset('time', data=range(0, self.num_samples, Ic_global.MS_PER_SAMPLE))
 
             for i in range(0, len(self.imu_data['imus'])):
                 imu = self.imu_data['imus'][i]

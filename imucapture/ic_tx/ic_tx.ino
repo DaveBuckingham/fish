@@ -6,7 +6,6 @@
 // We can communicate with the imu over spi, but the imu communicates with mag over i2c.
 
 
-
 // Wiring arduino to imus:
 //
 //    ARDUINO    PIN      IMU        COLOR
@@ -64,9 +63,9 @@
 
 #define TRIGGER_PIN                               4
 #define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
-const uint8_t IMU_SELECT_OPTIONS[]                 = {8, 9, 10};    // len = MAX_CHIP_SELECTS
+const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CHIP_SELECTS
 
-#define SERIAL_BUFF_LENGTH                        200             // buffer for serial com: response_len + room for byte stuffing
+#define SERIAL_BUFF_LENGTH                        200            // buffer for serial com: response_len + room for byte stuffing
 
 // IMU REGISTERS
 #define SELF_TEST_X_GYRO                          0x00
@@ -509,7 +508,6 @@ void begin_imu_com() {
     for (i=0; i < MAX_CHIP_SELECTS; i++) {
         pinMode(IMU_SELECT_OPTIONS[i], OUTPUT);
         digitalWrite(IMU_SELECT_OPTIONS[i], HIGH);
-        //delay(400); // NEED THIS???
         if (read_register(IMU_SELECT_OPTIONS[i], REG_WHO_AM_I) == IMU_WHOAMI_VAL) {
            imu_select[num_imus] = IMU_SELECT_OPTIONS[i];
            num_imus++;
@@ -537,7 +535,7 @@ void initialize(){
 
     for (i=0; i < num_imus; i++) {
 
-        write_register(imu_select[i], REG_PWR_MGMT_1, 0x81);         // reset mpu and set clock source
+        write_register(imu_select[i], REG_PWR_MGMT_1, 0x81);         // RESET MPU AND SET CLOCK SOURCE
         delay(1);
 
         write_register(imu_select[i], REG_CONFIG, 0x01);             // DLPF: GYRO BANDWIDTH = 184HZ, TEMP BANDWIDTH = 188HZ
@@ -563,7 +561,6 @@ void initialize(){
 
     }
 
-
 #ifdef USE_ENCODER
     pinMode(PIN_EMS_CLK, OUTPUT);
     pinMode(PIN_EMS_CS, OUTPUT);
@@ -572,7 +569,6 @@ void initialize(){
     digitalWrite(PIN_EMS_CLK, HIGH);
     digitalWrite(PIN_EMS_CS, LOW);
 #endif
-
 
 }
 
@@ -606,8 +602,7 @@ void read_sample(){
     j = 0;
 
     // SAMPLE ID
-    // COULD SPEED THING UP BY REMOVING SAMPLE IDS...
-    // OR USE 2 BYTES INSTEAD OF 4
+    // COULD SPEED THING UP BY REMOVING SAMPLE IDS, OR USE 2 BYTES INSTEAD OF 4
     response[j++] = next_sample_id >> 24;
     response[j++] = next_sample_id >> 16;
     response[j++] = next_sample_id >> 8;
@@ -619,6 +614,7 @@ void read_sample(){
 
         // READ TEMPERATURE
         // read_multiple_registers(imu_select[i], REG_TEMP_OUT_H, response + j, 2);
+        // j += 2;
 
         // READ ACCEL
         read_multiple_registers(imu_select[i], REG_ACCEL_FIRST, response + j, 6);

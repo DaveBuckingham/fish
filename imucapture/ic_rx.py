@@ -72,12 +72,10 @@ class Ic_rx(PyQt5.QtCore.QObject):
 
     trigger_state = None
 
-    timestamp_signal = PyQt5.QtCore.pyqtSignal(float)
-
     def __init__(self, data, settings):
         super(Ic_rx, self).__init__()
 
-        self.recording = False
+        self.recording = True
 
         self.sample_length = 0
 
@@ -190,7 +188,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
             logging.warning('no Arduino found')
             return False
         else:
-            logging.info(str(len(arduino_ports)) + ' possible Arduino devices(s) found')
+            logging.info(str(len(arduino_ports)) + ' possible Arduino device(s) found')
             serial_port = arduino_ports[0]
             logging.info('using device found on ' + serial_port)
 
@@ -348,14 +346,12 @@ class Ic_rx(PyQt5.QtCore.QObject):
         # RESET TIMER
         start_time = time.time() * 1000
 
-        timestamp = 0
+        #timestamp = 0
         while (self.recording):
 
             (received, message_type) = self.rx_packet()
 
             if ((message_type == Ic_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
-
-                #timestamp = (time.time() * 1000) - start_time
 
 
                 received = bytearray(received)
@@ -365,8 +361,6 @@ class Ic_rx(PyQt5.QtCore.QObject):
 
 
                 sample = []
-                sample.append(timestamp)
-                sample.append([])
 
                 for i in (range(0, self.data.num_imus)):
 
@@ -393,7 +387,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
                     (mx, my, mz) = map(self.raw_mag_to_microteslas, (mx, my, mz))
 
 
-                    sample[1].append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
+                    sample.append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
 
 
@@ -426,7 +420,7 @@ class Ic_rx(PyQt5.QtCore.QObject):
             else:
                 logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
 
-            timestamp += 5
+            #timestamp += 5
 
 
         logging.info("stopping recording data")

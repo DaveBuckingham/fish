@@ -95,15 +95,14 @@ class Ic_get_basis(object):
         return -Q
 
     def get_intervals(self, data):
-        # TODO: This would be way faster with a bisection algorithm
         intervals = []
         mean_accels = []
         start = 0
         end = self.HOLD_MIN
-        while end <= data.num_samples():
+        while end <= data.num_samples:
 
             if (self._calib_within_thresholds(data, start, end)):
-                while (self._calib_within_thresholds(data, start, end) and (end < data.num_samples())):
+                while (self._calib_within_thresholds(data, start, end) and (end < data.num_samples)):
                     end += 1
                 intervals.append((start, end))
                 start = end
@@ -118,22 +117,15 @@ class Ic_get_basis(object):
         return intervals
 
 
-    def get_bases(self, data, intervals=None):
-        # TODO: This fails for data from multiple IMUs.  Should treat the IMUs separately and return multiple sets of vectors
-        # working on fixing this -db
-        if (intervals is None):
-            intervals = self.get_intervals(data)
-
+    def get_bases(self, data, intervals):
         if(len(intervals) < 3):
             logging.error("fewer than 3 steady intervals")
             return None
-
 
         # SET AN ARBITRATY LIMIT, IF TOO LARGE, find_orthogonal_triple() WILL BE SLOW
         if(len(intervals) > self.MAX_INTERVALS):
             logging.error("too many steady intervals, the limit is " + str(self.MAX_INTERVALS))
             return None
-
 
         imu_bases = []
         for imu in range(0, data.num_imus):

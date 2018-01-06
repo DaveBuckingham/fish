@@ -90,7 +90,7 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # SECONDS
-        self.buffer_label_sec = PyQt5.QtGui.QLabel("= approx. " + str(self.data_buffer_len * 5) + " ms")
+        self.buffer_label_sec = PyQt5.QtGui.QLabel("= approx. " + str(self.data_buffer_len * Ic_global.MS_PER_SAMPLE) + " ms")
         buffer_layout.addWidget(self.buffer_label_sec, 3, 1)
 
         # TEXTBOX

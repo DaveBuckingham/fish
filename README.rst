@@ -5,6 +5,10 @@ Python program running on the PC receives data from the Arduino and provides
 users with a graphical interface. This interface allows users to interact with
 the Arduino and to view and manipulate IMU data.
 
+DSF (Dynamic Snap Free)
+Assume 5th derivitive of position is 0,
+i.e. accelerations are piecewise linear.
+
 For more information, consult the user manual.
 
 
