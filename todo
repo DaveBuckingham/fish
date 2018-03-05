@@ -4,8 +4,6 @@ grey out more buttons while recording
 
 global constant for capture rate 200hz
 
-select axis order x-y-z
-
 recover csv save/load
 
 

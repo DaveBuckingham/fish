@@ -3,6 +3,7 @@ import csv
 import logging
 
 import numpy
+import math
 
 import PyQt5.QtCore
 
@@ -81,7 +82,7 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.data_lock[0] = False
 
 
-    def add_sample(self, sample, limit='inf'):
+    def add_sample(self, sample, limit=math.inf):
         if (Ic_global.USE_ENCODER):
             assert(len(sample) == self.num_imus + 1)
         else:
