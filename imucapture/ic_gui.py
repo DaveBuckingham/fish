@@ -9,7 +9,7 @@ import time
 import logging
 
 import PyQt5.QtCore
-import PyQt5.QtGui
+import PyQt5.QtWidgets
 
 from imucapture.ic_rx import Ic_rx
 from imucapture.ic_data import Ic_data
@@ -19,7 +19,7 @@ from imucapture.ic_raw_data_window import Ic_raw_data_window
 from imucapture.ic_global import *
 from imucapture.ic_batch_transform_dialog import Ic_batch_transform_dialog
 
-class Ic_gui(PyQt5.QtGui.QWidget):
+class Ic_gui(PyQt5.QtWidgets.QWidget):
 
 
     FREQ_AVERAGE_WINDOW = 100
@@ -79,41 +79,41 @@ class Ic_gui(PyQt5.QtGui.QWidget):
         
         # CREATE BUTTONS AND ADD TO BUTTON LAYOUT
 
-        button_layout = PyQt5.QtGui.QVBoxLayout()
-        self.button_container = PyQt5.QtGui.QWidget()
+        button_layout = PyQt5.QtWidgets.QVBoxLayout()
+        self.button_container = PyQt5.QtWidgets.QWidget()
         self.button_container.setLayout(button_layout)
 
-        self.buttons['record'] = PyQt5.QtGui.QPushButton('Record')
+        self.buttons['record'] = PyQt5.QtWidgets.QPushButton('Record')
         self.buttons['record'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['record'].clicked.connect(self.record_button_slot)
         button_layout.addWidget(self.buttons['record'])
 
-        # self.buttons['test'] = PyQt5.QtGui.QPushButton('Test')
+        # self.buttons['test'] = PyQt5.QtWidgets.QPushButton('Test')
         # self.buttons['test'].setToolTip('Check communication with arduino and IMUs, run IMU self tests')
         # self.buttons['test'].clicked.connect(self.test_button_slot)
         # button_layout.addWidget(self.buttons['test'])
 
-        #self.buttons['save'] = PyQt5.QtGui.QPushButton('Save')
+        #self.buttons['save'] = PyQt5.QtWidgets.QPushButton('Save')
         #self.buttons['save'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         #self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
         #self.buttons['save'].clicked.connect(self.save_button_slot)
         #button_layout.addWidget(self.buttons['save'])
         #self.buttons['save'].setEnabled(False)
 
-        self.buttons['load'] = PyQt5.QtGui.QPushButton('Load')
+        self.buttons['load'] = PyQt5.QtWidgets.QPushButton('Load')
         self.buttons['load'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
-        self.buttons['transform'] = PyQt5.QtGui.QPushButton('Batch transform')
+        self.buttons['transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
         self.buttons['transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         self.buttons['transform'].setToolTip('Process the current data by applying a transforming algorithm')
         self.buttons['transform'].clicked.connect(self.transform_button_slot)
         button_layout.addWidget(self.buttons['transform'])
 
-        self.buttons['quit'] = PyQt5.QtGui.QPushButton('Quit')
+        self.buttons['quit'] = PyQt5.QtWidgets.QPushButton('Quit')
         self.buttons['quit'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         self.buttons['quit'].setToolTip('Exit the program')
         self.buttons['quit'].clicked.connect(self.quit_button_slot)
@@ -123,7 +123,7 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         # TEXT OUTPUT WINDOW
 
-        # self.text_window = PyQt5.QtGui.QTextEdit()
+        # self.text_window = PyQt5.QtWidgets.QTextEdit()
         # self.text_window.setMaximumWidth(Ic_gui.BUTTON_WIDTH)
         # self.text_window.setReadOnly(True)
         # self.text_window.setMinimumHeight(150)
@@ -131,12 +131,12 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         # STATUS INFO
 
-        stats_layout = PyQt5.QtGui.QVBoxLayout()
-        self.stats_trigger = PyQt5.QtGui.QLabel("Trigger signal state:")
-        self.stats_time = PyQt5.QtGui.QLabel("Time (ms):")
-        self.stats_true_frequency = PyQt5.QtGui.QLabel("Sample frequency:")
-        self.stats_num_samples_recorded = PyQt5.QtGui.QLabel("Total samples recorded:")
-        self.stats_num_samples_buffer = PyQt5.QtGui.QLabel("Samples in buffer:")
+        stats_layout = PyQt5.QtWidgets.QVBoxLayout()
+        self.stats_trigger = PyQt5.QtWidgets.QLabel("Trigger signal state:")
+        self.stats_time = PyQt5.QtWidgets.QLabel("Time (ms):")
+        self.stats_true_frequency = PyQt5.QtWidgets.QLabel("Sample frequency:")
+        self.stats_num_samples_recorded = PyQt5.QtWidgets.QLabel("Total samples recorded:")
+        self.stats_num_samples_buffer = PyQt5.QtWidgets.QLabel("Samples in buffer:")
 
         stats_layout.addWidget(self.stats_trigger)
         stats_layout.addWidget(self.stats_time)
@@ -147,7 +147,7 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
         # ADD WIDGETS TO LAYOUT
 
-        panel_layout = PyQt5.QtGui.QVBoxLayout()
+        panel_layout = PyQt5.QtWidgets.QVBoxLayout()
         panel_layout.addWidget(self.button_container)
         panel_layout.addWidget(self.hline())
         panel_layout.addWidget(self.settings)
@@ -156,7 +156,7 @@ class Ic_gui(PyQt5.QtGui.QWidget):
         # panel_layout.addWidget(self.hline())
         # panel_layout.addWidget(self.text_window)
 
-        top_layout = PyQt5.QtGui.QHBoxLayout()
+        top_layout = PyQt5.QtWidgets.QHBoxLayout()
         top_layout.addStretch()
         top_layout.addLayout(panel_layout)
 
@@ -174,9 +174,9 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
     # FOR DEBUGGING
     def list_widgets(self):
-        logging.info(len(PyQt5.QtGui.QApplication.topLevelWidgets()))
+        logging.info(len(PyQt5.QtWidgets.QApplication.topLevelWidgets()))
         logging.info(len(Ic_global.data_window_list))
-        #for w in PyQt5.QtGui.QApplication.topLevelWidgets():
+        #for w in PyQt5.QtWidgets.QApplication.topLevelWidgets():
         #    w.show()
             
 
@@ -184,9 +184,9 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
 
     def hline(self):
-        line = PyQt5.QtGui.QFrame()
-        line.setFrameShape(PyQt5.QtGui.QFrame.HLine)
-        line.setFrameShadow(PyQt5.QtGui.QFrame.Sunken)
+        line = PyQt5.QtWidgets.QFrame()
+        line.setFrameShape(PyQt5.QtWidgets.QFrame.HLine)
+        line.setFrameShadow(PyQt5.QtWidgets.QFrame.Sunken)
         return line
 
 
@@ -240,8 +240,8 @@ class Ic_gui(PyQt5.QtGui.QWidget):
     # GET A FILENAME FROM THE USER AND THEN LOAD THE FILE TO THE DATA BUFFER
     def load_button_slot(self):
 
-        options = PyQt5.QtGui.QFileDialog.Options() | PyQt5.QtGui.QFileDialog.DontUseNativeDialog
-        filename, searchtype = PyQt5.QtGui.QFileDialog.getOpenFileName(parent=self,
+        options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
+        filename, searchtype = PyQt5.QtWidgets.QFileDialog.getOpenFileName(parent=self,
                                                                        caption="Choose a file",
                                                                        directory=Ic_global.last_file_path,
                                                                        filter="*.csv *.hdf5",
@@ -398,7 +398,7 @@ class Ic_gui(PyQt5.QtGui.QWidget):
 
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)    # terminate on interrupt, will leave child process running!
-    app = PyQt5.QtGui.QApplication(sys.argv)
+    app = PyQt5.QtWidgets.QApplication(sys.argv)
     ex = Ic_gui()
     # atexit.register(ex.stop_recording)    # WE OVERRIDE closeEvent() INSTEAD
     ex.show()

@@ -2,7 +2,7 @@ import os
 import sys
 
 import PyQt5.QtCore
-import PyQt5.QtGui
+import PyQt5.QtWidgets
 
 
 class Ic_global():
@@ -52,7 +52,7 @@ class Ic_global():
     def enable_layout(layout, state):
         items = (layout.itemAt(i) for i in range(layout.count())) 
         for w in items:
-            if isinstance(w, PyQt5.QtGui.QLayout):
+            if isinstance(w, PyQt5.QtWidgets.QLayout):
                 Ic_global.enable_layout(w, state)
             else:
                 w.widget().setEnabled(state)

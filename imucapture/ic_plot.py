@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 
-import PyQt5.QtGui
+import PyQt5.QtWidgets
 
 from imucapture.ic_global import *
 
@@ -19,9 +19,9 @@ class Ic_plot(pg.PlotWidget):
         self.first = True
 
 
-        self.colors = [PyQt5.QtGui.QColor(220, 0, 0), \
-                       PyQt5.QtGui.QColor(0, 200, 0), \
-                       PyQt5.QtGui.QColor(30, 30, 255)]
+        self.colors = [PyQt5.QtWidgets.QColor(220, 0, 0), \
+                       PyQt5.QtWidgets.QColor(0, 200, 0), \
+                       PyQt5.QtWidgets.QColor(30, 30, 255)]
 
         self.setMinimumWidth(250)
 

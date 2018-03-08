@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
 import PyQt5.QtCore
+import PyQt5.QtWidgets
 import PyQt5.QtGui
 
 from imucapture.ic_global import *
 
-class Ic_settings(PyQt5.QtGui.QWidget):
+class Ic_settings(PyQt5.QtWidgets.QWidget):
 
     def __init__(self, parent=None):
 
@@ -36,24 +37,24 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         ########################################
         #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
         ########################################
-        trigger_checkbox = PyQt5.QtGui.QCheckBox('use trigger', self)
+        trigger_checkbox = PyQt5.QtWidgets.QCheckBox('use trigger', self)
         trigger_checkbox.setToolTip('Stop recording on trigger signal')
         trigger_checkbox.stateChanged.connect(self.toggle_trigger)
 
-        #self.invert_checkbox = PyQt5.QtGui.QCheckBox('invert trigger', self)
+        #self.invert_checkbox = PyQt5.QtWidgets.QCheckBox('invert trigger', self)
         #self.invert_checkbox.setToolTip('Trigger activates on pin low')
         #self.invert_checkbox.stateChanged.connect(self.toggle_invert)
 
-        trigger_edge_box = PyQt5.QtGui.QGroupBox()
-        self.trigger_edge_layout = PyQt5.QtGui.QVBoxLayout()
+        trigger_edge_box = PyQt5.QtWidgets.QGroupBox()
+        self.trigger_edge_layout = PyQt5.QtWidgets.QVBoxLayout()
 
-        radio = PyQt5.QtGui.QRadioButton("rising edge")
+        radio = PyQt5.QtWidgets.QRadioButton("rising edge")
         radio.setToolTip('Trigger is activated by a rising edge')
         radio.clicked.connect(self.set_trigger_rising_edge)
         self.trigger_edge_layout.addWidget(radio)
         radio.click()
 
-        radio = PyQt5.QtGui.QRadioButton("falling edge")
+        radio = PyQt5.QtWidgets.QRadioButton("falling edge")
         radio.setToolTip('Trigger is activated by a falling edge')
         radio.clicked.connect(self.set_trigger_falling_edge)
         self.trigger_edge_layout.addWidget(radio)
@@ -74,14 +75,14 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         ########################################
 
         # LAYOUT
-        buffer_layout = PyQt5.QtGui.QGridLayout()
+        buffer_layout = PyQt5.QtWidgets.QGridLayout()
 
         # LABEL
-        buffer_label = PyQt5.QtGui.QLabel("data buffer size")
+        buffer_label = PyQt5.QtWidgets.QLabel("data buffer size")
         buffer_layout.addWidget(buffer_label, 1, 1)
 
         # SLIDER
-        self.buffer_slider = PyQt5.QtGui.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.buffer_slider.setMinimum(Ic_global.DATA_BUFFER_MIN)
         self.buffer_slider.setMaximum(Ic_global.DATA_BUFFER_MAX)
         self.buffer_slider.setValue(self.data_buffer_len)
@@ -90,11 +91,11 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # SECONDS
-        self.buffer_label_sec = PyQt5.QtGui.QLabel("= approx. " + str(self.data_buffer_len * Ic_global.MS_PER_SAMPLE) + " ms")
+        self.buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Ic_global.MS_PER_SAMPLE) + " ms")
         buffer_layout.addWidget(self.buffer_label_sec, 3, 1)
 
         # TEXTBOX
-        self.buffer_textbox = PyQt5.QtGui.QLineEdit(str(self.data_buffer_len), self)
+        self.buffer_textbox = PyQt5.QtWidgets.QLineEdit(str(self.data_buffer_len), self)
         #self.buffer_textbox.setMaximumWidth(50)
         self.buffer_textbox.setFixedWidth(60)
         validator = PyQt5.QtGui.QIntValidator(Ic_global.DATA_BUFFER_MIN, Ic_global.DATA_BUFFER_MAX)
@@ -103,7 +104,7 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         buffer_layout.addWidget(self.buffer_textbox, 2, 2)
 
 
-        trigger_layout = PyQt5.QtGui.QHBoxLayout()
+        trigger_layout = PyQt5.QtWidgets.QHBoxLayout()
         trigger_layout.addWidget(trigger_checkbox)
         #trigger_layout.addWidget(self.invert_checkbox)
         trigger_layout.addWidget(trigger_edge_box)
@@ -112,7 +113,7 @@ class Ic_settings(PyQt5.QtGui.QWidget):
         ########################################
         #      PLACE EVERYTHING IN LAYOUT      #
         ########################################
-        top_layout = PyQt5.QtGui.QVBoxLayout()
+        top_layout = PyQt5.QtWidgets.QVBoxLayout()
         top_layout.addLayout(trigger_layout)
         top_layout.addLayout(buffer_layout)
         self.setLayout(top_layout)
