@@ -34,7 +34,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         self.imu_data = {}
 
-        self.data_lock = [False]
+        self.mutex = PyQt5.QtCore.QMutex()
 
         self.total_samples = 0
 
@@ -64,7 +64,9 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.num_imus = num_imus
 
         # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
-        self.data_lock[0] = True
+
+        self.mutex.lock()
+
         self.imu_data = {}
 
         # THIS WORKS
@@ -79,7 +81,8 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         if (Ic_global.USE_ENCODER):
             self.imu_data['encoder'] = []
-        self.data_lock[0] = False
+
+        self.mutex.unlock()
 
 
     def add_sample(self, sample, limit=math.inf):
@@ -88,61 +91,57 @@ class Ic_data(PyQt5.QtCore.QObject):
         else:
             assert(len(sample) == self.num_imus)
 
-        if(self.data_lock[0]):
-            logging.info("WRITE LOCKED Ic_rx")
-        else:
-            # Q: are you aiming for a real thread safe lock here? This might not work
-            self.data_lock[0] = True
+        self.mutex.lock()
 
-            #self.imu_data['timestamps'].append(sample[0])
+        #self.imu_data['timestamps'].append(sample[0])
 
-            # Q: If appending data is the reason not to use numpy arrays, could collect preallocate blocks and assign
-            self.num_samples += 1
+        # Q: If appending data is the reason not to use numpy arrays, could collect preallocate blocks and assign
+        self.num_samples += 1
+        for i in (range(0, self.num_imus)):
+
+            (self.imu_data['imus'][i]['accel'][0]).append(sample[i][0][0])
+            (self.imu_data['imus'][i]['accel'][1]).append(sample[i][0][1])
+            (self.imu_data['imus'][i]['accel'][2]).append(sample[i][0][2])
+
+            (self.imu_data['imus'][i]['gyro'][0]).append(sample[i][1][0])
+            (self.imu_data['imus'][i]['gyro'][1]).append(sample[i][1][1])
+            (self.imu_data['imus'][i]['gyro'][2]).append(sample[i][1][2])
+
+            (self.imu_data['imus'][i]['mag'][0]).append(sample[i][2][0])
+            (self.imu_data['imus'][i]['mag'][1]).append(sample[i][2][1])
+            (self.imu_data['imus'][i]['mag'][2]).append(sample[i][2][2])
+
+
+        if (Ic_global.USE_ENCODER):
+            self.imu_data['encoder'].append(sample[-1])
+
+
+        while (self.num_samples > limit):
+
             for i in (range(0, self.num_imus)):
+                self.imu_data['imus'][i]['accel'][0].popleft()
+                self.imu_data['imus'][i]['accel'][1].popleft()
+                self.imu_data['imus'][i]['accel'][2].popleft()
 
-                (self.imu_data['imus'][i]['accel'][0]).append(sample[i][0][0])
-                (self.imu_data['imus'][i]['accel'][1]).append(sample[i][0][1])
-                (self.imu_data['imus'][i]['accel'][2]).append(sample[i][0][2])
+                self.imu_data['imus'][i]['gyro'][0].popleft()
+                self.imu_data['imus'][i]['gyro'][1].popleft()
+                self.imu_data['imus'][i]['gyro'][2].popleft()
 
-                (self.imu_data['imus'][i]['gyro'][0]).append(sample[i][1][0])
-                (self.imu_data['imus'][i]['gyro'][1]).append(sample[i][1][1])
-                (self.imu_data['imus'][i]['gyro'][2]).append(sample[i][1][2])
+                self.imu_data['imus'][i]['mag'][0].popleft()
+                self.imu_data['imus'][i]['mag'][1].popleft()
+                self.imu_data['imus'][i]['mag'][2].popleft()
 
-                (self.imu_data['imus'][i]['mag'][0]).append(sample[i][2][0])
-                (self.imu_data['imus'][i]['mag'][1]).append(sample[i][2][1])
-                (self.imu_data['imus'][i]['mag'][2]).append(sample[i][2][2])
+            self.num_samples -= 1
 
 
             if (Ic_global.USE_ENCODER):
-                self.imu_data['encoder'].append(sample[-1])
-
-
-            while (self.num_samples > limit):
-
-                for i in (range(0, self.num_imus)):
-                    self.imu_data['imus'][i]['accel'][0].popleft()
-                    self.imu_data['imus'][i]['accel'][1].popleft()
-                    self.imu_data['imus'][i]['accel'][2].popleft()
-
-                    self.imu_data['imus'][i]['gyro'][0].popleft()
-                    self.imu_data['imus'][i]['gyro'][1].popleft()
-                    self.imu_data['imus'][i]['gyro'][2].popleft()
-
-                    self.imu_data['imus'][i]['mag'][0].popleft()
-                    self.imu_data['imus'][i]['mag'][1].popleft()
-                    self.imu_data['imus'][i]['mag'][2].popleft()
-
-                self.num_samples -= 1
-
-
-                if (Ic_global.USE_ENCODER):
-                    self.imu_data['encoder'].popleft()
+                self.imu_data['encoder'].popleft()
 
 
 
 
-            self.total_samples += 1
-            self.data_lock[0] = False
+        self.total_samples += 1
+        self.mutex.unlock()
 
 
 

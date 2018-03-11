@@ -1,4 +1,5 @@
 import pyqtgraph as pg
+import logging
 
 import PyQt5.QtWidgets
 
@@ -7,12 +8,12 @@ from imucapture.ic_global import *
 
 class Ic_plot(pg.PlotWidget):
 
-    def __init__(self, plot_data, lock, legend, parent=None):
+    def __init__(self, plot_data, mutex, legend, parent=None):
 
         super().__init__(parent)
 
         self.plot_data = plot_data
-        self.lock = lock
+        self.mutex = mutex
 
         self.parent = parent
 
@@ -53,12 +54,13 @@ class Ic_plot(pg.PlotWidget):
 
     def plot_slot(self):
 
-        if (not self.lock[0]):
+        if (self.mutex.tryLock()):
             self.curve_x_red.setData(self.x_range[:len(self.plot_data[0])],   self.plot_data[0])
             self.curve_y_green.setData(self.x_range[:len(self.plot_data[1])], self.plot_data[1])
             self.curve_z_blue.setData(self.x_range[:len(self.plot_data[2])],  self.plot_data[2])
+            self.mutex.unlock()
 
         else:
-            print("LOCKED")
+            logging.warning("Missed plot update: data mutex locked");
 
 
