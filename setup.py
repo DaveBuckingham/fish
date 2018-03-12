@@ -90,7 +90,6 @@ setup(
                       'pyqtgraph>=0.10.0',
                       'pyserial>=3.3',
                       'PyQt5>=5.8.2',
-                      'scipy>=0.19.0',
                       'pyquaternion>=0.9.2',
                      ],
 

@@ -1,6 +1,5 @@
 import numpy
 import math
-from scipy import interpolate, signal
 from copy import copy
 
 import itertools
