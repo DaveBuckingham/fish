@@ -23,8 +23,5 @@ executables = [
 ]
 
 
-setup(name='IMU-Capture',
-      version = '0.1',
-      description = 'Record data from IMU',
-      options = dict(build_exe = buildOptions),
+setup(options = dict(build_exe = buildOptions),
       executables = executables)
