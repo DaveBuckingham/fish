@@ -36,9 +36,16 @@ class Ic_raw_data_window(Ic_data_window):
         self.buttons['filter'].setEnabled(False)
 
 
-
-
+    # FILTER DATA BUTTON WAS PRESSED
     def filter_button_slot(self):
         transform_dialog = Ic_transform_dialog(self.data)
         transform_dialog.finished_signal.connect(self.update)
         transform_dialog.show()
+
+
+    # IF THE DATA WINDOW IS CLOSED WHILE STILL RECORDING, LET THE GUI KNOW TO STOP THE RECORDING
+    def closeEvent(self, event):
+        self.finished_signal.emit()
+        super().closeEvent(event)
+
+

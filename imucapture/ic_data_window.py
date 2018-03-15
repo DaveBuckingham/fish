@@ -139,7 +139,6 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
             Ic_global.data_window_list.remove(self)
         else:
             logging.error("closing data window. should be in global list but isn't!")
-        #self.finished_signal.emit()
         event.accept()
 
     # GET A FILENAME AND TYPE FROM THE USER AND THEN SAVE THE DATA BUFFER
