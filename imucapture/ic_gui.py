@@ -254,7 +254,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
             prefix, extension = os.path.splitext(filename)
             Ic_global.last_data_path = os.path.dirname(filename)
 
-            data = Ic_data()
+            data = Ic_data("raw")
 
             if (extension == '.hdf5'):
                 if not data.load_hdf5_file(filename):
@@ -358,7 +358,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         self.buttons['load'].setEnabled(False)
 
-        self.data = Ic_data()
+        self.data = Ic_data("raw")
 
         self.receiver_thread = PyQt5.QtCore.QThread()
         self.receiver = Ic_rx(self.data, self.settings)

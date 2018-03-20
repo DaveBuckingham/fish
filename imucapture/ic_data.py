@@ -2,6 +2,8 @@ import h5py
 import csv
 import logging
 
+import sys
+
 import numpy
 import math
 
@@ -29,7 +31,7 @@ class Ic_data(PyQt5.QtCore.QObject):
     data_frequency = None
 
 
-    def __init__(self, processed=False):
+    def __init__(self, dataset_type):
         super(Ic_data, self).__init__()
 
         self.imu_data = {}
@@ -38,21 +40,29 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         self.total_samples = 0
 
-        if(processed):
-            self.data_description_string = 'filtered data'
+        self.dataset_type = dataset_type
+
+        if (not self.set_units()):
+            sys.exit()
+        
+        self.reset_data(0)
+
+
+    def set_units(self):
+        if(self.dataset_type == 'transformed'):
             self.accel_units_string = 'Dynamic acceleration (meters per second squared)'
             self.gyro_units_string  = 'Orientation (radians)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
-        else:
-            self.data_description_string = 'raw data'
+        elif((self.dataset_type == 'raw') or (self.dataset_type == 'calibration')):
             self.accel_units_string = 'Acceleration (meters per second squared)'
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
+        else:
+            logging.error("invalid dataset type: " . dataset_type)
+            return False
+        return True
 
-        
-        #self.num_imus = 0
-        #self.num_samples = 0
-        self.reset_data(0)
+
 
     def has_data(self):
          return (self.num_samples > 0)
@@ -270,10 +280,13 @@ class Ic_data(PyQt5.QtCore.QObject):
                 i += 1
                 ext = str(i + 1)
 
-            self.data_description_string = datafile.attrs['description']
-            self.accel_units_string      = accel_dataset.attrs['description']
-            self.gyro_units_string       = gyro_dataset.attrs['description']
-            self.mag_units_string        = mag_dataset.attrs['description']
+            self.datset_type             = datafile.attrs['description']
+
+            if (not self.set_units()):
+                return False
+
+
+
 
             self.num_imus = i
             logging.debug('Loaded {} IMUs'.format(self.num_imus))
@@ -312,6 +325,10 @@ class Ic_data(PyQt5.QtCore.QObject):
                 save_data.create_dataset('accel' + extension, data=self.as_list_of_triples(i, 'accel'))
                 save_data.create_dataset('gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
                 save_data.create_dataset('mag' + extension, data=self.as_list_of_triples(i, 'mag'))
+
+                save_data.attrs['description'] = self.dataset_type
+
+                self.set_units()
 
             if (Ic_global.USE_ENCODER):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
