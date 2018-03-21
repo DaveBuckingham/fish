@@ -30,28 +30,29 @@ class Ic_calib_dialog(PyQt5.QtWidgets.QWidget):
 
 
 
-        self.range_labels = []
         radio_layout = PyQt5.QtWidgets.QGridLayout()
-        self.axis_select_matrix = []
+        self.button_matrix = []
         for i in range(0,3):
-            self.axis_select_matrix.append([None, None, None])
+            self.button_matrix.append([None, None, None])
 
         for i in range(0, 3):
-            self.range_labels.append(PyQt5.QtWidgets.QLabel())
-            radio_layout.addWidget(self.range_labels[i], i, 0)
+            range_as_seconds = (calib.intervals[i][0] / Ic_global.SAMPLE_FREQ_HZ, calib.intervals[i][1] / Ic_global.SAMPLE_FREQ_HZ)
+            range_label = PyQt5.QtWidgets.QLabel(str(range_as_seconds))
+            radio_layout.addWidget(range_label, i, 0)
             for j in range(0, 3):
                 radio = PyQt5.QtWidgets.QRadioButton(('x','y','z')[j])
-                #radio.setToolTip('')
+                radio.setAutoExclusive(False)
+                radio.setToolTip('')
                 radio.clicked.connect(self.axis_radio_event)
                 radio_layout.addWidget(radio, i, j+1)
-                self.axis_select_matrix[i][j] = radio
+                self.button_matrix[i][j] = radio
 
         for i in range(0,3):
             for j in range(0,3):
                 if (i == j):
-                    self.axis_select_matrix[i][j].setChecked(True)
+                    self.button_matrix[i][j].setChecked(True)
                 else:
-                    self.axis_select_matrix[i][j].setChecked(False)
+                    self.button_matrix[i][j].setChecked(False)
 
 
 
@@ -75,45 +76,32 @@ class Ic_calib_dialog(PyQt5.QtWidgets.QWidget):
         self.setLayout(self.top_layout)
 
 
-
-    # MAINTAIN THE AXIS SELECTION RADIOS AS A PERMUTATION MATRIX
-    # I.E. ONE RADIO SELECTED PER ROW AND PER COLUMN
-    # THERE MUST BE A BETTER WAY TO DO THIS EG WITH LINEAR ALGEBRA
+    # MAINTAIN RADIO BUTTON STATE AS A PERMUTATION MATRIX
     def axis_radio_event(self):
-        # FIND THE ROW AND COLUMN WITH TWO SELECTED RADIOS
-        rows = [0,1,2]
-        cols = [0,1,2]
-        double_row = None
-        double_col = None
-        for i in range(0,3):
-            for j in range(0,3):
-                if self.axis_select_matrix[i][j].isChecked():
-                    if (i in rows):
-                        rows.remove(i)
-                    else:
-                        double_row = i
-                    if (j in cols):
-                        cols.remove(j)
-                    else:
-                        double_col = j
+        matrix = numpy.array([[button.isChecked() for button in row] for row in self.button_matrix])
 
-        # DESELECT ONE RADIO FROM EACH, NOT THE INTERSECTION
-        if ((double_row is not None) and (double_col is not None)):
-            for i in range(0,3):
-                if (i != double_row):
-                    self.axis_select_matrix[i][double_col].setChecked(False)
-                if (i != double_col):
-                    self.axis_select_matrix[double_row][i].setChecked(False) 
+        if (matrix.sum() < 3) :
+            empty_col = matrix.sum(0).tolist().index(0)
+            empty_row = matrix.sum(1).tolist().index(0)
+            matrix[empty_row, empty_col] = True
 
-        # FILL IN THE RADIO AT A ROW AND COLUMN WITH NO CHECKED RADIOS
-        empty_row = [0,1,2]
-        empty_col = [0,1,2]
-        for i in range(0,3):
-            for j in range(0,3):
-                if self.axis_select_matrix[i][j].isChecked():
-                    empty_row.remove(i)
-                    empty_col.remove(j)
-        self.axis_select_matrix[empty_row[0]][empty_col[0]].setChecked(True)
+            for (row, col), value in numpy.ndenumerate(matrix):
+                self.button_matrix[row][col].setChecked(value)
+
+        elif (matrix.sum() > 3) :
+
+            double_col = matrix.sum(0).tolist().index(2)
+            double_row = matrix.sum(1).tolist().index(2)
+            matrix[double_row, :] = False
+            matrix[:, double_col] = False
+            matrix[double_row, double_col] = True
+
+            empty_col = matrix.sum(0).tolist().index(0)
+            empty_row = matrix.sum(1).tolist().index(0)
+            matrix[empty_row, empty_col] = True
+
+            for (row, col), value in numpy.ndenumerate(matrix):
+                self.button_matrix[row][col].setChecked(value)
 
 
 
