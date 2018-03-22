@@ -129,8 +129,8 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
         self.close()
 
     def activate_buttons(self):
-        for key in self.buttons.keys():
-            self.buttons[key].setEnabled(True)
+        self.buttons['save'].setEnabled(True)
+        self.buttons['close'].setEnabled(True)
 
 
     def closeEvent(self, event):

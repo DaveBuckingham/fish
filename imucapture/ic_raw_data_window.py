@@ -45,6 +45,13 @@ class Ic_raw_data_window(Ic_data_window):
         self.button_layout.addWidget(self.buttons['transform'])
         self.buttons['transform'].setEnabled(False)
 
+    def activate_buttons(self):
+        if (not self.recording):
+            self.buttons['calibrate'].setEnabled(True)
+            if(Ic_global.calibration.imu_bases != None):
+                self.buttons['transform'].setEnabled(True)
+            super().activate_buttons()
+
 
     def calibrate_button_slot(self):
         calib = Ic_calib()

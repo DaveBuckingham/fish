@@ -107,11 +107,12 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
-        self.buttons['transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
-        self.buttons['transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        self.buttons['transform'].setToolTip('Process the current data by applying a transforming algorithm')
-        self.buttons['transform'].clicked.connect(self.transform_button_slot)
-        button_layout.addWidget(self.buttons['transform'])
+        self.buttons['batch_transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
+        self.buttons['batch_transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
+        self.buttons['batch_transform'].setToolTip('Process the current data by applying a transforming algorithm')
+        self.buttons['batch_transform'].clicked.connect(self.batch_transform_button_slot)
+        self.buttons['batch_transform'].setEnabled(False)
+        button_layout.addWidget(self.buttons['batch_transform'])
 
         self.buttons['quit'] = PyQt5.QtWidgets.QPushButton('Quit')
         self.buttons['quit'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
@@ -211,7 +212,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 #              BUTTON SLOTS                #
 ############################################
 
-    def transform_button_slot(self):
+    def batch_transform_button_slot(self):
         dialog = Ic_batch_transform_dialog()
         dialog.show()
 
@@ -225,7 +226,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.close()
 
 
-    # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
+    # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN ic_rx INSTEAD!
     def record_button_slot(self):
         if (self.recording):
             self.stop_recording()
@@ -291,6 +292,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.buttons['load'].setEnabled(True)
 
         if (self.raw_plot_window is not None):           # RECORDING WAS SUCCESSFULL
+            self.raw_plot_window.recording = False
             self.raw_plot_window.activate_buttons()
 
         # DONE RECORDING, DITCH THE REFERENCE TO THE CURRENT PLOT WINDOW
@@ -347,6 +349,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
         self.raw_plot_window.finished_signal.connect(self.stop_recording)
         self.raw_plot_window.show()
+        self.raw_plot_window.recording = True
 
     # START RECORDING DATA
     def record(self):

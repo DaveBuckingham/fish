@@ -103,7 +103,6 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
         self.transform_btn.setToolTip('Apply the transformation, using the loaded calibration data, to the specified data')
         self.transform_btn.clicked.connect(self.transform_data)
         button_layout.addWidget(self.transform_btn)
-        self.transform_btn.setEnabled(False)
  
 
         self.top_layout.addWidget(algorithm_box, 0, 0)
@@ -122,7 +121,7 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
 
 
     def transform_data(self):
-        logging.info("running " + str(self.process_algorithm) + "\n")
+        logging.info("running " + str(self.process_algorithm))
 
         if(Ic_global.calibration.imu_bases is None):
             logging.error("can't transform data without basis vector from calibration file")

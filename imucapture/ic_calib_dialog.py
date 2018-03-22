@@ -26,6 +26,8 @@ class Ic_calib_dialog(PyQt5.QtWidgets.QWidget):
 
         self.top_layout = PyQt5.QtWidgets.QGridLayout()
 
+        self.calib = calib
+
 
 
 
@@ -68,7 +70,6 @@ class Ic_calib_dialog(PyQt5.QtWidgets.QWidget):
         self.transform_btn.setToolTip('Set the selected axes')
         self.transform_btn.clicked.connect(self.set_axes)
         button_layout.addWidget(self.transform_btn)
-        self.transform_btn.setEnabled(False)
  
 
         self.top_layout.addLayout(radio_layout, 1, 0)
@@ -107,11 +108,14 @@ class Ic_calib_dialog(PyQt5.QtWidgets.QWidget):
 
 
     def set_axes(self):
-        boolean_axis_select = numpy.matrix([[self.axis_select_matrix[j][k].isChecked() for j in range(3)] for k in range(3)])
-        for i in range(0, len(calib.imu_bases)):
-            Ic_global.calib.imu_bases[i] = numpy.array(numpy.dot(boolean_axis_select, calib.imu_bases[i]))
+        boolean_axis_select = numpy.matrix([[self.button_matrix[j][k].isChecked() for j in range(3)] for k in range(3)])
+        for i in range(0, len(self.calib.imu_bases)):
+            self.calib.imu_bases[i] = numpy.array(numpy.dot(boolean_axis_select, self.calib.imu_bases[i]))
+        Ic_global.calibration = self.calib
         logging.info("calibration set")
-        self.close
+        for window in (Ic_global.data_window_list):
+            window.activate_buttons()
+        self.close()
 
 
 
