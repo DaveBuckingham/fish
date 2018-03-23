@@ -11,8 +11,6 @@ import PyQt5.QtCore
 
 from imucapture.ic_global import *
 
-import collections
-
 
 try:
     from PyQt5.QtCore import QString
@@ -28,13 +26,8 @@ class Ic_data(PyQt5.QtCore.QObject):
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
 
-    data_frequency = None
-
-
-    def __init__(self, dataset_type):
+    def __init__(self, dataset_type, num_imus, max_samples):
         super(Ic_data, self).__init__()
-
-        self.imu_data = {}
 
         self.mutex = PyQt5.QtCore.QMutex()
 
@@ -44,8 +37,20 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         if (not self.set_units()):
             sys.exit()
+
+        self.imu_data = numpy.empty()
+
+        self.set_max_samples(max_sample)
         
-        self.reset_data(0)
+
+    def set_max_samples(self, max_samples):
+        self.mutex.lock()
+        if (max_samples < self.imu_data.shape[3]):
+            numpy.roll(self.imu_data, max_samples - self.imu_data.shape[3], 3)
+        # SOME NUMBER OF IMUS, 3 MODALITIES, 3 DIMENSIONS PER MODALITY, LOTS OF SAMPLES
+        self.imu_data.resize([num_imus, 3, 3, max_samples])
+        self.mutex.unlock()
+
 
 
     def set_units(self):
@@ -64,91 +69,17 @@ class Ic_data(PyQt5.QtCore.QObject):
 
 
 
-    def has_data(self):
-         return (self.num_samples > 0)
-
-
-    def reset_data(self, num_imus):
-        #self.has_data = False
-        self.num_samples = 0
-        self.num_imus = num_imus
-
-        # DICTIONARY OF LISTS AND OF LISTS OF DICTIONARIES OF LISTS OF LISTS
-
-        self.mutex.lock()
-
-        self.imu_data = {}
-
-        # THIS WORKS
-        self.imu_data['imus'] = [{'accel': [collections.deque(), collections.deque(), collections.deque()],
-                                  'gyro':  [collections.deque(), collections.deque(), collections.deque()], 
-                                  'mag':   [collections.deque(), collections.deque(), collections.deque()]
-                                 }
-                                 for i in range(self.num_imus)
-                                ]
-
-        # Q: Why don't you use numpy arrays?  It'll make the math *way* faster, and probably pyqtgraph too
-
-        if (Ic_global.USE_ENCODER):
-            self.imu_data['encoder'] = []
-
-        self.mutex.unlock()
-
-
     def add_sample(self, sample, limit=math.inf):
-        if (Ic_global.USE_ENCODER):
-            assert(len(sample) == self.num_imus + 1)
-        else:
-            assert(len(sample) == self.num_imus)
+        assert(len(sample) == self.num_imus)
 
         self.mutex.lock()
 
-        #self.imu_data['timestamps'].append(sample[0])
+        if (self.num_samples == self.imu_data.shape[3]):
+            numpy.roll(self.imu_data, -1, 3)
 
-        # Q: If appending data is the reason not to use numpy arrays, could collect preallocate blocks and assign
+        self.imu_data[:,:,:,-1] = sample
+
         self.num_samples += 1
-        for i in (range(0, self.num_imus)):
-
-            (self.imu_data['imus'][i]['accel'][0]).append(sample[i][0][0])
-            (self.imu_data['imus'][i]['accel'][1]).append(sample[i][0][1])
-            (self.imu_data['imus'][i]['accel'][2]).append(sample[i][0][2])
-
-            (self.imu_data['imus'][i]['gyro'][0]).append(sample[i][1][0])
-            (self.imu_data['imus'][i]['gyro'][1]).append(sample[i][1][1])
-            (self.imu_data['imus'][i]['gyro'][2]).append(sample[i][1][2])
-
-            (self.imu_data['imus'][i]['mag'][0]).append(sample[i][2][0])
-            (self.imu_data['imus'][i]['mag'][1]).append(sample[i][2][1])
-            (self.imu_data['imus'][i]['mag'][2]).append(sample[i][2][2])
-
-
-        if (Ic_global.USE_ENCODER):
-            self.imu_data['encoder'].append(sample[-1])
-
-
-        while (self.num_samples > limit):
-
-            for i in (range(0, self.num_imus)):
-                self.imu_data['imus'][i]['accel'][0].popleft()
-                self.imu_data['imus'][i]['accel'][1].popleft()
-                self.imu_data['imus'][i]['accel'][2].popleft()
-
-                self.imu_data['imus'][i]['gyro'][0].popleft()
-                self.imu_data['imus'][i]['gyro'][1].popleft()
-                self.imu_data['imus'][i]['gyro'][2].popleft()
-
-                self.imu_data['imus'][i]['mag'][0].popleft()
-                self.imu_data['imus'][i]['mag'][1].popleft()
-                self.imu_data['imus'][i]['mag'][2].popleft()
-
-            self.num_samples -= 1
-
-
-            if (Ic_global.USE_ENCODER):
-                self.imu_data['encoder'].popleft()
-
-
-
 
         self.total_samples += 1
         self.mutex.unlock()
@@ -334,32 +265,3 @@ class Ic_data(PyQt5.QtCore.QObject):
                 save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
 
 
-
-
-#    def rotate(self, R, imunum=0):
-#        acc = self.as_list_of_triples(imunum, 'accel')
-#        gyro = self.as_list_of_triples(imunum, 'gyro')
-#        mag = self.as_list_of_triples(imunum, 'mag')
-#
-#        accr = [[],[],[]]
-#        gyror = [[],[],[]]
-#        magr = [[],[],[]]
-#        for a, g, m in zip(acc, gyro, mag):
-#            a1 = R.dot(numpy.array(a))
-#            accr[0].append(a1[0])
-#            accr[1].append(a1[1])
-#            accr[2].append(a1[2])
-#
-#            g1 = R.dot(numpy.array(g))
-#            gyror[0].append(g1[0])
-#            gyror[1].append(g1[1])
-#            gyror[2].append(g1[2])
-#
-#            m1 = R.dot(numpy.array(m))
-#            magr[0].append(m1[0])
-#            magr[1].append(m1[1])
-#            magr[2].append(m1[2])
-#
-#        self.imu_data['imus'][imunum]['accel'] = accr
-#        self.imu_data['imus'][imunum]['gyro'] = gyror
-#        self.imu_data['imus'][imunum]['mag'] = magr

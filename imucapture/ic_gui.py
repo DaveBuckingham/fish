@@ -13,7 +13,6 @@ import PyQt5.QtWidgets
 
 from imucapture.ic_rx import Ic_rx
 from imucapture.ic_data import Ic_data
-from imucapture.ic_plot import Ic_plot
 from imucapture.ic_settings import Ic_settings
 from imucapture.ic_raw_data_window import Ic_raw_data_window
 from imucapture.ic_global import *
@@ -299,30 +298,13 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
     # UPDATE DISPLAYED INFORMATION
     def update(self):
  
-        # DISPLAY TIME
-        #timestamps = self.data.imu_data['timestamps']
-        #if(len(timestamps) > 0):
-        #    self.stats_time.setText('Time (ms): %.1f' % (timestamps[-1]))
-
         # DISPLAY NUMBER OF SAMPLES
-        #num_samples = len(timestamps)
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % self.data.num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
 
         # DISPLAY THE TRIGGER STATE
         self.stats_trigger.setText("Trigger signal state: " + ('ON' if self.receiver.trigger_state else 'OFF'))
 
-        # CALCULATE AND DISPLAY THE ACTUAL CURRENT MEASUREMENT FREQUENCY
-        #if (self.data.num_samples > Ic_gui.FREQ_AVERAGE_WINDOW):
-        
-            # DOESN'T WORK WITH DEQUE
-            #window = timestamps[-(Ic_gui.FREQ_AVERAGE_WINDOW):]
-
-            #window = [timestamps[i] for i in range(len(timestamps)-(Ic_gui.FREQ_AVERAGE_WINDOW), len(timestamps))]
-
-            #differences = [j-i for i, j in zip(window[:-1], window[1:])]
-            #self.true_frequency = 1000 / (sum(differences) / len(differences))
-            #self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
 
         self.raw_plot_window.update()
 
