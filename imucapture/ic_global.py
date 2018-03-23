@@ -45,9 +45,6 @@ class Ic_global():
 
 
 
-    # VARIABLES
-
-    last_file_path = ''
 
 
     # FUNCTIONS

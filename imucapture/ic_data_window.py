@@ -52,7 +52,7 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
         self.buttons['save'] = PyQt5.QtWidgets.QPushButton('Save')
         self.buttons['save'].setMaximumWidth(Ic_data_window.BUTTON_WIDTH)
-        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
+        self.buttons['save'].setToolTip('Save the current data to hdf5 file')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         self.button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
@@ -147,8 +147,7 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
         options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         filename, filetype = PyQt5.QtWidgets.QFileDialog.getSaveFileName(parent=self,
                                                                      caption="Save data",
-                                                                     directory=Ic_global.last_file_path,
-                                                                     filter="*.csv;;*.hdf5",
+                                                                     filter="*.hdf5",
                                                                      options=options)
 
         if filename:
@@ -160,10 +159,6 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
                     filename += '.hdf5'
                 self.data.save_hdf5_file(filename)
 
-            elif (filetype == "*.csv"):
-                if '.' not in filename:
-                    filename += '.csv'
-                self.data.save_csv_file(filename)
             else:
                 logging.error("invalid file type: " + filetype)
                 return False

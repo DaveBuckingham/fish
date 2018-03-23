@@ -37,52 +37,19 @@ class Ic_batch_transform_dialog(Ic_transform_dialog):
         self.num_files_label = PyQt5.QtWidgets.QLabel("0 files selected")
         self.batch_layout.addWidget(self.num_files_label)
 
-        # OUTPUT FILE TYPE
-        filetype_box = PyQt5.QtWidgets.QGroupBox("Output file type")
-        filetype_layout = PyQt5.QtWidgets.QVBoxLayout()
-
-        radio = PyQt5.QtWidgets.QRadioButton("hdf5")
-        radio.setToolTip('Batch process outputs files in hdf5 format')
-        radio.clicked.connect(self.set_output_hdf5)
-        filetype_layout.addWidget(radio)
-        radio.click()
-
-        radio = PyQt5.QtWidgets.QRadioButton("csv")
-        radio.setToolTip('Batch process outputs files in csv format')
-        radio.clicked.connect(self.set_output_csv)
-        filetype_layout.addWidget(radio)
-
-        radio = PyQt5.QtWidgets.QRadioButton("same as input")
-        radio.setToolTip('Each batch process output file uses the same format as the corresponding input file')
-        radio.clicked.connect(self.set_output_input)
-        filetype_layout.addWidget(radio)
-
-        filetype_box.setLayout(filetype_layout)
-        self.batch_layout.addWidget(filetype_box)
-
         # OUTPUT FILENAME POSTFIX
-        postfix_layout = PyQt5.QtWidgets.QHBoxLayout()
-        postfix_label = PyQt5.QtWidgets.QLabel("output suffix:")
-        postfix_label.setToolTip('Suffix appended to input file names to construct batch processing output file names')
-        postfix_layout.addWidget(postfix_label)
+        suffix_label = PyQt5.QtWidgets.QLabel("output suffix:")
+        suffix_label.setToolTip('Suffix appended to input file names to construct batch processing output file names')
+        suffix_layout.addWidget(suffix_label)
 
-        self.postfix_textbox = PyQt5.QtWidgets.QLineEdit("_processed")
-        postfix_layout.addWidget(self.postfix_textbox)
+        self.suffix_textbox = PyQt5.QtWidgets.QLineEdit("_processed")
+        suffix_layout.addWidget(self.suffix_textbox)
 
-        self.batch_layout.addLayout(postfix_layout)
+        self.batch_layout.addLayout(suffix_layout)
 
         self.top_layout.addLayout(self.batch_layout, 0, 1)
 
 
-
-    def set_output_csv(self):
-        self.batch_output_filetype = "csv"
-
-    def set_output_hdf5(self):
-        self.batch_output_filetype = "hdf5"
-
-    def set_output_input(self):
-        self.batch_output_filetype = "input"
 
 
 
@@ -91,12 +58,10 @@ class Ic_batch_transform_dialog(Ic_transform_dialog):
         options |= PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         (self.filename_list, searchtypes) = PyQt5.QtWidgets.QFileDialog.getOpenFileNames(parent=self,
                                                                                      caption="Select files to process",
-                                                                                     directory=Ic_global.last_file_path,
-                                                                                     filter="*.csv *.hdf5",
+                                                                                     filter="*.hdf5",
                                                                                      options=options)
         self.num_files_label.setText('%d files selected' % len(self.filename_list))
 
-        # STORE SOMETHING IN Ic_globa.last_file_path ???
 
 
 
@@ -107,26 +72,17 @@ class Ic_batch_transform_dialog(Ic_transform_dialog):
             logging.error("can't transform data without basis vector from calibration file")
             return
 
-        suffix = self.postfix_textbox.text()
+        suffix = self.suffix_textbox.text()
 
         if(self.filename_list):
             for filename in self.filename_list:
                 (base, extension) = os.path.splitext(filename)
-                if ((extension == ".hdf5") or (extension == ".csv")):
+                if (extension == ".hdf5"):
+                    self.data.load_hdf5_file(filename)
+                    self.process_current_dataset(algorithm)
 
-                    if (extension == ".hdf5"):
-                        self.data.load_hdf5_file(filename)
-                        self.process_current_dataset(algorithm)
-                    elif (extension == ".csv"):
-                        self.data.load_csv_file(filename)
-                        self.process_current_dataset(algorithm)
-
-                    if ((self.batch_output_filetype == "hdf5") or ((self.batch_output_filetype == "input") and (extension == ".hdf5"))):
-                        out_name = base + suffix + ".hdf5"
-                        self.data.save_hdf5_file(out_name)
-                    elif ((self.batch_output_filetype == "csv") or ((self.batch_output_filetype == "input") and (extension == ".csv"))):
-                        out_name = base + suffix + ".csv"
-                        self.data.save_csv_file(out_name)
+                    out_name = base + suffix + ".hdf5"
+                    self.data.save_hdf5_file(out_name)
 
             self.data.reset_data(0)
 

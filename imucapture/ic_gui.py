@@ -96,14 +96,14 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         #self.buttons['save'] = PyQt5.QtWidgets.QPushButton('Save')
         #self.buttons['save'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        #self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
+        #self.buttons['save'].setToolTip('Save the current data to hdf5 file')
         #self.buttons['save'].clicked.connect(self.save_button_slot)
         #button_layout.addWidget(self.buttons['save'])
         #self.buttons['save'].setEnabled(False)
 
         self.buttons['load'] = PyQt5.QtWidgets.QPushButton('Load')
         self.buttons['load'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
+        self.buttons['load'].setToolTip('Load data from hdf5 file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
@@ -244,8 +244,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         filename, searchtype = PyQt5.QtWidgets.QFileDialog.getOpenFileName(parent=self,
                                                                        caption="Choose a file",
-                                                                       directory=Ic_global.last_file_path,
-                                                                       filter="*.csv *.hdf5",
+                                                                       filter="*.hdf5",
                                                                        options=options)
 
         if filename:
@@ -260,10 +259,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
             if (extension == '.hdf5'):
                 if not data.load_hdf5_file(filename):
                     logging.error("invalid hdf5 file")
-                    return
-            elif (extension == '.csv'):
-                if not data.load_csv_file(filename):
-                    logging.error("invalid csv file")
                     return
             else:
                 logging.error("invalid file extension: " + extension)
