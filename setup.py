@@ -1,15 +1,9 @@
-"""A setuptools based setup module.
-See:
-https://packaging.python.org/en/latest/distributing.html
-https://github.com/pypa/sampleproject
-"""
-
-# Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-# To use a consistent encoding
 from codecs import open
 import os
 import sys
+
+VERSION = '0.1'
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -31,7 +25,7 @@ setup(
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
 
-    version = read_version,
+    version = VERSION
 
     description='Collect data from IMUs via Arduino',
     long_description=long_description,
