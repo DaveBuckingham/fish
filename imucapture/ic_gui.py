@@ -11,7 +11,8 @@ import logging
 import PyQt5.QtCore
 import PyQt5.QtWidgets
 
-from imucapture.ic_rx import Ic_rx
+from imucapture.ic_initialize import Ic_initialize
+from imucapture.ic_record import Ic_record
 from imucapture.ic_data import Ic_data
 from imucapture.ic_settings import Ic_settings
 from imucapture.ic_raw_data_window import Ic_raw_data_window
@@ -63,8 +64,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
 
         self.settings = Ic_settings(self)
-
-        self.data = None
 
 
         self.raw_plot_window = None
@@ -121,12 +120,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         button_layout.addWidget(self.buttons['quit'])
 
 
-        # TEXT OUTPUT WINDOW
-
-        # self.text_window = PyQt5.QtWidgets.QTextEdit()
-        # self.text_window.setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        # self.text_window.setReadOnly(True)
-        # self.text_window.setMinimumHeight(150)
 
 
         # STATUS INFO
@@ -153,8 +146,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         panel_layout.addWidget(self.settings)
         panel_layout.addWidget(self.hline())
         panel_layout.addLayout(stats_layout)
-        # panel_layout.addWidget(self.hline())
-        # panel_layout.addWidget(self.text_window)
 
         top_layout = PyQt5.QtWidgets.QHBoxLayout()
         top_layout.addStretch()
@@ -176,12 +167,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
     def list_widgets(self):
         logging.info(len(PyQt5.QtWidgets.QApplication.topLevelWidgets()))
         logging.info(len(Ic_global.data_window_list))
-        #for w in PyQt5.QtWidgets.QApplication.topLevelWidgets():
-        #    w.show()
-            
-
-
-
 
     def hline(self):
         line = PyQt5.QtWidgets.QFrame()
@@ -285,6 +270,8 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['load'].setEnabled(True)
 
+        self.settings.buffer_length_signal.disconnect(self.data.set_max_samples)
+
         if (self.raw_plot_window is not None):           # RECORDING WAS SUCCESSFULL
             self.raw_plot_window.recording = False
             self.raw_plot_window.activate_buttons()
@@ -305,32 +292,16 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         # DISPLAY THE TRIGGER STATE
         self.stats_trigger.setText("Trigger signal state: " + ('ON' if self.receiver.trigger_state else 'OFF'))
 
-
         self.raw_plot_window.update()
 
 
-    # GET RID OF THIS ??
-
-    # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS
-    def numimus_slot(self, num_imus):
-        self.num_imus = num_imus
-
-
-
-############################################
-#         OTHER FUNCTIONS (NOT SLOTS)      #
-############################################
-
-    def start_plot_slot(self):
-        self.timer.start(Ic_gui.PLOT_DELAY_MS)
-        self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
-        self.raw_plot_window.finished_signal.connect(self.stop_recording)
-        self.raw_plot_window.show()
-        self.raw_plot_window.recording = True
 
     # START RECORDING DATA
     def record(self):
         self.recording = True
+
+        self.asa = None
+        self.numimus = None
 
         self.buttons['record'].setText('Stop')
 
@@ -338,18 +309,60 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         self.buttons['load'].setEnabled(False)
 
-        self.data = Ic_data("raw")
+        logging.info("initializing")
+
+        self.initialize_thread = PyQt5.QtCore.QThread()
+        self.initializer = Ic_initialize()
+        self.initializer.moveToThread(self.initialize_thread)
+        self.initializer.finished_signal.connect(self.initialize_thread.quit)
+
+        self.initializer.numimus_signal.connect(self.set_num_imus)
+        self.initializer.asa_signal.connect(self.set_asa)
+        self.initialize_thread.started.connect(self.initializer.initialize)
+        self.initialize_thread.finished.connect(self.initialize_done)
+        self.initialize_thread.start()
+
+    def set_num_imus(self, num_imus):
+        self.num_imus = num_imus
+
+    def set_asa(self, asas):
+        self.mag_asas = asas
+
+    def initialize_done(self):
+        if ((self.mag_asas is None) or (self.num_imus is None)):
+            logging.warning("initialization failed aborting")
+            return False
+
+        logging.info("initialization succesfull, recording data")
+
+        self.data = Ic_data("raw", self.num_imus, self.settings.data_buffer_len)
+        self.settings.buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()
-        self.receiver = Ic_rx(self.data, self.settings)
+        self.receiver = Ic_record(self.settings, self.num_imus, self.mag_asas)
         self.receiver.moveToThread(self.receiver_thread)
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
-        self.receiver.recording_signal.connect(self.start_plot_slot)
-        self.receiver_thread.started.connect(self.receiver.run)
-        self.receiver_thread.finished.connect(self.receiver_done)
-        self.receiver.numimus_signal.connect(self.numimus_slot)
 
+        self.receiver_thread.started.connect(self.receiver.record)
+        self.receiver_thread.finished.connect(self.receiver_done)
         self.receiver_thread.start()
+
+        self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
+        self.raw_plot_window.finished_signal.connect(self.stop_recording)
+        self.raw_plot_window.show()
+        self.raw_plot_window.recording = True
+        self.timer.start(Ic_gui.PLOT_DELAY_MS)
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,7 +1,5 @@
 from cx_Freeze import setup, Executable
 
-VERSION = '0.1'
-
 buildOptions = dict(
     packages = [],
     excludes = [],
@@ -16,7 +14,7 @@ buildOptions = dict(
 base = 'Console'
 
 executables = [
-    Executable('imucapture\\__main__.py', base=base, targetName = 'imu_capture_' + VERSION + '.exe')
+    Executable('imucapture\\__main__.py', base=base, targetName = 'imu_capture_' + Ic_global.VERSION + '.exe')
 ]
 
 

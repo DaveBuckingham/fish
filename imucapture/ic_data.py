@@ -9,7 +9,7 @@ import math
 
 import PyQt5.QtCore
 
-from imucapture.ic_global import *
+from imucapture.ic_global import Ic_global
 
 
 try:
@@ -25,6 +25,10 @@ class Ic_data(PyQt5.QtCore.QObject):
 
     recording_signal = PyQt5.QtCore.pyqtSignal()
 
+    ACCEL_INDEX = 0
+    GYRO_INDEX  = 1
+    MAG_INDEX   = 2
+
 
     def __init__(self, dataset_type, num_imus, max_samples):
         super(Ic_data, self).__init__()
@@ -38,17 +42,19 @@ class Ic_data(PyQt5.QtCore.QObject):
         if (not self.set_units()):
             sys.exit()
 
-        self.imu_data = numpy.empty()
+        self.num_imus = num_imus
 
-        self.set_max_samples(max_sample)
-        
+        self.imu_data = numpy.empty([self.num_imus, 3, 3, max_samples])
+
+        self.num_samples = 0
+
 
     def set_max_samples(self, max_samples):
         self.mutex.lock()
         if (max_samples < self.imu_data.shape[3]):
             numpy.roll(self.imu_data, max_samples - self.imu_data.shape[3], 3)
         # SOME NUMBER OF IMUS, 3 MODALITIES, 3 DIMENSIONS PER MODALITY, LOTS OF SAMPLES
-        self.imu_data.resize([num_imus, 3, 3, max_samples])
+        self.imu_data.resize([self.num_imus, 3, 3, max_samples])
         self.mutex.unlock()
 
 
@@ -72,6 +78,7 @@ class Ic_data(PyQt5.QtCore.QObject):
     def add_sample(self, sample, limit=math.inf):
         assert(len(sample) == self.num_imus)
 
+
         self.mutex.lock()
 
         if (self.num_samples == self.imu_data.shape[3]):
@@ -86,8 +93,6 @@ class Ic_data(PyQt5.QtCore.QObject):
 
 
 
-    def as_list_of_triples(self, imu_index, mode):
-        return list(zip(*self.imu_data['imus'][imu_index][mode]))
 
 
     ##################################################

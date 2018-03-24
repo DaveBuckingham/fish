@@ -3,6 +3,8 @@ from codecs import open
 import os
 import sys
 
+from imucapture.ic_global import Ic_global
+
 VERSION = '0.1'
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -25,7 +27,7 @@ setup(
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
 
-    version = VERSION
+    version = Ic_global.VERSION
 
     description='Collect data from IMUs via Arduino',
     long_description=long_description,

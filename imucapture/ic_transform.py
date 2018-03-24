@@ -36,10 +36,10 @@ class Ic_transform():
         # where theta are the Euler angles
 
         # GET ACC IN MPS2
-        acc  = numpy.array(data.as_list_of_triples(imu, 'accel'))
+        acc = data.imu_data[imu, Ic_data.ACCEL_AXIS, :, :].transpose()
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = numpy.array(data.as_list_of_triples(imu, 'gyro'))
+        acc = data.imu_data[imu, Ic_data.GYRO_AXIS, :, :].transpose()
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -247,112 +247,6 @@ class Ic_transform():
 
 
 
-
-
-#    # USING "numpy-quaternion"
-#    def get_orientation_madgwick(self, data, calib, imu, filter_num_samples, initwindow=0.5, beta=2.86):
-#
-#        # GET ACC IN MPS2
-#        acc  = numpy.array(data.as_list_of_triples(imu, 'accel'))
-#
-#        # GET GYRO IN RADIANS PER SEC
-#        gyro = numpy.array(data.as_list_of_triples(imu, 'gyro'))
-#
-#        # FILTER DATA
-#        acc  = self.filter(acc, filter_num_samples)
-#        gyro = self.filter(gyro, filter_num_samples)
-#
-#        # CONVERT ACCEL DATA TO GS
-#        acc = acc / 9.81
-#
-#        # GET TIME IN MS
-#        #time = numpy.array(data.imu_data['timestamps'])
-#        # CONVERT TIME TO SECONDS
-#        #time = time / 1000.0
-#
-#        # COMPUTE TIME ARRAY IN SECONDS, ASSUME GLOBAL VALUE IS CORRECT
-#        time = numpy.array(numpy.arange(0, data.num_samples*Ic_global.SECONDS_PER_SAMPLE, Ic_global.SECONDS_PER_SAMPLE))
-#
-#        qchip2world = quaternion.from_rotation_matrix(calib.imu_bases[imu])
-#
-#        qorient = numpy.zeros_like(time, dtype=numpy.quaternion)
-#
-#        sampfreq = 1.0/numpy.mean(numpy.diff(time))
-#
-#        dt = 1.0 / sampfreq
-#
-#        qorient[0] = qchip2world.conj()
-#
-#
-#        for i, gyro1 in enumerate(gyro[1:, :], start=1):
-#            qprev = qorient[i-1]
-#
-#            acc1 = acc[i, :]
-#            acc1 = acc1 / numpy.linalg.norm(acc1)
-#
-#            # QUATERNION ANGULAR CHANGE FROM THE GRYO
-#
-#            qdotgyro = 0.5 * (qprev * numpy.quaternion(0, *gyro1))
-#
-#
-#            if beta > 0:
-#                # GRADIENT DESCENT ALGORITHM CORRECTIVE STEP
-#                qp = qprev.components
-#
-#                F = numpy.array([2*(qp[1]*qp[3] - qp[0]*qp[2]) - acc1[0],
-#                              2*(qp[0]*qp[1] + qp[2]*qp[3]) - acc1[1],
-#                              2*(0.5 - qp[1]**2 - qp[2]**2) - acc1[2]])
-#                J = numpy.array([[-2*qp[2], 2*qp[3], -2*qp[0], 2*qp[1]],
-#                               [2*qp[1], 2*qp[0], 2*qp[3], 2*qp[2]],
-#                               [0, -4*qp[1], -4*qp[2], 0]])
-#
-#                step = numpy.dot(J.T, F)
-#                step = step / numpy.linalg.norm(step)
-#
-#                step = numpy.quaternion(*step)
-#
-#                qdot = qdotgyro - (numpy.deg2rad(beta) * step)
-#            else:
-#                qdot = qdotgyro
-#
-#            qorient[i] = qprev + (qdot * dt)
-#
-#            qorient[i] /= numpy.abs(qorient[i])
-#
-#
-#        # GET THE GRAVITY VECTOR
-#        # GRAVITY IS +Z
-#
-#        gvec = [(q.conj() * numpy.quaternion(0, 0, 0, 1) * q).components[1:] for q in qorient]
-#
-#        accdyn_sensor = acc - gvec
-#
-#        # ATTEMPT TO CONVERT FROM CHIP COORDINATES TO WORLD
-#        # qorient IS THE QUATERNION THAT SPECIFIES THE CURRENT ORIENTATION OF THE CHIP, RELATIVE TO ITS INITIAL ORIENTATION
-#        # qchip2world IS THE QUATERNION THAT ROTATES FROM THE INITIAL CHIP ORIENTATION TO THE WORLD FRAME
-#
-#
-#        qorient_world = [qchip2world.conj() * q1.conj() for q1 in qorient]
-#
-#
-#        orient_world_rotm = [quaternion.as_rotation_matrix(q1) for q1 in qorient_world]
-#
-#
-#        orient_world = [rotm2eul(R1) for R1 in orient_world_rotm]
-#
-#
-#        # ROTATE ACCDYN INTO THE WORLD COORDINATE SYSTEM
-#
-#        qaccdyn_world = [(qchip2world.conj() * numpy.quaternion(0, *a1) * qchip2world) for a1 in accdyn_sensor]
-#
-#
-#        accdyn_world = [q.components[1:] for q in qaccdyn_world]
-#
-#        # CONVERT ACCEL DATA BACK TO MPS2
-#        accdyn_world = [i * 9.81 for i in accdyn_world]
-#
-#        #return (accdyn_world, orient_world, orient_world_rotm)
-#        return (accdyn_world, orient_world)
 
 
 

@@ -4,9 +4,11 @@ import PyQt5.QtCore
 import PyQt5.QtWidgets
 import PyQt5.QtGui
 
-from imucapture.ic_global import *
+from imucapture.ic_global import Ic_global
 
 class Ic_settings(PyQt5.QtWidgets.QWidget):
+
+    buffer_length_signal = PyQt5.QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None):
 
@@ -17,7 +19,9 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         self.use_trigger = False
         #self.invert_trigger = False
         self.rising_edge = True
-        self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
+
+        #self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
+        self.data_buffer_len = 10
 
 
         ########################################
@@ -143,7 +147,9 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
     def read_buffer_slider_slot(self, val):
         self.data_buffer_len = val
         self.buffer_textbox.setText(str(self.data_buffer_len))
+        # SHOULD READ FREQ FROM GLOBAL!
         self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
+        buffer_length_signal.emit(self.data_buffer_len)
 
 
     ########################################
@@ -154,5 +160,6 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         self.data_buffer_len = val
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
+        buffer_length_signal.emit(self.data_buffer_len)
 
 

@@ -94,9 +94,9 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
         self.plots = []
         for i in (range(0, self.data.num_imus)):
-            plot_a = Ic_plot(self.data.imu_data['imus'][i]['accel'], self.data.mutex, True)
-            plot_g = Ic_plot(self.data.imu_data['imus'][i]['gyro'],  self.data.mutex, False)
-            plot_m = Ic_plot(self.data.imu_data['imus'][i]['mag'],   self.data.mutex, False)
+            plot_a = Ic_plot(self.data.imu_data[i, Ic_data.ACCEL_INDEX, :, :], self.data.mutex, True)
+            plot_g = Ic_plot(self.data.imu_data[i, Ic_data.GYRO_INDEX,  :, :], self.data.mutex, False)
+            plot_m = Ic_plot(self.data.imu_data[i, Ic_data.MAG_INDEX,   :, :], self.data.mutex, False)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
