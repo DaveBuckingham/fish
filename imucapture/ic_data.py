@@ -44,18 +44,11 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         self.num_imus = num_imus
 
-        self.imu_data = numpy.empty([self.num_imus, 3, 3, max_samples])
+        self.imu_data = numpy.zeros([self.num_imus, 3, 3, max_samples])
 
         self.num_samples = 0
 
 
-    def set_max_samples(self, max_samples):
-        self.mutex.lock()
-        if (max_samples < self.imu_data.shape[3]):
-            numpy.roll(self.imu_data, max_samples - self.imu_data.shape[3], 3)
-        # SOME NUMBER OF IMUS, 3 MODALITIES, 3 DIMENSIONS PER MODALITY, LOTS OF SAMPLES
-        self.imu_data.resize([self.num_imus, 3, 3, max_samples])
-        self.mutex.unlock()
 
 
 
@@ -74,23 +67,42 @@ class Ic_data(PyQt5.QtCore.QObject):
         return True
 
 
+    def set_max_samples(self, max_samples):
+        self.mutex.lock()
 
-    def add_sample(self, sample, limit=math.inf):
+        if (max_samples < self.imu_data.shape[3]):
+            # SHRINK
+            if (self.num_samples < max_samples):
+                # THROW OUT EMPTY DATA
+                self.imu_data = self.imu_data[:,:,:, :max_samples]
+            else:
+                # THROW OUT OLD DATA
+                self.imu_data = self.imu_data[:,:,:, -max_samples:]
+                self.num_samples = max_samples
+
+        elif (max_samples > self.imu_data.shape[3]):
+            # GROW
+            self.imu_data = numpy.append(self.imu_data, numpy.zeros([self.num_imus, 3, 3, max_samples - self.imu_data.shape[3]]), 3)
+
+        self.mutex.unlock()
+
+
+
+    def add_sample(self, sample):
         assert(len(sample) == self.num_imus)
-
 
         self.mutex.lock()
 
         if (self.num_samples == self.imu_data.shape[3]):
-            numpy.roll(self.imu_data, -1, 3)
+            self.imu_data = numpy.roll(self.imu_data, -1, 3)
+        else:
+            self.num_samples += 1
 
-        self.imu_data[:,:,:,-1] = sample
+        self.imu_data[:,:,:,self.num_samples-1] = sample
 
-        self.num_samples += 1
-
-        self.total_samples += 1
         self.mutex.unlock()
 
+        self.total_samples += 1
 
 
 

@@ -20,8 +20,8 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         #self.invert_trigger = False
         self.rising_edge = True
 
-        #self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
-        self.data_buffer_len = 10
+        self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
+        self.data_buffer_len = 200
 
 
         ########################################
@@ -149,7 +149,7 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         self.buffer_textbox.setText(str(self.data_buffer_len))
         # SHOULD READ FREQ FROM GLOBAL!
         self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
-        buffer_length_signal.emit(self.data_buffer_len)
+        self.buffer_length_signal.emit(self.data_buffer_len)
 
 
     ########################################
@@ -160,6 +160,6 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         self.data_buffer_len = val
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
-        buffer_length_signal.emit(self.data_buffer_len)
+        self.buffer_length_signal.emit(self.data_buffer_len)
 
 

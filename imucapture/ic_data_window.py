@@ -15,7 +15,7 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
     FREQ_AVERAGE_WINDOW = 100
 
-    PLOT_DELAY_MS = 50
+    PLOT_DELAY_MS = 100
 
     BUTTON_WIDTH = 200
 
@@ -94,9 +94,9 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
         self.plots = []
         for i in (range(0, self.data.num_imus)):
-            plot_a = Ic_plot(self.data.imu_data[i, Ic_data.ACCEL_INDEX, :, :], self.data.mutex, True)
-            plot_g = Ic_plot(self.data.imu_data[i, Ic_data.GYRO_INDEX,  :, :], self.data.mutex, False)
-            plot_m = Ic_plot(self.data.imu_data[i, Ic_data.MAG_INDEX,   :, :], self.data.mutex, False)
+            plot_a = Ic_plot(self.data, i, Ic_data.ACCEL_INDEX, True)
+            plot_g = Ic_plot(self.data, i, Ic_data.GYRO_INDEX, False)
+            plot_m = Ic_plot(self.data, i, Ic_data.MAG_INDEX, False)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
@@ -113,8 +113,12 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
     # UPDATE PLOTS
     def update(self):
-        for p in self.plots:
-            p.plot_slot()
+        if (self.data.mutex.tryLock()):
+            for p in self.plots:
+                p.plot_slot()
+            self.data.mutex.unlock()
+        else:
+            logging.warning("Missed plot update: data being written");
 
 
     # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS

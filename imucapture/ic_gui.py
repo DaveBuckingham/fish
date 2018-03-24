@@ -339,7 +339,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.settings.buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()
-        self.receiver = Ic_record(self.settings, self.num_imus, self.mag_asas)
+        self.receiver = Ic_record(self.settings, self.data, self.mag_asas)
         self.receiver.moveToThread(self.receiver_thread)
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 

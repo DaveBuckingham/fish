@@ -55,30 +55,14 @@ class Ic_rx():
              str(COM_SIGNAL_HELLO):   'COM_SIGNAL_HELLO', 
              }
 
-    mag_asas = []
-
 
     def __init__(self):
         pass
 
+    def initialize_arduino(self):
+        self.tx_byte(self.COM_SIGNAL_INIT)
+        time.sleep(1)
 
-    def raw_accel_to_meters_per_second_squared(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        gs = Ic_rx.ACCEL_RANGE * (raw / Ic_rx.INT_MAX)
-        mps = gs * 9.80665
-        return mps
-
-    def raw_gyro_to_radians_per_second(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        dps = Ic_rx.GYRO_RANGE * (raw / Ic_rx.INT_MAX)
-        rps = dps * (math.pi / 180.0)
-        return rps
-
-    def raw_mag_to_microteslas(self, raw):
-        return raw * 0.15
-        # assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        # mt = Ic_rx.MAG_RANGE * (raw / Ic_rx.INT_MAX)
-        # return mt
 
 
 
@@ -149,8 +133,6 @@ class Ic_rx():
                 return (None, None)
 
         #print("READ: " + self.codes[str(message_type)])
-        print(message_type)
-        print(len(message))
         return (message, message_type)
 
 

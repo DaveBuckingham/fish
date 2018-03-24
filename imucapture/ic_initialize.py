@@ -37,12 +37,14 @@ class Ic_initialize(PyQt5.QtCore.QObject):
         txrx = Ic_rx()
 
         if (not txrx.open_connection()):
-            logging.warning("failed to create connection, aborting")
+            logging.warning("failed to create connection, aborting initialization")
             self.finished_signal.emit()
             return(False)
 
-        txrx.tx_byte(Ic_rx.COM_SIGNAL_INIT)
-        time.sleep(1)
+        txrx.initialize_arduino()
+
+
+
 
         ##################################
         #           NUM IMUS             #
@@ -93,6 +95,8 @@ class Ic_initialize(PyQt5.QtCore.QObject):
 
         self.asa_signal.emit(mag_asas)
 
+
+        txrx.close_connection()
 
         self.finished_signal.emit()
         return
