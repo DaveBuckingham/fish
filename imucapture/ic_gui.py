@@ -107,8 +107,9 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         self.buttons['batch_transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
         self.buttons['batch_transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        self.buttons['batch_transform'].setToolTip('Process the current data by applying a transforming algorithm')
-        self.buttons['batch_transform'].clicked.connect(self.batch_transform_button_slot)
+        #self.buttons['batch_transform'].setToolTip('Process the current data by applying a transforming algorithm')
+        self.buttons['batch_transform'].setToolTip('NOT YET IMPLEMENTED')
+        #self.buttons['batch_transform'].clicked.connect(self.batch_transform_button_slot)
         self.buttons['batch_transform'].setEnabled(False)
         button_layout.addWidget(self.buttons['batch_transform'])
 
@@ -269,6 +270,8 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.settings.buffer_length_signal.disconnect(self.data.set_max_samples)
 
         if (self.raw_plot_window is not None):           # RECORDING WAS SUCCESSFULL
+            self.data.trim_data()
+            self.raw_plot_window.update()
             self.raw_plot_window.recording = False
             self.raw_plot_window.activate_buttons()
 

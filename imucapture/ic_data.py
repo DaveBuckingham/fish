@@ -36,7 +36,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         self.num_imus = self.imu_data.shape[0]
         self.num_samples = num_samples
-        self.total_samples = num_samples
+        self.total_samples = self.num_samples
 
 
     @classmethod
@@ -47,19 +47,18 @@ class Ic_data(PyQt5.QtCore.QObject):
                 logging.debug('datafile is None')
                 return None
 
-            if (not (('imu_data' in datafile['data']) and ('description' in datafile['data'].attrs) and ('num_samples' in datafile['data'].attrs))):
+            if (('imu_data' not in datafile['data']) or ('description' not in datafile['data'].attrs)):
                 logging.error("couldn't load file: invalid format")
                 return None
 
             data = numpy.array(datafile.get('data/imu_data'))
             dataset_type = datafile['data'].attrs['description']
-            num_samples = datafile['data'].attrs['num_samples']
 
             if ((data.shape[1] != 3) or (data.shape[2] != 3)):
                 logging.error("couldn't load file: invalid data shape")
                 return None
 
-            return cls(dataset_type, data, num_samples)
+            return cls(dataset_type, data, data.shape[3])
 
         logging.error("couldn't load file")
         return None
@@ -77,7 +76,6 @@ class Ic_data(PyQt5.QtCore.QObject):
             save_data = datafile.create_group("data")
             save_data.create_dataset('imu_data', data=self.imu_data)
             save_data.attrs['description'] = self.dataset_type
-            save_data.attrs['num_samples'] = self.num_samples
             logging.info('saved data to file ' + filename)
 
 
@@ -100,6 +98,8 @@ class Ic_data(PyQt5.QtCore.QObject):
             return False
         return True
 
+    def trim_data(self):
+        self.set_max_samples(self.num_samples)
 
     def set_max_samples(self, max_samples):
         self.mutex.lock()
@@ -110,8 +110,8 @@ class Ic_data(PyQt5.QtCore.QObject):
                 # THROW OUT EMPTY DATA
                 self.imu_data = self.imu_data[:,:,:, :max_samples]
             else:
-                # THROW OUT OLD DATA
-                self.imu_data = self.imu_data[:,:,:, -max_samples:]
+                # THROW OUT EMPTY DATA AND OLD DATA
+                self.imu_data = self.imu_data[:,:,:, self.num_samples - max_samples : self.num_samples]
                 self.num_samples = max_samples
 
         elif (max_samples > self.imu_data.shape[3]):
