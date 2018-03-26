@@ -21,7 +21,6 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         self.rising_edge = True
 
         self.data_buffer_len = int((Ic_global.DATA_BUFFER_MAX - Ic_global.DATA_BUFFER_MIN + 1) / 2)
-        self.data_buffer_len = 200
 
 
         ########################################

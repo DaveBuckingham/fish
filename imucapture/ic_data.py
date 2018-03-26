@@ -21,38 +21,69 @@ except ImportError:
 class Ic_data(PyQt5.QtCore.QObject):
 
 
-    mag_asas = []
-
-    recording_signal = PyQt5.QtCore.pyqtSignal()
-
     ACCEL_INDEX = 0
     GYRO_INDEX  = 1
     MAG_INDEX   = 2
 
-
-    def __init__(self, dataset_type, num_imus, max_samples):
+    def __init__(self, dataset_type, data, num_samples):
         super(Ic_data, self).__init__()
 
         self.mutex = PyQt5.QtCore.QMutex()
 
-        self.total_samples = 0
+        self.set_dataset_type(dataset_type)
 
-        self.dataset_type = dataset_type
+        self.imu_data = data
 
-        if (not self.set_units()):
-            sys.exit()
-
-        self.num_imus = num_imus
-
-        self.imu_data = numpy.zeros([self.num_imus, 3, 3, max_samples])
-
-        self.num_samples = 0
+        self.num_imus = self.imu_data.shape[0]
+        self.num_samples = num_samples
+        self.total_samples = num_samples
 
 
+    @classmethod
+    def from_file(cls, filename):
+
+        with h5py.File(filename, 'r') as datafile:
+            if datafile is None:
+                logging.debug('datafile is None')
+                return None
+
+            if (not (('imu_data' in datafile['data']) and ('description' in datafile['data'].attrs) and ('num_samples' in datafile['data'].attrs))):
+                logging.error("couldn't load file: invalid format")
+                return None
+
+            data = numpy.array(datafile.get('data/imu_data'))
+            dataset_type = datafile['data'].attrs['description']
+            num_samples = datafile['data'].attrs['num_samples']
+
+            if ((data.shape[1] != 3) or (data.shape[2] != 3)):
+                logging.error("couldn't load file: invalid data shape")
+                return None
+
+            return cls(dataset_type, data, num_samples)
+
+        logging.error("couldn't load file")
+        return None
+
+
+        
+
+    @classmethod
+    def for_recording(cls, num_imus, max_samples):
+        return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
+
+
+    def save_file(self, filename):
+        with h5py.File(filename, 'w') as datafile:
+            save_data = datafile.create_group("data")
+            save_data.create_dataset('imu_data', data=self.imu_data)
+            save_data.attrs['description'] = self.dataset_type
+            save_data.attrs['num_samples'] = self.num_samples
+            logging.info('saved data to file ' + filename)
 
 
 
-    def set_units(self):
+    def set_dataset_type(self, data_type):
+        self.dataset_type = data_type
         if(self.dataset_type == 'transformed'):
             self.accel_units_string = 'Dynamic acceleration (meters per second squared)'
             self.gyro_units_string  = 'Orientation (radians)'
@@ -62,7 +93,10 @@ class Ic_data(PyQt5.QtCore.QObject):
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
         else:
-            logging.error("invalid dataset type: " . dataset_type)
+            logging.error("invalid dataset type: " + dataset_type + "assuming raw data")
+            self.accel_units_string = 'Acceleration (meters per second squared)'
+            self.gyro_units_string  = 'Gyroscope (radians per second)'
+            self.mag_units_string   = 'Magnetometer (microteslas)'
             return False
         return True
 
@@ -112,7 +146,7 @@ class Ic_data(PyQt5.QtCore.QObject):
     ##################################################
 
 
-    def load_hdf5_file(self, filename, root_group='/data', accelerometer_group='accel', gyroscope_group='gyro',
+    def complex_load_hdf5_file(self, filename, root_group='/data', accelerometer_group='accel', gyroscope_group='gyro',
                        magnetometer_group='mag', time_group='time'):
         with h5py.File(filename, 'r') as datafile:
             if datafile is None:
@@ -207,78 +241,5 @@ class Ic_data(PyQt5.QtCore.QObject):
         return False
 
     
-    def simple_load_hdf5_file(self, filename):
-        with h5py.File(filename, 'r') as datafile:
-            if datafile is None:
-                logging.debug('datafile is None')
-                return False
-
-            timepath = '/'.join([root_group, time_group])
-            self.imu_data = {}
-            #self.imu_data['timestamps'] = datafile.get('time')[()]
-            self.imu_data['imus'] = []
-
-            i = 0
-            ext = str(i + 1)
-            while ('imu' + ext in datafile):
-                self.imu_data['imus'].append({})
-                self.imu_data['imus'][i]['accel'] = list(map(list, zip(*datafile.get(('imu' + ext)/accel)[()])))
-                self.imu_data['imus'][i]['gyro'] = list(map(list, zip(*datafile.get(('imu' + ext)/gyro)[()])))
-                self.imu_data['imus'][i]['mag'] = list(map(list, zip(*datafile.get(('imu' + ext)/mag)[()])))
-                i += 1
-                ext = str(i + 1)
-
-            self.datset_type             = datafile.attrs['description']
-
-            if (not self.set_units()):
-                return False
-
-
-
-
-            self.num_imus = i
-            logging.debug('Loaded {} IMUs'.format(self.num_imus))
-
-            if (Ic_global.USE_ENCODER):
-                self.imu_data['encoder'] = datafile.get('data/Encoder')[()]
-
-            self.num_samples = len(self.imu_data['imus'][0]['accel'][0])
-            for imu in range(0, self.num_imus):
-                for mode in (['accel', 'gyro', 'mag']):
-                    for axis in range(0, 3):
-                        if (self.num_samples != len(self.imu_data['imus'][imu][mode][axis])):
-                            logging.error("data loaded with uneven lengths")
-                            return False
-
-            return True
-        return False
-
-
-
-
-
-
-    def save_hdf5_file(self, filename):
-        with h5py.File(filename, 'w') as datafile:
-            save_data = datafile.create_group("data")
-
-            #save_data.create_dataset('time', data=self.imu_data['timestamps'])
-            save_data.create_dataset('time', data=range(0, self.num_samples, Ic_global.MS_PER_SAMPLE))
-
-            for i in range(0, len(self.imu_data['imus'])):
-                imu = self.imu_data['imus'][i]
-
-                extension = str(i + 1)
-
-                save_data.create_dataset('accel' + extension, data=self.as_list_of_triples(i, 'accel'))
-                save_data.create_dataset('gyro' + extension, data=self.as_list_of_triples(i, 'gyro'))
-                save_data.create_dataset('mag' + extension, data=self.as_list_of_triples(i, 'mag'))
-
-                save_data.attrs['description'] = self.dataset_type
-
-                self.set_units()
-
-            if (Ic_global.USE_ENCODER):
-                save_data.create_dataset('Encoder', data=self.imu_data['encoder'])
 
 

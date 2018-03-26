@@ -236,25 +236,21 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
             logging.info("loading " + filename)
 
             prefix, extension = os.path.splitext(filename)
-            Ic_global.last_data_path = os.path.dirname(filename)
 
-            data = Ic_data("raw")
-
-            if (extension == '.hdf5'):
-                if not data.load_hdf5_file(filename):
-                    logging.error("invalid hdf5 file")
-                    return
-            else:
+            if (extension != '.hdf5'):
                 logging.error("invalid file extension: " + extension)
                 return
 
-            plot_window = Ic_raw_data_window(data, filename)
-            plot_window.update()
-            plot_window.activate_buttons()
-            plot_window.show()
+            data = Ic_data.from_file(filename)
 
+            if (data is not None):
 
-            logging.info(filename + " loaded")
+                plot_window = Ic_raw_data_window(data, filename)
+                plot_window.update()
+                plot_window.activate_buttons()
+                plot_window.show()
+
+                logging.info(filename + " loaded")
 
 
 
@@ -335,7 +331,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         logging.info("initialization succesfull, recording data")
 
-        self.data = Ic_data("raw", self.num_imus, self.settings.data_buffer_len)
+        self.data = Ic_data.for_recording(self.num_imus, self.settings.data_buffer_len)
         self.settings.buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()

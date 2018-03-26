@@ -38,21 +38,9 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
-        #self.basis_vector = None
-        #self.imu_bases = None
-
-        #self.setMaximumWidth(300)
-
         self.top_layout = PyQt5.QtWidgets.QGridLayout()
 
-        self.batch_process = False
-        self.batch_output_filetype = ""
         self.process_algorithm = ""
-
-        self.filename_list = []
-
-
-        
 
         self.top_layout = PyQt5.QtWidgets.QGridLayout()
 

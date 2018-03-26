@@ -158,14 +158,11 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
             filename = str(filename)
             Ic_global.last_data_path = os.path.dirname(filename)
 
-            if (filetype == "*.hdf5"):
-                if '.' not in filename:
-                    filename += '.hdf5'
-                self.data.save_hdf5_file(filename)
+            (base, extension) = os.path.splitext(filename)
+            if (not extension):
+                filename = base + '.hdf5'
 
-            else:
-                logging.error("invalid file type: " + filetype)
-                return False
+            self.data.save_file(filename)
 
             logging.info("saved " + filename)
             self.setWindowTitle(filename)
