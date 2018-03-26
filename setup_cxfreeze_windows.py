@@ -1,7 +1,5 @@
 from cx_Freeze import setup, Executable
 
-# Dependencies are automatically detected, but it might need
-# fine tuning.
 buildOptions = dict(
     packages = [],
     excludes = [],
@@ -11,17 +9,17 @@ buildOptions = dict(
                 'pyqtgraph.ThreadsafeTimer',
                 'timeit',
                ],
-    include_files = ['imucapture\\VERSION']
 )
     
 base = 'Console'
-#import sys
-#base = 'Win32GUI' if sys.platform=='win32' else None
 
 executables = [
-    Executable('imucapture\\__main__.py', base=base, targetName = 'imu_capture.exe')
+    Executable('imucapture\\__main__.py', base=base, targetName = 'imu_capture_' + Ic_global.VERSION + '.exe')
 ]
 
 
-setup(options = dict(build_exe = buildOptions),
+setup(name='imucapture',
+      version = Ic_global.VERSION,
+      description = 'Record data from IMU',
+      options = dict(build_exe = buildOptions),
       executables = executables)
