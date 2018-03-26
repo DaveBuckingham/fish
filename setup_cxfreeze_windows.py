@@ -1,4 +1,5 @@
 from cx_Freeze import setup, Executable
+from imucapture.ic_global import Ic_global
 
 buildOptions = dict(
     packages = [],
@@ -11,10 +12,14 @@ buildOptions = dict(
                ],
 )
     
-base = 'Console'
-
 executables = [
-    Executable('imucapture\\__main__.py', base=base, targetName = 'imu_capture_' + Ic_global.VERSION + '.exe')
+    Executable(
+        'imucapture\\__main__.py',
+        base='Console',
+        targetName = 'imu_capture.exe',
+        shortcutName = 'imucapture',
+        shortcutDir = 'DesktopFolder',
+        )
 ]
 
 
