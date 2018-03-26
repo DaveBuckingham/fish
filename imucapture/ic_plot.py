@@ -8,12 +8,14 @@ from imucapture.ic_global import *
 
 class Ic_plot(pg.PlotWidget):
 
-    def __init__(self, plot_data, mutex, legend, parent=None):
+    def __init__(self, data, imu, modality, legend, parent=None):
 
         super().__init__(parent)
 
-        self.plot_data = plot_data
-        self.mutex = mutex
+        self.data = data
+        self.imu = imu
+        self.modality = modality
+
 
         self.parent = parent
 
@@ -43,24 +45,15 @@ class Ic_plot(pg.PlotWidget):
         self.curve_z_blue  = self.plot([0,0], pen=(30, 60, 255, 210), name='z', downsampleMethod='peak', autoDownsample=True)
 
 
-        # WITHOUT DOWNSAMPLING?
-        # self.curve_x_red   = self.plot([], [], pen=(255, 0, 0, 165), name='x')
-        # self.curve_y_green = self.plot([], [], pen=(0, 255, 0, 155), name='y')
-        # self.curve_z_blue  = self.plot([], [], pen=(30, 60, 255, 210), name='z')
-
         self.x_range = [x * Ic_global.SECONDS_PER_SAMPLE for x in range(0, Ic_global.DATA_BUFFER_MAX)]
 
 
 
     def plot_slot(self):
 
-        if (self.mutex.tryLock()):
-            self.curve_x_red.setData(self.x_range[:len(self.plot_data[0])],   self.plot_data[0])
-            self.curve_y_green.setData(self.x_range[:len(self.plot_data[1])], self.plot_data[1])
-            self.curve_z_blue.setData(self.x_range[:len(self.plot_data[2])],  self.plot_data[2])
-            self.mutex.unlock()
+        self.curve_x_red.setData(  self.data.imu_data[self.imu, self.modality, 0, :])
+        self.curve_y_green.setData(self.data.imu_data[self.imu, self.modality, 1, :])
+        self.curve_z_blue.setData( self.data.imu_data[self.imu, self.modality, 2, :])
 
-        else:
-            logging.warning("Missed plot update: data mutex locked");
 
 

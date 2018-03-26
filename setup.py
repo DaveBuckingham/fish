@@ -1,15 +1,11 @@
-"""A setuptools based setup module.
-See:
-https://packaging.python.org/en/latest/distributing.html
-https://github.com/pypa/sampleproject
-"""
-
-# Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-# To use a consistent encoding
 from codecs import open
 import os
 import sys
+
+from imucapture.ic_global import Ic_global
+
+VERSION = '0.1'
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -31,7 +27,7 @@ setup(
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
 
-    version = read_version,
+    version = Ic_global.VERSION
 
     description='Collect data from IMUs via Arduino',
     long_description=long_description,
@@ -63,8 +59,6 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],

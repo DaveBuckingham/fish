@@ -1,4 +1,5 @@
 import math
+import sys
 import os
 import time
 import serial
@@ -8,17 +9,9 @@ import serial.tools.list_ports
 
 from imucapture.ic_data import Ic_data
 
-from imucapture.ic_global import *
+from imucapture.ic_global import Ic_global
 
-import PyQt5.QtCore
-
-try:
-    from PyQt5.QtCore import QString
-except ImportError:
-    QString = str
-
-
-class Ic_rx(PyQt5.QtCore.QObject):
+class Ic_rx():
 
 
     COM_FLAG_START                  = 0x7E
@@ -27,12 +20,12 @@ class Ic_rx(PyQt5.QtCore.QObject):
     COM_FLAG_XOR                    = 0x20
 
     # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-    COM_PACKET_SAMPLE               = 0x50
-    COM_PACKET_ASA                  = 0x51
-    COM_PACKET_STRING               = 0x54
-    COM_PACKET_TEST                 = 0x55
-    COM_PACKET_HELLO                = 0x56
-    COM_PACKET_NUMIMUS              = 0x57
+    COM_PACKET_SAMPLE               = 0x50        # 80
+    COM_PACKET_ASA                  = 0x51        # 81
+    COM_PACKET_STRING               = 0x54        # 84
+    COM_PACKET_TEST                 = 0x55        # 85
+    COM_PACKET_HELLO                = 0x56        # 86
+    COM_PACKET_NUMIMUS              = 0x57        # 87
 
     # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
     COM_SIGNAL_INIT                 = 0x69
@@ -62,46 +55,14 @@ class Ic_rx(PyQt5.QtCore.QObject):
              str(COM_SIGNAL_HELLO):   'COM_SIGNAL_HELLO', 
              }
 
-    mag_asas = []
 
+    def __init__(self):
+        pass
 
-    finished_signal = PyQt5.QtCore.pyqtSignal()
-    numimus_signal = PyQt5.QtCore.pyqtSignal(int)
+    def initialize_arduino(self):
+        self.tx_byte(self.COM_SIGNAL_INIT)
+        time.sleep(1)
 
-    recording_signal = PyQt5.QtCore.pyqtSignal()
-
-    trigger_state = None
-
-    def __init__(self, data, settings):
-        super(Ic_rx, self).__init__()
-
-        self.recording = True
-
-        self.sample_length = 0
-
-        self.data = data
-        self.settings = settings
-
-        self.trigger_value = False
-
-
-    def raw_accel_to_meters_per_second_squared(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        gs = Ic_rx.ACCEL_RANGE * (raw / Ic_rx.INT_MAX)
-        mps = gs * 9.80665
-        return mps
-
-    def raw_gyro_to_radians_per_second(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        dps = Ic_rx.GYRO_RANGE * (raw / Ic_rx.INT_MAX)
-        rps = dps * (math.pi / 180.0)
-        return rps
-
-    def raw_mag_to_microteslas(self, raw):
-        return raw * 0.15
-        # assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        # mt = Ic_rx.MAG_RANGE * (raw / Ic_rx.INT_MAX)
-        # return mt
 
 
 
@@ -245,186 +206,4 @@ class Ic_rx(PyQt5.QtCore.QObject):
         return handshake_success
 
 
-
-    # GYRO RANGE SHOULD BE +=8g (MPU6050)
-    # ACCEL RANGE SHOULD BE +=250dps (MPU6050)
-    def test(self):
-        self.open_connection()
-        self.tx_byte(Ic_rx.COM_SIGNAL_TEST)
-        time.sleep(1)
-        (received, message_type) = self.rx_packet()
-        self.close_connection()
-
-        if ((message_type == Ic_rx.COM_PACKET_TEST) and (len(received) == 6)):
-            return [bool(val) for val in received]
-
-        else:
-            return None
-
-
-
-    def run(self):
-
-        if (not self.open_connection()):
-            logging.warning("failed to create connection, aborting")
-            self.finished_signal.emit()
-            return()
-
-        logging.info("initializing imus")
-        self.tx_byte(Ic_rx.COM_SIGNAL_INIT)
-        time.sleep(1)
-        (message, message_type) = self.rx_packet()
-        if (message_type == Ic_rx.COM_PACKET_NUMIMUS):
-            num_imus = message[0];
-            logging.info("detected " + str(num_imus) + " IMUs")
-        else:
-            logging.error("unable to determine number of IMUs, aborting")
-            self.close_connection()
-            self.finished_signal.emit()
-            return()
-
-        self.data.reset_data(num_imus)
-
-        if (num_imus < 1):
-            logging.warning("no IMUs detected, aborting")
-            self.close_connection()
-            self.finished_signal.emit()
-            return()
-
-        # MUST BE AFTER imu_data SET UP
-        self.numimus_signal.emit(self.data.num_imus)
-
-        self.sample_length = 4 + (18 * num_imus) + 1
-        if (Ic_global.USE_ENCODER):
-            self.sample_length += 2
-
-        time.sleep(2)
-
-
-        ##################################
-        #        MAG ADJUSTMENT          #
-        ##################################
-
-        logging.info("calculating magnetometer sensitivty adjustment...")
-        Ic_rx.mag_asas = []
-        time.sleep(1)
-        self.tx_byte(Ic_rx.COM_SIGNAL_ASA)
-        time.sleep(1)
-
-        for i in (range(0, num_imus)):
-            (received, message_type) = self.rx_packet()
-            if ((message_type == Ic_rx.COM_PACKET_ASA) and (len(received) == 3)):
-                asa = []
-                for j in (range(0, 3)):
-                    asa.append((float(received[j] - 128.0) / 256.0) + 1.0)
-                    #asa.append(((float(received[j] - 128) / 256) + 1) * Ic_rx.MAGNETOMETER_SCALE_FACTOR)
-                Ic_rx.mag_asas.append(asa)
-            else:
-                logging.warning(str(message_type))
-                logging.warning(str(len(received)))
-                logging.warning("ASA read failed, using 1 adjustment")
-                Ic_rx.mag_asas.append([1,1,1])
-
-        logging.info("Magnetometer asa values:")
-        for imu in Ic_rx.mag_asas:
-            logging.info(imu)
-            #logging.info(', '.join(map(str, imu)))
-
-
-        ##################################
-        #        RECORD DATA             #
-        ##################################
-
-        self.tx_byte(Ic_rx.COM_SIGNAL_RUN)
-        logging.info("sent record command to arduino")
-
-
-        logging.info("recording data")
-
-        self.recording_signal.emit()
-
-        # RESET TIMER
-        start_time = time.time() * 1000
-
-        #timestamp = 0
-        while (self.recording):
-
-            (received, message_type) = self.rx_packet()
-
-            if ((message_type == Ic_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
-
-
-                received = bytearray(received)
-               
-
-                (id,) = struct.unpack('>L', received[:4])
-
-
-                sample = []
-
-                for i in (range(0, self.data.num_imus)):
-
-
-                    accel_start = 4 + (i * 18)
-                    mag_start   = 16 + (i * 18)
-                    mag_end     = 22 + (i * 18)
-
-                    # ACCEL AND GYRO ARE LITTLE ENDIAN
-                    (ax, ay, az, gx, gy, gz) = struct.unpack('>hhhhhh', received[accel_start:mag_start])
-
-                    # MAG IS BIG ENDIAN
-                    (mx, my, mz) = struct.unpack('<hhh', received[mag_start:mag_end])
-
-                    # CONVERT RAW MEASUREMENTS TO OUR FAVORITE UNITS
-                    (ax, ay, az) = map(self.raw_accel_to_meters_per_second_squared, (ax, ay, az))
-                    (gx, gy, gz) = map(self.raw_gyro_to_radians_per_second, (gx, gy, gz))
-
-
-                    # I'M NOT SURE WHICH IF THESE SHOULD BE FIRST
-                    # ASA FIRST, THEN SCALE BY 0.15 SEEMS TO PRODUCE APPROPRIATE VALUES
-                    # I.E. BETWEEN 25 AND 65 MICROTESLAS AT EARTHS SURFACE ACCORDING TO WIKIPEDIA
-                    (mx, my, mz) = [(mx, my, mz)[j] * Ic_rx.mag_asas[i][j] for j in range(3)]
-                    (mx, my, mz) = map(self.raw_mag_to_microteslas, (mx, my, mz))
-
-
-                    sample.append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
-
-
-
-                trigger_start = 4 + (self.data.num_imus * 18)
-
-                # ONE BYTE FOR TRIGGER
-                (self.trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
-
-                #if (self.settings.invert_trigger):
-                if (not self.settings.rising_edge):
-                    self.trigger_state = not self.trigger_state
-
-                if (Ic_global.USE_ENCODER):
-                    # TWO BYTES FOR ENCODER
-                    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
-                    enc *= 0.3515625  # 360/1024
-                    #print(enc)
-                    sample.append(enc)
-
-                self.data.add_sample(sample, self.settings.data_buffer_len)
-
-
-                if (self.settings.use_trigger and self.trigger_state):
-                    logging.info("received trigger")
-                    self.tx_byte(Ic_rx.COM_SIGNAL_STOP)
-                    self.close_connection()
-                    self.finished_signal.emit()
-                    return()
-
-            else:
-                logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))
-
-            #timestamp += 5
-
-
-        logging.info("stopping recording data")
-        self.close_connection()
-        self.finished_signal.emit()
-        return()
 

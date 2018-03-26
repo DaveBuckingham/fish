@@ -15,7 +15,7 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
     FREQ_AVERAGE_WINDOW = 100
 
-    PLOT_DELAY_MS = 50
+    PLOT_DELAY_MS = 100
 
     BUTTON_WIDTH = 200
 
@@ -52,7 +52,7 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
         self.buttons['save'] = PyQt5.QtWidgets.QPushButton('Save')
         self.buttons['save'].setMaximumWidth(Ic_data_window.BUTTON_WIDTH)
-        self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
+        self.buttons['save'].setToolTip('Save the current data to hdf5 file')
         self.buttons['save'].clicked.connect(self.save_button_slot)
         self.button_layout.addWidget(self.buttons['save'])
         self.buttons['save'].setEnabled(False)
@@ -94,9 +94,9 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
         self.plots = []
         for i in (range(0, self.data.num_imus)):
-            plot_a = Ic_plot(self.data.imu_data['imus'][i]['accel'], self.data.mutex, True)
-            plot_g = Ic_plot(self.data.imu_data['imus'][i]['gyro'],  self.data.mutex, False)
-            plot_m = Ic_plot(self.data.imu_data['imus'][i]['mag'],   self.data.mutex, False)
+            plot_a = Ic_plot(self.data, i, Ic_data.ACCEL_INDEX, True)
+            plot_g = Ic_plot(self.data, i, Ic_data.GYRO_INDEX, False)
+            plot_m = Ic_plot(self.data, i, Ic_data.MAG_INDEX, False)
             self.plots.append(plot_a)
             self.plots.append(plot_g)
             self.plots.append(plot_m)
@@ -113,8 +113,12 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
 
     # UPDATE PLOTS
     def update(self):
-        for p in self.plots:
-            p.plot_slot()
+        if (self.data.mutex.tryLock()):
+            for p in self.plots:
+                p.plot_slot()
+            self.data.mutex.unlock()
+        else:
+            logging.warning("Missed plot update: data being written");
 
 
     # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS
@@ -129,8 +133,8 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
         self.close()
 
     def activate_buttons(self):
-        for key in self.buttons.keys():
-            self.buttons[key].setEnabled(True)
+        self.buttons['save'].setEnabled(True)
+        self.buttons['close'].setEnabled(True)
 
 
     def closeEvent(self, event):
@@ -147,26 +151,18 @@ class Ic_data_window(PyQt5.QtWidgets.QWidget):
         options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         filename, filetype = PyQt5.QtWidgets.QFileDialog.getSaveFileName(parent=self,
                                                                      caption="Save data",
-                                                                     directory=Ic_global.last_file_path,
-                                                                     filter="*.csv;;*.hdf5",
+                                                                     filter="*.hdf5",
                                                                      options=options)
 
         if filename:
             filename = str(filename)
             Ic_global.last_data_path = os.path.dirname(filename)
 
-            if (filetype == "*.hdf5"):
-                if '.' not in filename:
-                    filename += '.hdf5'
-                self.data.save_hdf5_file(filename)
+            (base, extension) = os.path.splitext(filename)
+            if (not extension):
+                filename = base + '.hdf5'
 
-            elif (filetype == "*.csv"):
-                if '.' not in filename:
-                    filename += '.csv'
-                self.data.save_csv_file(filename)
-            else:
-                logging.error("invalid file type: " + filetype)
-                return False
+            self.data.save_file(filename)
 
             logging.info("saved " + filename)
             self.setWindowTitle(filename)

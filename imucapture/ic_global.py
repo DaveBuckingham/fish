@@ -4,12 +4,14 @@ import sys
 import PyQt5.QtCore
 import PyQt5.QtWidgets
 
+from imucapture.ic_calib import Ic_calib
+
 
 class Ic_global():
 
-    data_window_list = []
-
     # CONSTANTS
+
+    VERSION = '0.2.0'
 
     USE_ENCODER = False
 
@@ -18,34 +20,20 @@ class Ic_global():
     MS_PER_SAMPLE = int(SECONDS_PER_SAMPLE * 1000)   # 5, MUST BE AN INTEGER
 
 
-
-
-
-
-
-
     APPLICATION_NAME = 'IMU-Capture'
 
     here = os.path.abspath(os.path.dirname(__file__))
 
-    with open(os.path.join(here, 'VERSION')) as version_file:
-        VERSION = version_file.read().strip()
-
     APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
-
-
-
-
 
     DATA_BUFFER_MIN = 1                  # >0
     DATA_BUFFER_MAX = 20000
 
 
 
-
     # VARIABLES
+    data_window_list = []
 
-    last_file_path = ''
 
 
     # FUNCTIONS
@@ -56,3 +44,5 @@ class Ic_global():
                 Ic_global.enable_layout(w, state)
             else:
                 w.widget().setEnabled(state)
+
+    calibration = Ic_calib()

@@ -11,9 +11,9 @@ import logging
 import PyQt5.QtCore
 import PyQt5.QtWidgets
 
-from imucapture.ic_rx import Ic_rx
+from imucapture.ic_initialize import Ic_initialize
+from imucapture.ic_record import Ic_record
 from imucapture.ic_data import Ic_data
-from imucapture.ic_plot import Ic_plot
 from imucapture.ic_settings import Ic_settings
 from imucapture.ic_raw_data_window import Ic_raw_data_window
 from imucapture.ic_global import *
@@ -65,8 +65,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         self.settings = Ic_settings(self)
 
-        self.data = None
-
 
         self.raw_plot_window = None
 
@@ -96,22 +94,24 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         #self.buttons['save'] = PyQt5.QtWidgets.QPushButton('Save')
         #self.buttons['save'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        #self.buttons['save'].setToolTip('Save the current data to hdf5 or csv file')
+        #self.buttons['save'].setToolTip('Save the current data to hdf5 file')
         #self.buttons['save'].clicked.connect(self.save_button_slot)
         #button_layout.addWidget(self.buttons['save'])
         #self.buttons['save'].setEnabled(False)
 
         self.buttons['load'] = PyQt5.QtWidgets.QPushButton('Load')
         self.buttons['load'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        self.buttons['load'].setToolTip('Load data from an hdf5 or csv file')
+        self.buttons['load'].setToolTip('Load data from hdf5 file')
         self.buttons['load'].clicked.connect(self.load_button_slot)
         button_layout.addWidget(self.buttons['load'])
 
-        self.buttons['transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
-        self.buttons['transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        self.buttons['transform'].setToolTip('Process the current data by applying a transforming algorithm')
-        self.buttons['transform'].clicked.connect(self.transform_button_slot)
-        button_layout.addWidget(self.buttons['transform'])
+        self.buttons['batch_transform'] = PyQt5.QtWidgets.QPushButton('Batch transform')
+        self.buttons['batch_transform'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
+        #self.buttons['batch_transform'].setToolTip('Process the current data by applying a transforming algorithm')
+        self.buttons['batch_transform'].setToolTip('NOT YET IMPLEMENTED')
+        #self.buttons['batch_transform'].clicked.connect(self.batch_transform_button_slot)
+        self.buttons['batch_transform'].setEnabled(False)
+        button_layout.addWidget(self.buttons['batch_transform'])
 
         self.buttons['quit'] = PyQt5.QtWidgets.QPushButton('Quit')
         self.buttons['quit'].setMaximumWidth(Ic_gui.BUTTON_WIDTH)
@@ -121,12 +121,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         button_layout.addWidget(self.buttons['quit'])
 
 
-        # TEXT OUTPUT WINDOW
-
-        # self.text_window = PyQt5.QtWidgets.QTextEdit()
-        # self.text_window.setMaximumWidth(Ic_gui.BUTTON_WIDTH)
-        # self.text_window.setReadOnly(True)
-        # self.text_window.setMinimumHeight(150)
 
 
         # STATUS INFO
@@ -153,8 +147,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         panel_layout.addWidget(self.settings)
         panel_layout.addWidget(self.hline())
         panel_layout.addLayout(stats_layout)
-        # panel_layout.addWidget(self.hline())
-        # panel_layout.addWidget(self.text_window)
 
         top_layout = PyQt5.QtWidgets.QHBoxLayout()
         top_layout.addStretch()
@@ -176,12 +168,6 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
     def list_widgets(self):
         logging.info(len(PyQt5.QtWidgets.QApplication.topLevelWidgets()))
         logging.info(len(Ic_global.data_window_list))
-        #for w in PyQt5.QtWidgets.QApplication.topLevelWidgets():
-        #    w.show()
-            
-
-
-
 
     def hline(self):
         line = PyQt5.QtWidgets.QFrame()
@@ -211,7 +197,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 #              BUTTON SLOTS                #
 ############################################
 
-    def transform_button_slot(self):
+    def batch_transform_button_slot(self):
         dialog = Ic_batch_transform_dialog()
         dialog.show()
 
@@ -225,7 +211,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.close()
 
 
-    # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN AM_RX INSTEAD!
+    # CAN THIS BE SIMPLIFIED BY SETTING STOP RECORDING TIME IN ic_rx INSTEAD!
     def record_button_slot(self):
         if (self.recording):
             self.stop_recording()
@@ -243,8 +229,7 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         filename, searchtype = PyQt5.QtWidgets.QFileDialog.getOpenFileName(parent=self,
                                                                        caption="Choose a file",
-                                                                       directory=Ic_global.last_file_path,
-                                                                       filter="*.csv *.hdf5",
+                                                                       filter="*.hdf5",
                                                                        options=options)
 
         if filename:
@@ -252,29 +237,21 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
             logging.info("loading " + filename)
 
             prefix, extension = os.path.splitext(filename)
-            Ic_global.last_data_path = os.path.dirname(filename)
 
-            data = Ic_data()
-
-            if (extension == '.hdf5'):
-                if not data.load_hdf5_file(filename):
-                    logging.error("invalid hdf5 file")
-                    return
-            elif (extension == '.csv'):
-                if not data.load_csv_file(filename):
-                    logging.error("invalid csv file")
-                    return
-            else:
+            if (extension != '.hdf5'):
                 logging.error("invalid file extension: " + extension)
                 return
 
-            plot_window = Ic_raw_data_window(data, filename)
-            plot_window.update()
-            plot_window.activate_buttons()
-            plot_window.show()
+            data = Ic_data.from_file(filename)
 
+            if (data is not None):
 
-            logging.info(filename + " loaded")
+                plot_window = Ic_raw_data_window(data, filename)
+                plot_window.update()
+                plot_window.activate_buttons()
+                plot_window.show()
+
+                logging.info(filename + " loaded")
 
 
 
@@ -290,7 +267,12 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['load'].setEnabled(True)
 
+        self.settings.buffer_length_signal.disconnect(self.data.set_max_samples)
+
         if (self.raw_plot_window is not None):           # RECORDING WAS SUCCESSFULL
+            self.data.trim_data()
+            self.raw_plot_window.update()
+            self.raw_plot_window.recording = False
             self.raw_plot_window.activate_buttons()
 
         # DONE RECORDING, DITCH THE REFERENCE TO THE CURRENT PLOT WINDOW
@@ -302,55 +284,23 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
     # UPDATE DISPLAYED INFORMATION
     def update(self):
  
-        # DISPLAY TIME
-        #timestamps = self.data.imu_data['timestamps']
-        #if(len(timestamps) > 0):
-        #    self.stats_time.setText('Time (ms): %.1f' % (timestamps[-1]))
-
         # DISPLAY NUMBER OF SAMPLES
-        #num_samples = len(timestamps)
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % self.data.num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
 
         # DISPLAY THE TRIGGER STATE
         self.stats_trigger.setText("Trigger signal state: " + ('ON' if self.receiver.trigger_state else 'OFF'))
 
-        # CALCULATE AND DISPLAY THE ACTUAL CURRENT MEASUREMENT FREQUENCY
-        #if (self.data.num_samples > Ic_gui.FREQ_AVERAGE_WINDOW):
-        
-            # DOESN'T WORK WITH DEQUE
-            #window = timestamps[-(Ic_gui.FREQ_AVERAGE_WINDOW):]
-
-            #window = [timestamps[i] for i in range(len(timestamps)-(Ic_gui.FREQ_AVERAGE_WINDOW), len(timestamps))]
-
-            #differences = [j-i for i, j in zip(window[:-1], window[1:])]
-            #self.true_frequency = 1000 / (sum(differences) / len(differences))
-            #self.stats_true_frequency.setText('Sample frequency: %.3f' % self.true_frequency)
-
         self.raw_plot_window.update()
 
 
-    # GET RID OF THIS ??
-
-    # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS
-    def numimus_slot(self, num_imus):
-        self.num_imus = num_imus
-
-
-
-############################################
-#         OTHER FUNCTIONS (NOT SLOTS)      #
-############################################
-
-    def start_plot_slot(self):
-        self.timer.start(Ic_gui.PLOT_DELAY_MS)
-        self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
-        self.raw_plot_window.finished_signal.connect(self.stop_recording)
-        self.raw_plot_window.show()
 
     # START RECORDING DATA
     def record(self):
         self.recording = True
+
+        self.asa = None
+        self.numimus = None
 
         self.buttons['record'].setText('Stop')
 
@@ -358,18 +308,60 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
         self.buttons['load'].setEnabled(False)
 
-        self.data = Ic_data()
+        logging.info("initializing")
+
+        self.initialize_thread = PyQt5.QtCore.QThread()
+        self.initializer = Ic_initialize()
+        self.initializer.moveToThread(self.initialize_thread)
+        self.initializer.finished_signal.connect(self.initialize_thread.quit)
+
+        self.initializer.numimus_signal.connect(self.set_num_imus)
+        self.initializer.asa_signal.connect(self.set_asa)
+        self.initialize_thread.started.connect(self.initializer.initialize)
+        self.initialize_thread.finished.connect(self.initialize_done)
+        self.initialize_thread.start()
+
+    def set_num_imus(self, num_imus):
+        self.num_imus = num_imus
+
+    def set_asa(self, asas):
+        self.mag_asas = asas
+
+    def initialize_done(self):
+        if ((self.mag_asas is None) or (self.num_imus is None)):
+            logging.warning("initialization failed aborting")
+            return False
+
+        logging.info("initialization succesfull, recording data")
+
+        self.data = Ic_data.for_recording(self.num_imus, self.settings.data_buffer_len)
+        self.settings.buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()
-        self.receiver = Ic_rx(self.data, self.settings)
+        self.receiver = Ic_record(self.settings, self.data, self.mag_asas)
         self.receiver.moveToThread(self.receiver_thread)
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
-        self.receiver.recording_signal.connect(self.start_plot_slot)
-        self.receiver_thread.started.connect(self.receiver.run)
-        self.receiver_thread.finished.connect(self.receiver_done)
-        self.receiver.numimus_signal.connect(self.numimus_slot)
 
+        self.receiver_thread.started.connect(self.receiver.record)
+        self.receiver_thread.finished.connect(self.receiver_done)
         self.receiver_thread.start()
+
+        self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
+        self.raw_plot_window.finished_signal.connect(self.stop_recording)
+        self.raw_plot_window.show()
+        self.raw_plot_window.recording = True
+        self.timer.start(Ic_gui.PLOT_DELAY_MS)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
