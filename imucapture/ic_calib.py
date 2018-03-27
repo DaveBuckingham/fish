@@ -36,6 +36,7 @@ class Ic_calib():
     def parse_data(self, calib_data):
 
 
+
         self.intervals = self.get_basis.get_intervals(calib_data)
         imu_bases = self.get_basis.get_bases(calib_data, self.intervals)
 
@@ -50,8 +51,8 @@ class Ic_calib():
             still_end = self.intervals[0][1]
 
             self.initial_gravity = numpy.mean(calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end], axis=1)
-            self.still_accel = calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end]
-            self.still_gyro = calib_data.imu_data[0, Ic_data.GYRO_INDEX, :, still_start:still_end]
+            self.still_accel = calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end].transpose()
+            self.still_gyro = calib_data.imu_data[0, Ic_data.GYRO_INDEX, :, still_start:still_end].transpose()
 
             return True
 

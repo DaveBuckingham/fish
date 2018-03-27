@@ -93,6 +93,10 @@ class Ic_data(PyQt5.QtCore.QObject):
     def for_recording(cls, num_imus, max_samples):
         return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
 
+    @classmethod
+    def from_data(cls, data_type, data):
+        return cls(data_type, data, data.shape[3])
+
 
     def save_file(self, filename):
         with h5py.File(filename, 'w') as datafile:

@@ -100,9 +100,11 @@ class Ic_get_basis(object):
         mean_accels = []
         start = 0
         end = self.HOLD_MIN
+
         while end <= data.num_samples:
 
             if (self._calib_within_thresholds(data, start, end)):
+                # THIS LOOP TAKES A LONG TIME
                 while (self._calib_within_thresholds(data, start, end) and (end < data.num_samples)):
                     end += 1
                 intervals.append((start, end))

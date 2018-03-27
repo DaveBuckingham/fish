@@ -141,16 +141,14 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
                 assert(self.data.num_samples == len(solution_gyro))
 
 
-            transformed_data = Ic_data("transformed")
-            transformed_data.reset_data(self.data.num_imus)
+            #for sample_index in range(0, self.data.num_samples):
+            #    sample = []
+            #    for imu in range(0, self.data.num_imus):
+            #        sample.append([solution_accel[sample_index], solution_gyro[sample_index], [0, 0, 0]])
 
-            for sample_index in range(0, self.data.num_samples):
-                sample = []
-                for imu in range(0, self.data.num_imus):
-                    sample.append([solution_accel[sample_index], solution_gyro[sample_index], [0, 0, 0]])
-                    # MAYBE WE SHOULD COPY OVER THE MAG FROM THE RAW DATA
+            #    transformed_data.add_sample(sample)
 
-                transformed_data.add_sample(sample)
+            transformed_data = Ic_data.from_data("transformed", numpy.stack((solution_accel, solution_gyro, self.data[:, Ic_data.MAG_INDEX, :, :]), 1))
 
             transformed_window = Ic_transformed_data_window(transformed_data)
             transformed_window.update()

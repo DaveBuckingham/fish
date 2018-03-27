@@ -126,7 +126,6 @@ class Ic_transform():
         rotm_world = []
         for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
             Rchip = eul2rotm(chiprpy)
-            #R = Rchip.dot(chip2world_rot)
             R = Rchip.dot(calib.imu_bases[imu])
 
             rotm_world1 = calib.imu_bases[imu].T.dot(R)
