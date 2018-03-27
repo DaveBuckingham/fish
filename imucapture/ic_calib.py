@@ -49,7 +49,7 @@ class Ic_calib():
             still_start = self.intervals[0][0]
             still_end = self.intervals[0][1]
 
-            self.initial_gravity = numpy.mean(calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end], axis=3)
+            self.initial_gravity = numpy.mean(calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end], axis=1)
             self.still_accel = calib_data.imu_data[0, Ic_data.ACCEL_INDEX, :, still_start:still_end]
             self.still_accel = calib_data.imu_data[0, Ic_data.GYRO_INDEX, :, still_start:still_end]
 
