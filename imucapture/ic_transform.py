@@ -6,6 +6,7 @@ from pyquaternion import Quaternion
 from copy import copy
 
 from imucapture.ic_global import *
+from imucapture.ic_data import Ic_data
 
 
 class Ic_transform():
@@ -36,10 +37,10 @@ class Ic_transform():
         # where theta are the Euler angles
 
         # GET ACC IN MPS2
-        acc = data.imu_data[imu, Ic_data.ACCEL_AXIS, :, :].transpose()
+        acc = data.imu_data[imu, Ic_data.ACCEL_INDEX, :, :].transpose()
 
         # GET GYRO IN RADIANS PER SEC
-        acc = data.imu_data[imu, Ic_data.GYRO_AXIS, :, :].transpose()
+        gyro = data.imu_data[imu, Ic_data.GYRO_INDEX, :, :].transpose()
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -65,7 +66,7 @@ class Ic_transform():
         Qbias = 1e-10 * Qacc
 
         Qdyn = accdynmag * stack_matrices([[Qacc, numpy.zeros((3, 3))],
-                                                 [numpy.zeros((3, 3)), Qacc]])
+                                           [numpy.zeros((3, 3)), Qacc]])
 
         xkm1 = numpy.zeros((12,))
         dt = numpy.diff(time)

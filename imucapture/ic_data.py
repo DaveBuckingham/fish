@@ -147,6 +147,8 @@ class Ic_data(PyQt5.QtCore.QObject):
 
         self.mutex.unlock()
 
+    def has_data(self):
+        return (self.num_samples > 0)
 
 
     def add_sample(self, sample):

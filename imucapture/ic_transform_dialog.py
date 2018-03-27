@@ -115,6 +115,7 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
             logging.error("can't transform data without basis vector from calibration file")
             return
 
+        assert(Ic_global.calibration is not None)
 
         if (self.data.has_data()):
 
