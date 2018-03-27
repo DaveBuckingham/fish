@@ -5,6 +5,8 @@ from copy import copy
 import itertools
 import logging
 
+from imucapture.ic_data import Ic_data
+
 
 
 class Ic_get_basis(object):
@@ -56,12 +58,12 @@ class Ic_get_basis(object):
         accel_ok = True
         for imu in range(0, data.num_imus):
             for axis in ([0,1,2]):
-                gyro_min = min(data.imu_data['imus'][imu]['gyro'][axis][start:end])
-                gyro_max = max(data.imu_data['imus'][imu]['gyro'][axis][start:end])
+                gyro_min = min(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
+                gyro_max = max(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
                 gyro_ok = gyro_ok and (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
 
-                accel_min = min(data.imu_data['imus'][imu]['accel'][axis][start:end])
-                accel_max = max(data.imu_data['imus'][imu]['accel'][axis][start:end])
+                accel_min = min(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
+                accel_max = max(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
                 accel_ok = accel_ok and (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
 
                 if not (gyro_ok and accel_ok):
@@ -131,9 +133,9 @@ class Ic_get_basis(object):
 
             means = []
             for start, end in intervals:
-                mean_x = self._mean(data.imu_data['imus'][imu]['accel'][0][start:end])
-                mean_y = self._mean(data.imu_data['imus'][imu]['accel'][1][start:end])
-                mean_z = self._mean(data.imu_data['imus'][imu]['accel'][2][start:end])
+                mean_x = self._mean(data.imu_data[imu, Ic_data.ACCEL_INDEX, 0, start:end])
+                mean_y = self._mean(data.imu_data[imu, Ic_data.ACCEL_INDEX, 1, start:end])
+                mean_z = self._mean(data.imu_data[imu, Ic_data.ACCEL_INDEX, 2, start:end])
                 means.append((mean_x, mean_y, mean_z))
                 
             original = self._find_orthogonal_triple(means)

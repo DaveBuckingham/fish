@@ -7,7 +7,7 @@ import logging
 
 from imucapture.ic_get_basis import Ic_get_basis
 from imucapture.ic_global import *
-#from imucapture.ic_data import Ic_data
+from imucapture.ic_data import Ic_data
 
 try:
     from PyQt5.QtCore import QString

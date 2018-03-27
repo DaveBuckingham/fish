@@ -11,6 +11,7 @@ from imucapture.ic_global import *
 
 from imucapture.ic_data_window      import Ic_data_window
 from imucapture.ic_calib_dialog     import Ic_calib_dialog
+from imucapture.ic_calib            import Ic_calib
 from imucapture.ic_transform_dialog import Ic_transform_dialog
 
 class Ic_raw_data_window(Ic_data_window):
@@ -48,7 +49,7 @@ class Ic_raw_data_window(Ic_data_window):
     def activate_buttons(self):
         if (not self.recording):
             self.buttons['calibrate'].setEnabled(True)
-            if(Ic_global.calibration.imu_bases != None):
+            if(Ic_global.calibration is not None and Ic_global.calibration.imu_bases is not None):
                 self.buttons['transform'].setEnabled(True)
             super().activate_buttons()
 

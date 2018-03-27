@@ -111,7 +111,7 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
     def transform_data(self):
         logging.info("running " + str(self.process_algorithm))
 
-        if(Ic_global.calibration.imu_bases is None):
+        if(Ic_global.calibration is None or Ic_global.calibration.imu_bases is None):
             logging.error("can't transform data without basis vector from calibration file")
             return
 

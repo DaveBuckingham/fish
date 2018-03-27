@@ -7,6 +7,8 @@ import sys
 import numpy
 import math
 
+import time
+
 import PyQt5.QtCore
 
 from imucapture.ic_global import Ic_global
@@ -25,7 +27,7 @@ class Ic_data(PyQt5.QtCore.QObject):
     GYRO_INDEX  = 1
     MAG_INDEX   = 2
 
-    def __init__(self, dataset_type, data):
+    def __init__(self, dataset_type, data, num_samples):
         super(Ic_data, self).__init__()
 
         self.mutex = PyQt5.QtCore.QMutex()
@@ -35,12 +37,14 @@ class Ic_data(PyQt5.QtCore.QObject):
         self.imu_data = data
 
         self.num_imus = self.imu_data.shape[0]
-        self.num_samples = self.imu_data.shape[3]
+        self.num_samples = num_samples
         self.total_samples = self.num_samples
 
 
     @classmethod
     def from_file(cls, filename):
+
+        start = time.time()
 
         with h5py.File(filename, 'r') as datafile:
             if datafile is None:
@@ -50,20 +54,22 @@ class Ic_data(PyQt5.QtCore.QObject):
             if ('imu0' not in datafile['data']):
                 logging.error("couldn't load file: invalid format")
                 return None
-            
-            data = numpy.array([[datafile['data']['imu0']['accel'],
-                                datafile['data']['imu0']['gyro'],
-                                datafile['data']['imu0']['mag']
-                               ]]
-                              )
+
+
+            data = numpy.array([numpy.stack((datafile['data']['imu0']['accel'],
+                                             datafile['data']['imu0']['gyro'],
+                                             datafile['data']['imu0']['mag']
+                                           ))
+                              ])
+
             i = 1
             while ('imu' + str(i) in datafile['data']):
                 imu_str = 'imu' + str(i)
                 data = numpy.append(data,
-                                    [datafile['data'][imu_str]['accel'],
-                                     datafile['data'][imu_str]['gyro'],
-                                     datafile['data'][imu_str]['mag']
-                                    ],
+                                    numpy.stack((datafile['data'][imu_str]['accel'],
+                                                 datafile['data'][imu_str]['gyro'],
+                                                 datafile['data'][imu_str]['mag']
+                                               )),
                                     0)
                 i += 1
 
@@ -75,7 +81,7 @@ class Ic_data(PyQt5.QtCore.QObject):
                 logging.error("couldn't load file: invalid data shape " + str(data.shape))
                 return None
 
-            return cls(dataset_type, data)
+            return cls(dataset_type, data, data.shape[3])
 
         logging.error("couldn't load file")
         return None
@@ -85,7 +91,7 @@ class Ic_data(PyQt5.QtCore.QObject):
 
     @classmethod
     def for_recording(cls, num_imus, max_samples):
-        return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]))
+        return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
 
 
     def save_file(self, filename):

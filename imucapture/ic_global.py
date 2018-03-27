@@ -4,8 +4,6 @@ import sys
 import PyQt5.QtCore
 import PyQt5.QtWidgets
 
-from imucapture.ic_calib import Ic_calib
-
 
 class Ic_global():
 
@@ -45,4 +43,4 @@ class Ic_global():
             else:
                 w.widget().setEnabled(state)
 
-    calibration = Ic_calib()
+    calibration = None
