@@ -53,21 +53,6 @@ class Ic_get_basis(object):
         else:
             return(triples[0])
 
-    def _calib_within_thresholds(self, data, start, end):
-        for imu in range(0, data.num_imus):
-            for axis in ([0,1,2]):
-                gyro_min = min(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
-                gyro_max = max(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
-                gyro_ok = (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
-
-                accel_min = min(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
-                accel_max = max(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
-                accel_ok = (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
-
-                if not (gyro_ok and accel_ok):
-                    return False
-        return True
-
 
     def _mean(self, list):
         return (sum(list) / float(len(list)))
@@ -93,6 +78,26 @@ class Ic_get_basis(object):
         Q, R = numpy.linalg.qr(X)
         return -Q
 
+
+
+
+    def _calib_within_thresholds(self, data, start, end):
+        for imu in range(0, data.num_imus):
+            for axis in ([0,1,2]):
+                gyro_min = min(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
+                gyro_max = max(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
+                gyro_ok = (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
+
+                accel_min = min(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
+                accel_max = max(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
+                accel_ok = (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
+
+                if not (gyro_ok and accel_ok):
+                    return False
+        return True
+
+
+
     def get_intervals(self, data):
         intervals = []
         mean_accels = []
@@ -102,9 +107,15 @@ class Ic_get_basis(object):
         while end <= data.num_samples:
 
             if (self._calib_within_thresholds(data, start, end)):
-                # THIS LOOP TAKES A LONG TIME
                 while (self._calib_within_thresholds(data, start, end) and (end < data.num_samples)):
-                    end += 1
+                    # THIS LOOP TAKES A LONG TIME
+                    #end += 1
+
+                    # A HACK TO SPEED IT UP...THERE HAS TO BE A BETTER WAY
+                    end += 20
+                    if (not(self._calib_within_thresholds(data, start, end) and (end < data.num_samples))):
+                        end -= 19
+
                 intervals.append((start, end))
                 start = end
                 end = start + self.HOLD_MIN

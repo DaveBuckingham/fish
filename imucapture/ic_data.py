@@ -114,12 +114,12 @@ class Ic_data(PyQt5.QtCore.QObject):
             self.accel_units_string = 'Dynamic acceleration (meters per second squared)'
             self.gyro_units_string  = 'Orientation (radians)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
-        elif((self.dataset_type == 'raw') or (self.dataset_type == 'calibration')):
+        elif(self.dataset_type == 'raw'):
             self.accel_units_string = 'Acceleration (meters per second squared)'
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
         else:
-            logging.error("invalid dataset type: " + dataset_type + "assuming raw data")
+            logging.error("unknown dataset type: " + dataset_type + "assuming raw data")
             self.accel_units_string = 'Acceleration (meters per second squared)'
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'

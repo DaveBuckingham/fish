@@ -246,7 +246,10 @@ class Ic_gui(PyQt5.QtWidgets.QWidget):
 
             if (data is not None):
 
-                plot_window = Ic_raw_data_window(data, filename)
+                if (data.dataset_type == 'raw'):
+                    plot_window = Ic_raw_data_window(data, filename)
+                if (data.dataset_type == 'transformed'):
+                    plot_window = Ic_transformed_data_window(data, filename)
                 plot_window.update()
                 plot_window.activate_buttons()
                 plot_window.show()
