@@ -119,6 +119,8 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
 
         if (self.data.has_data()):
 
+            transformed_data = numpy.empty([self.data.num_imus, 3, 3, self.data.num_samples])
+
             for i in range(0, self.data.num_imus):
 
                 if (self.process_algorithm == 'integrate'):
@@ -137,20 +139,13 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
                     logging.error("invalid algorithm: " + self.process_algorithm)
                     return
 
-                assert(self.data.num_samples == len(solution_accel))
-                assert(self.data.num_samples == len(solution_gyro))
+
+                solution_mag = self.data.imu_data[i, Ic_data.MAG_INDEX, :, :]
+                transformed_data[i, :, :, :] = numpy.stack([solution_accel, solution_gyro, solution_mag])
 
 
-            #for sample_index in range(0, self.data.num_samples):
-            #    sample = []
-            #    for imu in range(0, self.data.num_imus):
-            #        sample.append([solution_accel[sample_index], solution_gyro[sample_index], [0, 0, 0]])
+            transformed_window = Ic_transformed_data_window(Ic_data.from_data('transformed', transformed_data))
 
-            #    transformed_data.add_sample(sample)
-
-            transformed_data = Ic_data.from_data("transformed", numpy.stack((solution_accel, solution_gyro, self.data[:, Ic_data.MAG_INDEX, :, :]), 1))
-
-            transformed_window = Ic_transformed_data_window(transformed_data)
             transformed_window.update()
             transformed_window.activate_buttons()
             transformed_window.show()

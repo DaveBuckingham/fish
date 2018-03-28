@@ -121,23 +121,37 @@ class Ic_transform():
         orient_sensor = numpy.pad(numpy.array(eulerEKF), ((1, 0), (0, 0)), mode='edge')
         accdyn_sensor = numpy.pad(numpy.array(aD), ((1, 0), (0, 0)), mode='edge')
 
-        orient_world = []
-        accdyn_world = []
-        rotm_world = []
-        for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
-            Rchip = eul2rotm(chiprpy)
-            R = Rchip.dot(calib.imu_bases[imu])
+#        orient_world = []
+#        accdyn_world = []
+#        #rotm_world = []
+#
+#        for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
+#            Rchip = eul2rotm(chiprpy)
+#            R = Rchip.dot(calib.imu_bases[imu])
+#
+#            rotm_world1 = calib.imu_bases[imu].T.dot(R)
+#            orient_world.append(rotm2eul(rotm_world1))
+#            #rotm_world.append(rotm_world1)
+#
+#            # rotate the dynamic acceleration into the world coordinates
+#            accdyn_world.append(R.T.dot(adyn1))
+#
+#        #return (accdyn_world, orient_world, rotm_world)
+#        return (accdyn_world, orient_world)
 
-            rotm_world1 = calib.imu_bases[imu].T.dot(R)
-            orient_world.append(rotm2eul(rotm_world1))
-            rotm_world.append(rotm_world1)
+        accdyn_world = numpy.empty([3,0])
+        orient_world = numpy.empty([3,0])
+        for chiprpy, dynamic_acceleration in zip(orient_sensor, accdyn_sensor):
+            rotation_chip = eul2rotm(chiprpy)
+            rotation = rotation_chip.dot(calib.imu_bases[imu])
+            rotation_matrix_world = calib.imu_bases[imu].T.dot(rotation)
+            eul = rotm2eul(rotation_matrix_world)
+            orient_world = numpy.append(orient_world, [[eul[0]], [eul[1]], [eul[2]]], 1)
 
-            # rotate the dynamic acceleration into the world coordinates
-            accdyn_world.append(R.T.dot(adyn1))
+            rot = rotation.T.dot(dynamic_acceleration)
+            accdyn_world = numpy.append(accdyn_world, [[rot[0]], [rot[1]], [rot[2]]], 1)
 
-        #return (accdyn_world, orient_world, rotm_world)
         return (accdyn_world, orient_world)
-
 
 
 

@@ -86,9 +86,6 @@ class Ic_data(PyQt5.QtCore.QObject):
         logging.error("couldn't load file")
         return None
 
-
-        
-
     @classmethod
     def for_recording(cls, num_imus, max_samples):
         return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
