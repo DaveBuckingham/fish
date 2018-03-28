@@ -9,7 +9,7 @@ class Ic_global():
 
     # CONSTANTS
 
-    VERSION = '0.2.0'
+    VERSION = '0.2.1'
 
     USE_ENCODER = False
 
