@@ -54,17 +54,15 @@ class Ic_get_basis(object):
             return(triples[0])
 
     def _calib_within_thresholds(self, data, start, end):
-        gyro_ok = True
-        accel_ok = True
         for imu in range(0, data.num_imus):
             for axis in ([0,1,2]):
                 gyro_min = min(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
                 gyro_max = max(data.imu_data[imu, Ic_data.GYRO_INDEX, axis, start:end])
-                gyro_ok = gyro_ok and (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
+                gyro_ok = (max(abs(gyro_min), abs(gyro_max)) < self.GYRO_THRESHOLD)
 
                 accel_min = min(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
                 accel_max = max(data.imu_data[imu, Ic_data.ACCEL_INDEX, axis, start:end])
-                accel_ok = accel_ok and (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
+                accel_ok = (accel_max - accel_min < self.ACCEL_DELTA_THRESHOLD)
 
                 if not (gyro_ok and accel_ok):
                     return False

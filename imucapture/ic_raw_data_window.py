@@ -56,9 +56,9 @@ class Ic_raw_data_window(Ic_data_window):
 
     def calibrate_button_slot(self):
         calib = Ic_calib()
-        calib.parse_data(self.data)
-        self.calib_dialog = Ic_calib_dialog(calib)
-        self.calib_dialog.show()
+        if(calib.parse_data(self.data)):
+            self.calib_dialog = Ic_calib_dialog(calib)
+            self.calib_dialog.show()
 
     # FILTER DATA BUTTON WAS PRESSED
     def transform_button_slot(self):
