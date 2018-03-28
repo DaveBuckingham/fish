@@ -49,6 +49,10 @@ bindingoffset=10mm, top=25mm,bottom=25mm}
 
 
 \newcommand{\name}{IMU-Capture}
+
+\newcommand{\arduinoFilename}{\texttt{ic_arduino.ino}
+\newcommand{\arduinoDirectory}{ic_arduino}
+
 \newcommand{\programVersion}{0.1}
 \newcommand{\manualVersion}{0.1}
 \newcommand{\email}{eric.tytell@tufts.edu}
@@ -168,7 +172,7 @@ documents the procedure we have used to prepare the mpu9250 for use with
 \url{http://www.url_for_cassandras_manual.com}
 
 For testing purposes, or if the added size and weight are acceptable, an mpu9250
-mounted on a circuit-board can be used with \name{}.
+mounted on a circuit-board can be used.
 
 
 \section{SPI}
@@ -180,20 +184,20 @@ exchange data with a master device (the Arduino) over a single bus consisting of
 
 \section{Wiring the Arduino}
 \label{sec:wiring}
-Table \ref{tab:wiring} summarizes the process of connecting IMUs to the Arduino.
-It may be necessary to use a breadboard, especially if multiple IMUs are used.
-Figure \ref{fig:wiring} shows an Arduino wired to a single IMU.  Pins 8, 9, and
-10 are used for \emph{chip select} lines for up to three IMUs. Pin 11 carries
-data traveling from the Arduino to the IMUs, i.e. Master-Out, Slave-In (MOSI).
-Pin 12 carries data traveling from the IMUs to the Arduino, i.e. Master-In,
-Slave Out (MISO). Pin 13 carries a clock signal which regulates timing of the
-communication protocol.  Each IMU should be connected to 3.3V power (available
-on the Arduino Uno) and to ground.
+Table \ref{tab:wiring} summarizes the process of connecting the IMUs to the
+Arduino.  It may be necessary to use a breadboard, especially if multiple IMUs
+are used.  Figure \ref{fig:wiring} shows an Arduino wired to a single IMU.  Pins
+8, 9, and 10 are used for \emph{chip select} lines for up to three IMUs. Pin 11
+carries data traveling from the Arduino to the IMUs, i.e. Master-Out, Slave-In
+(MOSI).  Pin 12 carries data traveling from the IMUs to the Arduino, i.e.
+Master-In, Slave Out (MISO). Pin 13 carries a clock signal which regulates
+timing of the communication protocol.  Each IMU should be connected to 3.3V
+power (available on the Arduino Uno) and to ground.
 
 If using a trigger, connect it to Pin 4 and to ground.
 
 Connect the Arduino to the PC with a USB cable.  To ensure adequate power,
-especially if using multiple IMUs, it is recommended to connect the Arduino to
+especially if using multiple IMUs, it may be necessary to connect the Arduino to
 an external power source instead of relying on the USB port for power.
 
 \begin{table}
@@ -239,75 +243,68 @@ Uno.}
 
 \chapter{Installation}
 
-\section{Arduino IDE}
-While there are many ways to install program code onto the Arduino, we have
-tested \name{} using the Arduino IDE version 1.8.1. Earlier versions may lack
-some of library definitions used by \name{}.
+\section{Arduino}
+\label{sec:installarduinocode}
+The portion of \name{} that runs on an Arduino is called \arduinoFilename{}. It
+is located inside the directory \arduinoDirectory{} and is distributed with the
+rest of \name{}.  We have succesfully installed \arduinoFilename{} on an Arduino
+Uno using the Arduino IDE version 1.8.1. Earlier versions of the Arduino IDE may
+lack some of library definitions used by \name{}. Use the Arduino IDE 1.8.1 or
+some other means to install \arduinoFilename{} on the Arduino.
 
 The Arduino IDE can be downloaded from:
 \url{https://www.arduino.cc/en/Main/Software}
-
-If your operating system has a package management system, it might be able to
-install the Arduino IDE automatically. For example, on a Debian-based system you
-can use \texttt{apt}:
-\begin{verbatim}
-# apt install Arduino-core
-\end{verbatim}
-
-\section{Install \name{} on the Arduino}
-\label{sec:installarduinocode}
-
-Transfer the file \verb|ic_tx/ic_tx.ino| onto Arduino.  This can be accomplished
-using the Arduino IDE graphical user interface.  Alternatively, the Arduino IDE
-can be used to program the Arduino directly from the command line:
-
-\begin{verbatim}
-# arduino --upload ic_tx/ic_tx.ino
-\end{verbatim}
-
-For more information about the Arduino command line interface, see:
-\url{https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc}
 
 
 \section{PC}
 \label{sec:installPc}
 
-\name{} requires Python 3. It has been tested with Python version 3.5. Thus, it
-is recommended to use Python version 3.5 or later. On windows, \name{} has been
-successfully installed with the Anaconda Python distribution
-(\url{https://www.anaconda.com}), but tests failed to install \name{} with a
-standalone Python installation.
+\section{Binary}
 
-It is recommended to use using pip (the Python Package Index) to install
-\name{}: \url{https://pypi.python.org/pypi/pip}
+A binary installation (.msi) file is provided for Windows users. It includes the
+python interpreter and all required libraries. It has been tested on Windows 10.
+To install \name{}, simply download and run the installer.
+
+\section{Pip}
+
+\name{} requires Python 3. It has been tested with Python version 3.5. Thus, it
+is recommended to use Python version 3.5 or later.  With Python 3 installed, you
+can use pip pip (the Python Package Index) to install \name{}:
 
 \begin{verbatim}
-# cd PROGRAM_NAME
 # pip install --upgrade pip
+# cd /path/to/imucapture/
 # pip install ./
 \end{verbatim}
 
-Pip will automatically install any of the following dependencies, and any of their sub-dependencies, if needed:
+
+Pip should automatically install any of the following dependencies, and any of their sub-dependencies, if needed:
 \begin{itemize}
-\item h5py
-\item pyqtgraph
-\item pyserial
-\item pyqt5
-\item scipy
-\item numpy-quaternion
+\item H5py
+\item PyQtGraph
+\item pySerial
+\item PyQt5
+\item pyquaternion
 \end{itemize}
 
-Once \name{} has been installed, it can be started from the command line:\\
+
+\chapter{Running}
+
+If \name{} was installed with the Windows installer, it can be started by double-clicking the
+executable (.exe) icon or desktop shortcut.
+
+If \name{} was installed with pip, it can be started from the command line:\\
 
 \texttt{
 \# \name{}
 }
 
-On Windows, informational and error messages will not be displayed unless
-\name{} is invoked by the Python interpreter explicitly:
+On Windows, if \name{} is installed with pip and invoked from the command line,
+informational and error messages will not be displayed unless \name{} is invoked
+by the Python interpreter explicitly:
 
 \texttt{
-\# python \name{}
+\# python -m \name{}
 }
 
 When \name{} starts, the main control panel will be visible (Figure
@@ -322,23 +319,6 @@ When \name{} starts, the main control panel will be visible (Figure
 \end{figure}
 
 
-\chapter{The data buffer} \name{} uses a single data buffer to hold IMU data.
-When data is recorded from the IMUs, the data buffer is first erased. Then each
-sample is added to the buffer as it is recorded. When data is not being
-recorded, the buffer can be saved to a file, or a file can be loaded into the
-buffer, erasing any previous contents. Data processing operations can be
-performed on the data buffer, altering it irreversibly.  Therefore, any time the
-data buffer contains valuable data it is recommended to save it to file before
-collecting new data, loading another file, or executing data processing
-operations.
-
-The \emph{data buffer length (\# samples)} slider adjusts the size of the data
-buffer. When each new sample is received, it is added to the data buffer. If the
-buffer is already full (the number of samples in the buffer is equal to the
-size of the buffer), the oldest sample in the buffer is deleted. If the size of
-the buffer is adjust to be smaller than the number of samples in the buffer, the
-oldest samples in the buffer are deleted until the number of samples in the
-buffer is equal to the buffer length.
 
 
 \chapter{Collecting data}
@@ -349,13 +329,26 @@ Arduino and instructs it to begin collecting data from the IMUs at 200Hz. This
 sample rate is hard-coded, and was determined to be near the maximum possible
 with the Arduino Uno.
 
-
+A new data window containing an empty data buffer is opened. As data samples are received
+from the Arduion, each sample is added to data buffer.
+The \emph{data buffer length (\# samples)} slider adjusts the size of the data
+buffer to which recorded data is currently being written.  When each new sample
+is received, it is added to the data buffer. If the buffer is already full (the
+number of samples in the buffer is equal to the size of the buffer), the oldest
+sample in the buffer is deleted. If the size of the buffer is adjust to be
+smaller than the number of samples in the buffer, the oldest samples in the
+buffer are deleted until the number of samples in the buffer is equal to the
+buffer length.
 
 The \emph{stop} button (or the trigger, as described in Section \ref{sec:trigger}),
 causes the PC first to instruct the Arduino to stop collecting data and then to
 halt communication with the Arduino.
 
+\section{Plots}
+\label{sec:plots}
+
 Table \ref{tab:units} lists the units used for each sensor modality.
+
 \begin{table}
 \centering
 \begin{tabular}{@{}*3l@{}}
@@ -370,11 +363,6 @@ magnetometer  & magnetic flux density & microteslas \\
 \caption{Units used by \name{}}
 \label{tab:units}
 \end{table}
-
-
-
-\section{Plots}
-\label{sec:plots}
 
 As samples received from the Arduino are recorded in the data buffer, they
 become visible in the data visualization plots. For each IMU, one row of three
@@ -419,18 +407,6 @@ there is a trigger connected to the Arduino.
 \chapter{Saving and loading}
 \label{sec:savingloading}
 
-\section{File formats}
-
-\label{sec:fileformats}
-The \csv{} file format stores data in plain text, using newlines to delimit
-samples and commas to delimit measurements within each sample.  \name{} uses the
-CSV module in the Python Standard Library with default formatting parameters:
-\url{https://docs.python.org/3/library/csv.html}
-
-The \hdf{} format is designed to store large amounts of data. It is generally
-more compact than \csv{}. \name{} uses the h5py Python package to read and write
-\hdf{} files: \url{http://www.h5py.org/}
-
 
 \section{Saving}
 
@@ -448,35 +424,9 @@ data buffer, overwriting any data stored there.  The \emph{load} button is
 disabled while data is being recorded.
 
 
-\chapter{Filter data}
-
-Due to factors such as the effect of gravity upon the accelerometer, sensor
-drift, and noise, the raw data collected by \name{} will not reflect the actual
-dynamics of the IMUs. \name{} includes several algorithms that can be applied to
-IMU data after it has been recorded. Currently, it is not possible to apply
-these algorithms in real time as the data is recorded. Running one of these
-algorithms will have to main effects upon recorded data: 1) The effect of
-gravity is removed from the acceleration data, leaving only \emph{dynamic}
-acceleration. 2) The rotational speed data is converted into rotational angle
-data, that is, the rotation of the IMUs is integrated over time.
-
-Currently, filtering algorithms only apply to a single IMU.
-
-The \emph{filter} button opens the data processing control panel (Figure
-\ref{fig:filter}).
-
-\begin{figure}[]
-    \begin{center}
-        \includegraphics[height=3in]{screenshot_process}
-    \end{center}
-    \caption{Data filtering control panel} 
-    \label{fig:filter}
-\end{figure}
-
-
 \section{Calibration}
 
-Before any of the filtering algorithms can be applied, it is necessary to load a
+Before any of the transformation algorithms can be applied, it is necessary to load a
 calibration file by clicking the \emph{Parse calibration file} button. Three
 main pieces of information are extracted from the calibration file:
 \begin{enumerate}
@@ -504,6 +454,37 @@ If \name{} is unable to load a calibration file, error messages explaining why
 can help determine if there are problems with the file and help to record a
 correct calibration file. See Section \ref{sec:calibErrorMessages} for more
 discussion about these messages.
+
+
+
+
+\chapter{Transform data}
+
+It is only possible to transform data after a calibration has been set.
+
+Due to factors such as the effect of gravity upon the accelerometer, sensor
+drift, and noise, the raw data collected by \name{} will not reflect the actual
+dynamics of the IMUs. \name{} includes several algorithms that can be applied to
+IMU data after it has been recorded. Currently, it is not possible to apply
+these algorithms in real time as the data is recorded. Running one of these
+algorithms will have to main effects upon recorded data: 1) The effect of
+gravity is removed from the acceleration data, leaving only \emph{dynamic}
+acceleration. 2) The rotational speed data is converted into rotational angle
+data, that is, the rotation of the IMUs is integrated over time.
+
+Currently, filtering algorithms only apply to a single IMU.
+
+The \emph{filter} button opens the data processing control panel (Figure
+\ref{fig:filter}).
+
+\begin{figure}[]
+    \begin{center}
+        \includegraphics[height=3in]{screenshot_process}
+    \end{center}
+    \caption{Data filtering control panel} 
+    \label{fig:filter}
+\end{figure}
+
 
 
 \section{Filter mode}
