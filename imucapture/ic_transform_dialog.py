@@ -141,6 +141,15 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
 
 
                 solution_mag = self.data.imu_data[i, Ic_data.MAG_INDEX, :, :]
+
+                if (solution_accel.shape != solution_gyro.shape or solution_accel.shape != solution_mag.shape):
+                    logging.error("solution modalities don't have the same shape:")
+                    logging.error('accel: ' + str(solution_accel.shape))
+                    logging.error('gyro: ' + str(solution_gyro.shape))
+                    logging.error('mag: ' + str(solution_mag.shape))
+                    return
+
+
                 transformed_data[i, :, :, :] = numpy.stack([solution_accel, solution_gyro, solution_mag])
 
 

@@ -121,24 +121,6 @@ class Ic_transform():
         orient_sensor = numpy.pad(numpy.array(eulerEKF), ((1, 0), (0, 0)), mode='edge')
         accdyn_sensor = numpy.pad(numpy.array(aD), ((1, 0), (0, 0)), mode='edge')
 
-#        orient_world = []
-#        accdyn_world = []
-#        #rotm_world = []
-#
-#        for chiprpy, adyn1 in zip(orient_sensor, accdyn_sensor):
-#            Rchip = eul2rotm(chiprpy)
-#            R = Rchip.dot(calib.imu_bases[imu])
-#
-#            rotm_world1 = calib.imu_bases[imu].T.dot(R)
-#            orient_world.append(rotm2eul(rotm_world1))
-#            #rotm_world.append(rotm_world1)
-#
-#            # rotate the dynamic acceleration into the world coordinates
-#            accdyn_world.append(R.T.dot(adyn1))
-#
-#        #return (accdyn_world, orient_world, rotm_world)
-#        return (accdyn_world, orient_world)
-
         accdyn_world = numpy.empty([3,0])
         orient_world = numpy.empty([3,0])
         for chiprpy, dynamic_acceleration in zip(orient_sensor, accdyn_sensor):
@@ -151,18 +133,19 @@ class Ic_transform():
             rot = rotation.T.dot(dynamic_acceleration)
             accdyn_world = numpy.append(accdyn_world, [[rot[0]], [rot[1]], [rot[2]]], 1)
 
+        print(accdyn_world.shape)
+        print(orient_world.shape)
         return (accdyn_world, orient_world)
 
 
 
-    # USING "pyquaternion"
     def get_orientation_madgwick(self, data, calib, imu, filter_num_samples, initwindow=0.5, beta=2.86):
 
         # GET ACC IN MPS2
-        acc  = numpy.array(data.as_list_of_triples(imu, 'accel'))
+        acc = data.imu_data[imu, Ic_data.ACCEL_INDEX, :, :].transpose()
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = numpy.array(data.as_list_of_triples(imu, 'gyro'))
+        gyro = data.imu_data[imu, Ic_data.GYRO_INDEX, :, :].transpose()
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -243,7 +226,7 @@ class Ic_transform():
         orient_world_rotm = [q1.rotation_matrix for q1 in qorient_world]
 
 
-        orient_world = [rotm2eul(R1) for R1 in orient_world_rotm]
+        orient_world = numpy.array([rotm2eul(R1) for R1 in orient_world_rotm]).transpose()
 
 
         # ROTATE ACCDYN INTO THE WORLD COORDINATE SYSTEM
@@ -251,18 +234,13 @@ class Ic_transform():
         qaccdyn_world = [(qchip2world.conjugate * Quaternion(0, a1[0], a1[1], a1[2]) * qchip2world) for a1 in accdyn_sensor]
 
 
-        accdyn_world = [q.elements[1:] for q in qaccdyn_world]
+        accdyn_world = numpy.array([q.elements[1:] for q in qaccdyn_world]).transpose()
 
         # CONVERT ACCEL DATA BACK TO MPS2
-        accdyn_world = [i * 9.81 for i in accdyn_world]
+        accdyn_world *= 9.81
 
-        #return (accdyn_world, orient_world, orient_world_rotm)
+
         return (accdyn_world, orient_world)
-
-
-
-
-
 
 
 
@@ -360,32 +338,21 @@ def stack_matrices(M):
 
 
 
-# def gramschmidt(U):
-#     k = U.shape[1]
-#     V = copy(U)
-# 
-#     for i in range(k):
-#         V[:, i] /= numpy.linalg.norm(V[:, i])
-# 
-#         for j in range(i+1, k):
-#             proj = numpy.dot(V[:, i], V[:, j]) * V[:, i]
-#             V[:, j] -= proj
-# 
-#     return V
 
 
 def eul2rotm(x):
     (phi, theta, psi) = x
 
-    Rz_yaw =    numpy.array([[numpy.cos(psi),     numpy.sin(psi),    0],
-                         [-numpy.sin(psi),     numpy.cos(psi),    0],
-                         [0,                0,              1]])
-    Ry_pitch = numpy.array([[numpy.cos(theta),    0,              -numpy.sin(theta)],
-                         [0,                1,              0],
-                         [numpy.sin(theta),    0,              numpy.cos(theta)]])
-    Rx_roll =  numpy.array([[1,                0,              0],
-                         [0,                numpy.cos(phi),    numpy.sin(phi)],
-                         [0,                -numpy.sin(phi),   numpy.cos(phi)]])
+    Rz_yaw =   numpy.array([[numpy.cos(psi),   numpy.sin(psi),  0                ],
+                            [-numpy.sin(psi),  numpy.cos(psi),  0                ],
+                            [0,                0,               1                ]])
+    Ry_pitch = numpy.array([[numpy.cos(theta), 0,               -numpy.sin(theta)],
+                            [0,                1,               0                ],
+                            [numpy.sin(theta), 0,               numpy.cos(theta) ]])
+    Rx_roll =  numpy.array([[1,                0,               0                ],
+                            [0,                numpy.cos(phi),  numpy.sin(phi)   ],
+                            [0,                -numpy.sin(phi), numpy.cos(phi)   ]])
+
     return Rx_roll.dot(Ry_pitch.dot(Rz_yaw))
 
 
