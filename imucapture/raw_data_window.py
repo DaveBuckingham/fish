@@ -9,12 +9,12 @@ import logging
 
 from imucapture.global_data import *
 
-from imucapture.data_window      import Ic_data_window
-from imucapture.calib_dialog     import Ic_calib_dialog
-from imucapture.calib            import Ic_calib
-from imucapture.transform_dialog import Ic_transform_dialog
+from imucapture.data_window      import Data_window
+from imucapture.calib_dialog     import Calib_dialog
+from imucapture.calib            import Calib
+from imucapture.transform_dialog import Transform_dialog
 
-class Ic_raw_data_window(Ic_data_window):
+class Raw_data_window(Data_window):
 
 
     FREQ_AVERAGE_WINDOW = 100
@@ -33,14 +33,14 @@ class Ic_raw_data_window(Ic_data_window):
         self.data = data
 
         self.buttons['calibrate'] = PyQt5.QtWidgets.QPushButton('Calibrate')
-        self.buttons['calibrate'].setMaximumWidth(Ic_data_window.BUTTON_WIDTH)
+        self.buttons['calibrate'].setMaximumWidth(Data_window.BUTTON_WIDTH)
         self.buttons['calibrate'].setToolTip('Use this data to calibrate the system')
         self.buttons['calibrate'].clicked.connect(self.calibrate_button_slot)
         self.button_layout.addWidget(self.buttons['calibrate'])
         self.buttons['calibrate'].setEnabled(False)
 
         self.buttons['transform'] = PyQt5.QtWidgets.QPushButton('Transform')
-        self.buttons['transform'].setMaximumWidth(Ic_data_window.BUTTON_WIDTH)
+        self.buttons['transform'].setMaximumWidth(Data_window.BUTTON_WIDTH)
         self.buttons['transform'].setToolTip('Process the data by applying a filtering algorithm')
         self.buttons['transform'].clicked.connect(self.transform_button_slot)
         self.button_layout.addWidget(self.buttons['transform'])
@@ -49,20 +49,20 @@ class Ic_raw_data_window(Ic_data_window):
     def activate_buttons(self):
         if (not self.recording):
             self.buttons['calibrate'].setEnabled(True)
-            if(Ic_global_data.calibration is not None and Ic_global_data.calibration.imu_bases is not None):
+            if(Global_data.calibration is not None and Global_data.calibration.imu_bases is not None):
                 self.buttons['transform'].setEnabled(True)
             super().activate_buttons()
 
 
     def calibrate_button_slot(self):
-        calib = Ic_calib()
+        calib = Calib()
         if(calib.parse_data(self.data)):
-            self.calib_dialog = Ic_calib_dialog(calib)
+            self.calib_dialog = Calib_dialog(calib)
             self.calib_dialog.show()
 
     # FILTER DATA BUTTON WAS PRESSED
     def transform_button_slot(self):
-        self.transform_dialog = Ic_transform_dialog(self.data)
+        self.transform_dialog = Transform_dialog(self.data)
         self.transform_dialog.finished_signal.connect(self.update)
         self.transform_dialog.show()
 

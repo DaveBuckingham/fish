@@ -6,7 +6,7 @@ import PyQt5.QtWidgets
 from imucapture.global_data import *
 
 
-class Ic_plot(pg.PlotWidget):
+class Plot(pg.PlotWidget):
 
     def __init__(self, data, imu, modality, legend, parent=None):
 

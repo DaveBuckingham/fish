@@ -56,7 +56,6 @@ class Gui(PyQt5.QtWidgets.QWidget):
         # MEASURED FREQUENCY OF DATA COLLECTED
         self.true_frequency = 0.0
 
-
         self.plots = []
 
         self.timer = PyQt5.QtCore.QTimer(self)
@@ -198,7 +197,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
 ############################################
 
     def batch_transform_button_slot(self):
-        dialog = Ic_batch_transform_dialog()
+        dialog = Batch_transform_dialog()
         dialog.show()
 
 
@@ -242,14 +241,14 @@ class Gui(PyQt5.QtWidgets.QWidget):
                 logging.error("invalid file extension: " + extension)
                 return
 
-            data = Ic_data.from_file(filename)
+            data = Data.from_file(filename)
 
             if (data is not None):
 
                 if (data.dataset_type == 'raw'):
-                    plot_window = Ic_raw_data_window(data, filename)
+                    plot_window = Raw_data_window(data, filename)
                 if (data.dataset_type == 'transformed'):
-                    plot_window = Ic_transformed_data_window(data, filename)
+                    plot_window = Transformed_data_window(data, filename)
                 plot_window.update()
                 plot_window.activate_buttons()
                 plot_window.show()
@@ -300,26 +299,23 @@ class Gui(PyQt5.QtWidgets.QWidget):
 
     # START RECORDING DATA
     def record(self):
-        self.recording = True
 
-        self.asa = None
-        self.numimus = None
+        self.buttons['record'].setEnabled(False)
 
-        self.buttons['record'].setText('Stop')
-
-        self.buttons['record'].setToolTip('Stop recording samples')
-
-        self.buttons['load'].setEnabled(False)
+        self.mag_asas = None
+        self.num_imus = None
 
         logging.info("initializing")
 
         self.initialize_thread = PyQt5.QtCore.QThread()
-        self.initializer = Ic_initialize()
+        self.initializer = Initialize()
         self.initializer.moveToThread(self.initialize_thread)
         self.initializer.finished_signal.connect(self.initialize_thread.quit)
 
         self.initializer.numimus_signal.connect(self.set_num_imus)
         self.initializer.asa_signal.connect(self.set_asa)
+        self.initializer.success_signal.connect(self.initialize_success)
+
         self.initialize_thread.started.connect(self.initializer.initialize)
         self.initialize_thread.finished.connect(self.initialize_done)
         self.initialize_thread.start()
@@ -331,17 +327,23 @@ class Gui(PyQt5.QtWidgets.QWidget):
         self.mag_asas = asas
 
     def initialize_done(self):
-        if ((self.mag_asas is None) or (self.num_imus is None)):
-            logging.warning("initialization failed aborting")
-            return False
+        self.buttons['record'].setEnabled(True)
+
+    def initialize_success(self):
+        assert ((self.mag_asas is None) and (self.num_imus is None))
+
+        self.recording = True
+        self.buttons['record'].setText('Stop')
+        self.buttons['record'].setToolTip('Stop recording samples')
+        self.buttons['load'].setEnabled(False)
 
         logging.info("initialization succesfull, recording data")
 
-        self.data = Ic_data.for_recording(self.num_imus, self.settings.data_buffer_len)
+        self.data = Data.for_recording(self.num_imus, self.settings.data_buffer_len)
         self.settings.buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()
-        self.receiver = Ic_record(self.settings, self.data, self.mag_asas)
+        self.receiver = Record(self.settings, self.data, self.mag_asas)
         self.receiver.moveToThread(self.receiver_thread)
         self.receiver.finished_signal.connect(self.receiver_thread.quit)
 
@@ -349,7 +351,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
         self.receiver_thread.finished.connect(self.receiver_done)
         self.receiver_thread.start()
 
-        self.raw_plot_window = Ic_raw_data_window(self.data, 'unsaved raw data')
+        self.raw_plot_window = Raw_data_window(self.data, 'unsaved raw data')
         self.raw_plot_window.finished_signal.connect(self.stop_recording)
         self.raw_plot_window.show()
         self.raw_plot_window.recording = True

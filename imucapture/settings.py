@@ -4,9 +4,9 @@ import PyQt5.QtCore
 import PyQt5.QtWidgets
 import PyQt5.QtGui
 
-from imucapture.global_data import Ic_global_data
+from imucapture.global_data import Global_data
 
-class Ic_settings(PyQt5.QtWidgets.QWidget):
+class Settings(PyQt5.QtWidgets.QWidget):
 
     buffer_length_signal = PyQt5.QtCore.pyqtSignal(int)
 
@@ -20,13 +20,13 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
         #self.invert_trigger = False
         self.rising_edge = True
 
-        self.data_buffer_len = int((Ic_global_data.DATA_BUFFER_MAX - Ic_global_data.DATA_BUFFER_MIN + 1) / 2)
+        self.data_buffer_len = int((Global_data.DATA_BUFFER_MAX - Global_data.DATA_BUFFER_MIN + 1) / 2)
 
 
         ########################################
         #               SETUP                  #
         ########################################
-        super(Ic_settings, self).__init__(parent)
+        super(Settings, self).__init__(parent)
         self.parent = parent
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
@@ -41,7 +41,7 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
             items = (layout.itemAt(i) for i in range(layout.count())) 
             for w in items:
                 if isinstance(w, PyQt5.QtWidgets.QLayout):
-                    Ic_global_data.enable_layout(w, state)
+                    Global_data.enable_layout(w, state)
                 else:
                     w.widget().setEnabled(state)
             
@@ -96,22 +96,22 @@ class Ic_settings(PyQt5.QtWidgets.QWidget):
 
         # SLIDER
         self.buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.buffer_slider.setMinimum(Ic_global_data.DATA_BUFFER_MIN)
-        self.buffer_slider.setMaximum(Ic_global_data.DATA_BUFFER_MAX)
+        self.buffer_slider.setMinimum(Global_data.DATA_BUFFER_MIN)
+        self.buffer_slider.setMaximum(Global_data.DATA_BUFFER_MAX)
         self.buffer_slider.setValue(self.data_buffer_len)
         self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
         self.buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
         buffer_layout.addWidget(self.buffer_slider, 2, 1)
 
         # SECONDS
-        self.buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Ic_global_data.MS_PER_SAMPLE) + " ms")
+        self.buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Global_data.MS_PER_SAMPLE) + " ms")
         buffer_layout.addWidget(self.buffer_label_sec, 3, 1)
 
         # TEXTBOX
         self.buffer_textbox = PyQt5.QtWidgets.QLineEdit(str(self.data_buffer_len), self)
         #self.buffer_textbox.setMaximumWidth(50)
         self.buffer_textbox.setFixedWidth(60)
-        validator = PyQt5.QtGui.QIntValidator(Ic_global_data.DATA_BUFFER_MIN, Ic_global_data.DATA_BUFFER_MAX)
+        validator = PyQt5.QtGui.QIntValidator(Global_data.DATA_BUFFER_MIN, Global_data.DATA_BUFFER_MAX)
         self.buffer_textbox.setValidator(validator)
         self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)
         buffer_layout.addWidget(self.buffer_textbox, 2, 2)

@@ -6,10 +6,10 @@ import PyQt5.QtWidgets
 import logging
 
 
-from imucapture.data import Ic_data
-from imucapture.transform import Ic_transform
+from imucapture.data import Data
+from imucapture.transform import Transform
 from imucapture.global_data import *
-from imucapture.transformed_data_window import Ic_transformed_data_window
+from imucapture.transformed_data_window import Transformed_data_window
 
 try:
     from PyQt5.QtCore import QString
@@ -17,7 +17,7 @@ except ImportError:
     QString = str
 
 
-class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
+class Transform_dialog(PyQt5.QtWidgets.QWidget):
 
     finished_signal = PyQt5.QtCore.pyqtSignal()
 
@@ -30,11 +30,11 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
         super().__init__()
 
         # SET WINDOW TITLE
-        self.setWindowTitle(Ic_global_data.APPLICATION_FULL_NAME) 
+        self.setWindowTitle(Global_data.APPLICATION_FULL_NAME) 
 
         self.data=data
 
-        self.transform = Ic_transform()
+        self.transform = Transform()
 
         self.setWindowModality(PyQt5.QtCore.Qt.ApplicationModal)
 
@@ -111,11 +111,11 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
     def transform_data(self):
         logging.info("running " + str(self.process_algorithm))
 
-        if(Ic_global_data.calibration is None or Ic_global_data.calibration.imu_bases is None):
+        if(Global_data.calibration is None or Global_data.calibration.imu_bases is None):
             logging.error("can't transform data without basis vector from calibration file")
             return
 
-        assert(Ic_global_data.calibration is not None)
+        assert(Global_data.calibration is not None)
 
         if (self.data.has_data()):
 
@@ -125,22 +125,22 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
 
                 if (self.process_algorithm == 'integrate'):
                     num_filter_samples = 10
-                    (solution_accel, solution_gyro) = self.transform.get_orientation_integrate(self.data, Ic_global_data.calibration, i, num_filter_samples)
+                    (solution_accel, solution_gyro) = self.transform.get_orientation_integrate(self.data, Global_data.calibration, i, num_filter_samples)
 
                 elif (self.process_algorithm == 'madgwick'):
                     num_filter_samples = 10
-                    (solution_accel, solution_gyro) = self.transform.get_orientation_madgwick(self.data, Ic_global_data.calibration, i, num_filter_samples)
+                    (solution_accel, solution_gyro) = self.transform.get_orientation_madgwick(self.data, Global_data.calibration, i, num_filter_samples)
 
                 elif (self.process_algorithm == 'dsf'):
                     num_filter_samples = 10
-                    (solution_accel, solution_gyro) = self.transform.get_orientation_dsf(self.data, Ic_global_data.calibration, i, num_filter_samples)
+                    (solution_accel, solution_gyro) = self.transform.get_orientation_dsf(self.data, Global_data.calibration, i, num_filter_samples)
 
                 else:
                     logging.error("invalid algorithm: " + self.process_algorithm)
                     return
 
 
-                solution_mag = self.data.imu_data[i, Ic_data.MAG_INDEX, :, :]
+                solution_mag = self.data.imu_data[i, Data.MAG_INDEX, :, :]
 
                 if (solution_accel.shape != solution_gyro.shape or solution_accel.shape != solution_mag.shape):
                     logging.error("solution modalities don't have the same shape:")
@@ -153,7 +153,7 @@ class Ic_transform_dialog(PyQt5.QtWidgets.QWidget):
                 transformed_data[i, :, :, :] = numpy.stack([solution_accel, solution_gyro, solution_mag])
 
 
-            transformed_window = Ic_transformed_data_window(Ic_data.from_data('transformed', transformed_data))
+            transformed_window = Transformed_data_window(Data.from_data('transformed', transformed_data))
 
             transformed_window.update()
             transformed_window.activate_buttons()

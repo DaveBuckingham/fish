@@ -6,10 +6,10 @@ from pyquaternion import Quaternion
 from copy import copy
 
 from imucapture.global_data import *
-from imucapture.data import Ic_data
+from imucapture.data import Data
 
 
-class Ic_transform():
+class Transform():
     def __init__(self):
         pass
 
@@ -37,10 +37,10 @@ class Ic_transform():
         # where theta are the Euler angles
 
         # GET ACC IN MPS2
-        acc = data.imu_data[imu, Ic_data.ACCEL_INDEX, :, :].transpose()
+        acc = data.imu_data[imu, Data.ACCEL_INDEX, :, :].transpose()
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = data.imu_data[imu, Ic_data.GYRO_INDEX, :, :].transpose()
+        gyro = data.imu_data[imu, Data.GYRO_INDEX, :, :].transpose()
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -53,7 +53,7 @@ class Ic_transform():
         #time = time / 1000.0
 
         # COMPUTE TIME ARRAY IN SECONDS, ASSUME GLOBAL VALUE IS CORRECT
-        time = numpy.array(numpy.arange(0, data.num_samples*Ic_global_data.SECONDS_PER_SAMPLE, Ic_global_data.SECONDS_PER_SAMPLE))
+        time = numpy.array(numpy.arange(0, data.num_samples*Global_data.SECONDS_PER_SAMPLE, Global_data.SECONDS_PER_SAMPLE))
 
 
         bias_gyro = numpy.mean(calib.still_gyro, axis=0)
@@ -142,10 +142,10 @@ class Ic_transform():
     def get_orientation_madgwick(self, data, calib, imu, filter_num_samples, initwindow=0.5, beta=2.86):
 
         # GET ACC IN MPS2
-        acc = data.imu_data[imu, Ic_data.ACCEL_INDEX, :, :].transpose()
+        acc = data.imu_data[imu, Data.ACCEL_INDEX, :, :].transpose()
 
         # GET GYRO IN RADIANS PER SEC
-        gyro = data.imu_data[imu, Ic_data.GYRO_INDEX, :, :].transpose()
+        gyro = data.imu_data[imu, Data.GYRO_INDEX, :, :].transpose()
 
         # FILTER DATA
         acc  = self.filter(acc, filter_num_samples)
@@ -160,7 +160,7 @@ class Ic_transform():
         #time = time / 1000.0
 
         # COMPUTE TIME ARRAY IN SECONDS, ASSUME GLOBAL VALUE IS CORRECT
-        time = numpy.array(numpy.arange(0, data.num_samples*Ic_global_data.SECONDS_PER_SAMPLE, Ic_global_data.SECONDS_PER_SAMPLE))
+        time = numpy.array(numpy.arange(0, data.num_samples*Global_data.SECONDS_PER_SAMPLE, Global_data.SECONDS_PER_SAMPLE))
 
         qchip2world = Quaternion(matrix=calib.imu_bases[imu])
 

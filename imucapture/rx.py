@@ -7,11 +7,11 @@ import struct
 import logging
 import serial.tools.list_ports
 
-from imucapture.data import Ic_data
+from imucapture.data import Data
 
-from imucapture.global_data import Ic_global_data
+from imucapture.global_data import Global_data
 
-class Ic_rx():
+class Rx():
 
 
     COM_FLAG_START                  = 0x7E
@@ -111,7 +111,7 @@ class Ic_rx():
         val = None
 
         # WAIT FOR START OF FRAME
-        while (val != Ic_rx.COM_FLAG_START):
+        while (val != Rx.COM_FLAG_START):
             val = self.rx_byte()
             if (val == None):
                 logging.warning("rx failed, no data read from serial")
@@ -121,12 +121,12 @@ class Ic_rx():
         val = self.rx_byte()
 
         # READ, UNSTUFF, AND STORE PAYLOAD
-        while (val != Ic_rx.COM_FLAG_END):
-            if (val == Ic_rx.COM_FLAG_ESCAPE):
+        while (val != Rx.COM_FLAG_END):
+            if (val == Rx.COM_FLAG_ESCAPE):
                 val = self.rx_byte()
                 if (val == None):
                     return (None, None)
-                val = val ^ Ic_rx.COM_FLAG_XOR
+                val = val ^ Rx.COM_FLAG_XOR
             message.append(val)
             val = self.rx_byte()
             if (val == None):
@@ -173,10 +173,10 @@ class Ic_rx():
 
 
         # HANDSHAKE
-        self.tx_byte(Ic_rx.COM_SIGNAL_STOP)
+        self.tx_byte(Rx.COM_SIGNAL_STOP)
         time.sleep(2)
         self.connection.flushInput()
-        self.tx_byte(Ic_rx.COM_SIGNAL_HELLO)
+        self.tx_byte(Rx.COM_SIGNAL_HELLO)
 
         handshake_success = None
         handshake_attempts = 0
@@ -184,7 +184,7 @@ class Ic_rx():
         while (handshake_success is None):
             logging.info("attempting handshake")
             (message, message_type) = self.rx_packet()
-            if ((message_type is not None) and (message_type == Ic_rx.COM_PACKET_HELLO)):
+            if ((message_type is not None) and (message_type == Rx.COM_PACKET_HELLO)):
                 handshake_success = True
             else:
                 handshake_attempts += 1
@@ -192,10 +192,10 @@ class Ic_rx():
                 if (handshake_attempts > 4):
                     handshake_success = False
                 else:
-                    self.tx_byte(Ic_rx.COM_SIGNAL_STOP)
+                    self.tx_byte(Rx.COM_SIGNAL_STOP)
                     time.sleep(2)
                     self.connection.flushInput()
-                    self.tx_byte(Ic_rx.COM_SIGNAL_HELLO)
+                    self.tx_byte(Rx.COM_SIGNAL_HELLO)
 
         if (handshake_success):
             logging.info("handshake succesfull")

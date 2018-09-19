@@ -7,7 +7,7 @@ import struct
 import logging
 import serial.tools.list_ports
 
-from imucapture.rx import Ic_rx
+from imucapture.rx import Rx
 
 from imucapture.global_data import Global_data
 
@@ -19,22 +19,23 @@ except ImportError:
     QString = str
 
 
-class Ic_initialize(PyQt5.QtCore.QObject):
+class Initialize(PyQt5.QtCore.QObject):
 
     mag_asas = []
 
     finished_signal = PyQt5.QtCore.pyqtSignal()
+    success_signal = PyQt5.QtCore.pyqtSignal()
     numimus_signal = PyQt5.QtCore.pyqtSignal(int)
     asa_signal = PyQt5.QtCore.pyqtSignal(list)
 
 
     def __init__(self):
-        super(Ic_initialize, self).__init__()
+        super(Initialize, self).__init__()
 
 
     def initialize(self):
 
-        txrx = Ic_rx()
+        txrx = Rx()
 
         if (not txrx.open_connection()):
             logging.warning("failed to create connection, aborting initialization")
@@ -53,7 +54,7 @@ class Ic_initialize(PyQt5.QtCore.QObject):
         num_imus = 0
 
         (message, message_type) = txrx.rx_packet()
-        if (message_type == Ic_rx.COM_PACKET_NUMIMUS):
+        if (message_type == Rx.COM_PACKET_NUMIMUS):
             num_imus = message[0];
         else:
             txrx.close_connection()
@@ -77,16 +78,16 @@ class Ic_initialize(PyQt5.QtCore.QObject):
         logging.info("calculating magnetometer sensitivty adjustment...")
         mag_asas = []
         time.sleep(1)
-        txrx.tx_byte(Ic_rx.COM_SIGNAL_ASA)
+        txrx.tx_byte(Rx.COM_SIGNAL_ASA)
         time.sleep(1)
 
         for i in (range(0, num_imus)):
             (received, message_type) = txrx.rx_packet()
-            if ((message_type == Ic_rx.COM_PACKET_ASA) and (len(received) == 3)):
+            if ((message_type == Rx.COM_PACKET_ASA) and (len(received) == 3)):
                 asa = []
                 for j in (range(0, 3)):
                     asa.append((float(received[j] - 128.0) / 256.0) + 1.0)
-                    #asa.append(((float(received[j] - 128) / 256) + 1) * Ic_rx.MAGNETOMETER_SCALE_FACTOR)
+                    #asa.append(((float(received[j] - 128) / 256) + 1) * Rx.MAGNETOMETER_SCALE_FACTOR)
                 mag_asas.append(asa)
             else:
                 logging.warning("ASA read failed, using 1 adjustment")
@@ -98,6 +99,8 @@ class Ic_initialize(PyQt5.QtCore.QObject):
 
         txrx.close_connection()
 
+        print("CCCCCCCCCccc")
+        self.success_signal.emit()
         self.finished_signal.emit()
         return
 
@@ -110,12 +113,12 @@ class Ic_initialize(PyQt5.QtCore.QObject):
     # ACCEL RANGE SHOULD BE +=250dps (MPU6050)
     def test(self):
         self.open_connection()
-        self.tx_byte(Ic_rx.COM_SIGNAL_TEST)
+        self.tx_byte(Rx.COM_SIGNAL_TEST)
         time.sleep(1)
         (received, message_type) = self.rx_packet()
         self.close_connection()
 
-        if ((message_type == Ic_rx.COM_PACKET_TEST) and (len(received) == 6)):
+        if ((message_type == Rx.COM_PACKET_TEST) and (len(received) == 6)):
             return [bool(val) for val in received]
 
         else:

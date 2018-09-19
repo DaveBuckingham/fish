@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 
-from imucapture.data_window import Ic_data_window
+from imucapture.data_window import Data_window
 from imucapture.global_data import *
 
-class Ic_transformed_data_window(Ic_data_window):
+class Transformed_data_window(Data_window):
 
 
     FREQ_AVERAGE_WINDOW = 100

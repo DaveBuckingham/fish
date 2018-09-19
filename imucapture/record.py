@@ -7,10 +7,10 @@ import struct
 import logging
 import serial.tools.list_ports
 
-from imucapture.data import Ic_data
-from imucapture.rx import Ic_rx
+from imucapture.data import Data
+from imucapture.rx import Rx
 
-from imucapture.global_data import Ic_global_data
+from imucapture.global_data import Global_data
 
 import PyQt5.QtCore
 
@@ -20,13 +20,13 @@ except ImportError:
     QString = str
 
 
-class Ic_record(PyQt5.QtCore.QObject):
+class Record(PyQt5.QtCore.QObject):
 
 
     finished_signal = PyQt5.QtCore.pyqtSignal()
 
     def __init__(self, settings, data, mag_asas):
-        super(Ic_record, self).__init__()
+        super(Record, self).__init__()
 
         # CAN WE MOVE THIS INTO record()?
         self.recording = True
@@ -36,7 +36,7 @@ class Ic_record(PyQt5.QtCore.QObject):
         self.mag_asas = mag_asas
 
         self.sample_length = 4 + (18 * self.data.num_imus) + 1
-        #if (Ic_global_data.USE_ENCODER):
+        #if (Global_data.USE_ENCODER):
         #    self.sample_length += 2
 
         self.settings = settings
@@ -44,21 +44,21 @@ class Ic_record(PyQt5.QtCore.QObject):
         self.trigger_state = False
 
     def raw_accel_to_meters_per_second_squared(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        gs = Ic_rx.ACCEL_RANGE * (raw / Ic_rx.INT_MAX)
+        assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
+        gs = Rx.ACCEL_RANGE * (raw / Rx.INT_MAX)
         mps = gs * 9.80665
         return mps
 
     def raw_gyro_to_radians_per_second(self, raw):
-        assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        dps = Ic_rx.GYRO_RANGE * (raw / Ic_rx.INT_MAX)
+        assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
+        dps = Rx.GYRO_RANGE * (raw / Rx.INT_MAX)
         rps = dps * (math.pi / 180.0)
         return rps
 
     def raw_mag_to_microteslas(self, raw):
         return raw * 0.15
-        # assert((raw >= -Ic_rx.INT_MAX) and (raw < Ic_rx.INT_MAX))
-        # mt = Ic_rx.MAG_RANGE * (raw / Ic_rx.INT_MAX)
+        # assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
+        # mt = Rx.MAG_RANGE * (raw / Rx.INT_MAX)
         # return mt
 
 
@@ -66,7 +66,7 @@ class Ic_record(PyQt5.QtCore.QObject):
 
     def record(self):
 
-        txrx = Ic_rx()
+        txrx = Rx()
 
         if (not txrx.open_connection()):
             logging.warning("failed to create connection, aborting recording")
@@ -75,7 +75,7 @@ class Ic_record(PyQt5.QtCore.QObject):
 
         txrx.initialize_arduino()
 
-        txrx.tx_byte(Ic_rx.COM_SIGNAL_RUN)
+        txrx.tx_byte(Rx.COM_SIGNAL_RUN)
         logging.info("sent record command to arduino")
 
         # RESET TIMER
@@ -85,7 +85,7 @@ class Ic_record(PyQt5.QtCore.QObject):
 
             (received, message_type) = txrx.rx_packet()
 
-            if ((message_type == Ic_rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
+            if ((message_type == Rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
 
                 received = bytearray(received)
@@ -129,7 +129,7 @@ class Ic_record(PyQt5.QtCore.QObject):
                 if (not self.settings.rising_edge):
                     self.trigger_state = not self.trigger_state
 
-                #if (Ic_global_data.USE_ENCODER):
+                #if (Global_data.USE_ENCODER):
                 #    # TWO BYTES FOR ENCODER
                 #    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
                 #    enc *= 0.3515625  # 360/1024
@@ -140,7 +140,7 @@ class Ic_record(PyQt5.QtCore.QObject):
 
                 if (self.settings.use_trigger and self.trigger_state):
                     logging.info("received trigger")
-                    self.tx_byte(Ic_rx.COM_SIGNAL_STOP)
+                    self.tx_byte(Rx.COM_SIGNAL_STOP)
                     txrx.close_connection()
                     self.finished_signal.emit()
                     return()

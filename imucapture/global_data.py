@@ -7,7 +7,7 @@ class Global_data():
 
     # CONSTANTS
 
-    VERSION = '0.2.1'
+    VERSION = '0.2.2'
 
     USE_ENCODER = False
 
