@@ -1,5 +1,5 @@
 from cx_Freeze import setup, Executable
-from imucapture.ic_global import Ic_global
+from imucapture.global import Global
 
 buildOptions = dict(
     packages = [],
@@ -24,7 +24,7 @@ executables = [
 
 
 setup(name='imucapture',
-      version = Ic_global.VERSION,
+      version = Global.VERSION,
       description = 'Record data from IMU',
       options = dict(build_exe = buildOptions),
       executables = executables)
