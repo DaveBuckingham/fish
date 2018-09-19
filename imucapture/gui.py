@@ -330,7 +330,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
         self.buttons['record'].setEnabled(True)
 
     def initialize_success(self):
-        assert ((self.mag_asas is None) and (self.num_imus is None))
+        assert ((self.mag_asas is not None) and (self.num_imus is not None))
 
         self.recording = True
         self.buttons['record'].setText('Stop')

@@ -99,7 +99,6 @@ class Initialize(PyQt5.QtCore.QObject):
 
         txrx.close_connection()
 
-        print("CCCCCCCCCccc")
         self.success_signal.emit()
         self.finished_signal.emit()
         return

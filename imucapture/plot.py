@@ -45,7 +45,7 @@ class Plot(pg.PlotWidget):
         self.curve_z_blue  = self.plot([0,0], pen=(30, 60, 255, 210), name='z', downsampleMethod='peak', autoDownsample=True)
 
 
-        self.x_range = [x * Ic_global_data.SECONDS_PER_SAMPLE for x in range(0, Ic_global_data.DATA_BUFFER_MAX)]
+        self.x_range = [x * Global_data.SECONDS_PER_SAMPLE for x in range(0, Global_data.DATA_BUFFER_MAX)]
 
 
 

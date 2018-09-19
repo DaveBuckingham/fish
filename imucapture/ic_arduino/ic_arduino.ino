@@ -62,7 +62,7 @@
 #define SAMPLE_FREQ_HZ                            200            // attempted samples per second
 
 #define TRIGGER_PIN                               4
-#define MAX_CHIP_SELECTS                          3              // how many imus, 1 or 2.
+#define MAX_CHIP_SELECTS                          3              // maximum number of imus
 const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CHIP_SELECTS
 
 #define SERIAL_BUFF_LENGTH                        200            // buffer for serial com: response_len + room for byte stuffing
@@ -99,7 +99,7 @@ const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CH
 #define I2C_ADDRESS_MAG                           0x0C
 
 // MAG REGISTERS
-#define MAG_HXL                                   0x03           // beginning of mag 6 bytes of mag data
+#define MAG_HXL                                   0x03           // beginning of 6 bytes of mag data
 #define MAG_CNTL1                                 0x0A
 #define MAG_CNTL2                                 0x0B
 #define MAG_ASAX                                  0x10
