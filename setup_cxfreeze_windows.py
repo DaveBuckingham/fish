@@ -23,7 +23,7 @@ executables = [
 ]
 
 
-setup(name='imucapture',
+setup(name = 'imucapture_sfl' if Global_data.SMART_FILE_LOADING else 'imucapture',
       version = Global_data.VERSION,
       description = 'Record data from IMU',
       options = dict(build_exe = buildOptions),
