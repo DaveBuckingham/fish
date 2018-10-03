@@ -7,30 +7,25 @@ class Global_data():
 
     # CONSTANTS
 
+    APPLICATION_NAME = 'IMU-Capture'
     VERSION = '0.2.2'
-
-    USE_ENCODER = False
+    APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
 
     SAMPLE_FREQ_HZ = 200                             # EXPECTED SAMPLES PER SECOND
     SECONDS_PER_SAMPLE = 1 / SAMPLE_FREQ_HZ          # 0.005
     MS_PER_SAMPLE = int(SECONDS_PER_SAMPLE * 1000)   # 5, MUST BE AN INTEGER
 
-
-    APPLICATION_NAME = 'IMU-Capture'
-
-    here = os.path.abspath(os.path.dirname(__file__))
-
-    APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
-
     DATA_BUFFER_MIN = 1                  # >0
     DATA_BUFFER_MAX = 20000
 
 
+    # OPTIONAL FEATURES
+
+    USE_ENCODER = False
+    SMART_FILE_LOADING = True
+
 
     # VARIABLES
+
     data_window_list = []
-
-
-
-
     calibration = None

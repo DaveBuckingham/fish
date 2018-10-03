@@ -86,6 +86,167 @@ class Data(PyQt5.QtCore.QObject):
         logging.error("couldn't load file")
         return None
 
+
+
+
+
+
+    @classmethod
+    def from_file_smart(cls, filename):
+
+        start = time.time()
+
+        with h5py.File(filename, 'r') as datafile:
+            if datafile is None:
+                logging.error("couldn't load file")
+                return None
+
+
+            if ('data' in datafile):
+                root = datafile['data']
+            elif ('Data' in datafile):
+                root = datafile['Data']
+            else:
+                root = datafile
+
+            if ('imu0' in root):
+                no_imu_group = False
+            else:
+                no_imu_group = True
+
+
+            data = None
+            imu_index = 0
+            while (no_imu_group or ('imu' + str(imu_index) in root)):
+
+                if (no_imu_group):
+                    imu = root
+                else:
+                    imu = root['imu' + str(imu_index)]
+
+                no_imu_group = False
+
+                if ('accel' in imu):
+                    accel_data = imu['accel']
+                elif ('Accel' in imu):
+                    accel_data = imu['Accel']
+                elif ('acceleration' in imu):
+                    accel_data = imu['acceleration']
+                elif ('Acceleleration' in imu):
+                    accel_data = imu['Acceleration']
+                else:
+                    logging.error("couldn't load file: accel data not found")
+                    return None
+
+                if ('gyro' in imu):
+                    gyro_data = imu['gyro']
+                elif ('Gyro' in imu):
+                    gyro_data = imu['Gyro']
+                elif ('gyroscope' in imu):
+                    gyro_data = imu['gyroscope']
+                elif ('Gyroscope' in imu):
+                    gyro_data = imu['Gyroscope']
+                else:
+                    logging.error("couldn't load file: gyro data not found")
+                    return None
+
+                if ('mag' in imu):
+                    mag_data = imu['mag']
+                elif ('Mag' in imu):
+                    mag_data = imu['Mag']
+                elif ('magnetometer' in imu):
+                    mag_data = imu['magnetometer']
+                elif ('Magnetometer' in imu):
+                    mag_data = imu['Magnetometer']
+                else:
+                    mag_data = numpy.zeros_like(accel_data)
+
+                accel_data = accel_data[()]
+                gyro_data = gyro_data[()]
+                mag_data = mag_data[()]
+
+                if (accel_data.shape[1] == 3):
+                    accel_data = accel_data.transpose([1,0])
+                if (gyro_data.shape[1] == 3):
+                    gyro_data = gyro_data.transpose([1,0])
+                if (mag_data.shape[1] == 3):
+                    mag_data = mag_data.transpose([1,0])
+
+                if ('t' in root):
+                    timestamps = root['t'][()]
+
+
+                    # REMOVE LAST ENTRY IF TIMESTAMP == 0
+                    if (timestamps[-1] == 0):
+                        timestamps = numpy.delete(timestamps, -1, 0)
+                        accel_data = numpy.delete(accel_data, -1, 1)
+                        gyro_data = numpy.delete(gyro_data, -1, 1)
+                        mag_data = numpy.delete(mag_data, -1, 1)
+
+
+                    # REMOVE ALL ENTRIES WITH TIMESTAMP == 0
+                    # sample_index = timestamps.size - 1
+                    # while sample_index >= 0.0:
+                    #     if (timestamps[sample_index] == 0.0):
+                    #         timestamps = numpy.delete(timestamps, sample_index, 0)
+                    #         accel_data = numpy.delete(accel_data, sample_index, 1)
+                    #         gyro_data = numpy.delete(gyro_data, sample_index, 1)
+                    #         mag_data = numpy.delete(mag_data, sample_index, 1)
+                    #     sample_index -= 1
+
+
+                    if (any(x>=y for x, y in zip(timestamps, timestamps[1:]))):
+                        logging.error("couldn't load file: non-monotonic timestamps")
+                        return None
+
+                    # START TIMESTAMPS AT 0 AND CONVERT FROM NANOSECONDS TO MILLISECONDS
+                    start_time = timestamps[0]
+                    timestamps[:] = [(x - start_time) / 1000000 for x in timestamps]
+
+
+                    # TIMESTAMPS FOR PERFECT 200 HZ RECORDINGS
+                    desired_timestamps = numpy.arange(0, timestamps[-1], 5);
+
+
+                    interpolated_accel_data = numpy.empty([3, desired_timestamps.size])
+                    interpolated_gyro_data = numpy.empty([3, desired_timestamps.size])
+                    interpolated_mag_data = numpy.empty([3, desired_timestamps.size])
+                    for dimension_index in ([0,1,2]):
+                        interpolated_accel_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], accel_data[dimension_index,:])
+                        interpolated_gyro_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], gyro_data[dimension_index,:])
+                        interpolated_mag_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], mag_data[dimension_index,:])
+
+                    #accel_data = interpolated_accel_data
+                    #gyro_data = interpolated_gyro_data
+                    #mag_data = interpolated_mag_data
+
+
+                if (data == None):
+                    data = numpy.array([numpy.stack((accel_data, gyro_data, mag_data))])
+                else:
+                    data = numpy.append(data, numpy.stack((accel_data, gyro_data, mag_data)), 0)
+
+                imu_index += 1
+
+            if ('description' in root.attrs):
+                dataset_type = root.attrs['description']
+            else:
+                dataset_type = 'unknown'
+
+            if ((data.shape[1] != 3) or (data.shape[2] != 3)):
+                logging.error("couldn't load file: invalid data shape " + str(data.shape))
+                return None
+
+            return cls(dataset_type, data, data.shape[3])
+
+        logging.error("couldn't load file")
+        return None
+
+
+
+
+
+
     @classmethod
     def for_recording(cls, num_imus, max_samples):
         return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
@@ -109,17 +270,19 @@ class Data(PyQt5.QtCore.QObject):
 
 
     def set_dataset_type(self, data_type):
-        self.dataset_type = data_type
-        if(self.dataset_type == 'transformed'):
+        if(data_type == 'transformed'):
+            self.dataset_type = data_type
             self.accel_units_string = 'Dynamic acceleration (meters per second squared)'
             self.gyro_units_string  = 'Orientation (radians)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
-        elif(self.dataset_type == 'raw'):
+        elif(data_type == 'raw'):
+            self.dataset_type = data_type
             self.accel_units_string = 'Acceleration (meters per second squared)'
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'
         else:
-            logging.error("unknown dataset type: " + dataset_type + "assuming raw data")
+            logging.error("unknown dataset type: " + data_type + "assuming raw data")
+            self.dataset_type = 'raw'
             self.accel_units_string = 'Acceleration (meters per second squared)'
             self.gyro_units_string  = 'Gyroscope (radians per second)'
             self.mag_units_string   = 'Magnetometer (microteslas)'

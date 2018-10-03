@@ -228,7 +228,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
         options = PyQt5.QtWidgets.QFileDialog.Options() | PyQt5.QtWidgets.QFileDialog.DontUseNativeDialog
         filename, searchtype = PyQt5.QtWidgets.QFileDialog.getOpenFileName(parent=self,
                                                                        caption="Choose a file",
-                                                                       filter="*.hdf5",
+                                                                       filter="*.hdf5 *.h5",
                                                                        options=options)
 
         if filename:
@@ -237,11 +237,14 @@ class Gui(PyQt5.QtWidgets.QWidget):
 
             prefix, extension = os.path.splitext(filename)
 
-            if (extension != '.hdf5'):
+            if (not (extension == '.hdf5' or extension == '.h5')):
                 logging.error("invalid file extension: " + extension)
                 return
 
-            data = Data.from_file(filename)
+            if (Global_data.SMART_FILE_LOADING):
+                data = Data.from_file_smart(filename)
+            else:
+                data = Data.from_file(filename)
 
             if (data is not None):
 

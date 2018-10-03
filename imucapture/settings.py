@@ -34,17 +34,7 @@ class Settings(PyQt5.QtWidgets.QWidget):
         self.setMaximumWidth(300)
 
 
-        ########################################
-        #   HELPER FUNCTION: ENABLE A LAYOUT   #
-        ########################################
-        def enable_layout(layout, state):
-            items = (layout.itemAt(i) for i in range(layout.count())) 
-            for w in items:
-                if isinstance(w, PyQt5.QtWidgets.QLayout):
-                    Global_data.enable_layout(w, state)
-                else:
-                    w.widget().setEnabled(state)
-            
+           
 
 
         ########################################
@@ -75,7 +65,7 @@ class Settings(PyQt5.QtWidgets.QWidget):
         trigger_edge_box.setLayout(self.trigger_edge_layout)
 
 
-        enable_layout(self.trigger_edge_layout, self.use_trigger)
+        self.enable_layout(self.trigger_edge_layout, self.use_trigger)
 
 
 
@@ -133,11 +123,24 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
 
     ########################################
+    #   HELPER FUNCTION: ENABLE A LAYOUT   #
+    ########################################
+    def enable_layout(self, layout, state):
+        items = (layout.itemAt(i) for i in range(layout.count())) 
+        for w in items:
+            if isinstance(w, PyQt5.QtWidgets.QLayout):
+                Global_data.enable_layout(w, state)
+            else:
+                w.widget().setEnabled(state)
+
+
+
+    ########################################
     #        HANDLE TRIGGER CHECKBOX       #
     ########################################
     def toggle_trigger(self, state):
         self.use_trigger = not self.use_trigger
-        enable_layout(self.trigger_edge_layout, self.use_trigger)
+        self.enable_layout(self.trigger_edge_layout, self.use_trigger)
 
     def set_trigger_rising_edge(self):
         self.rising_edge = True
