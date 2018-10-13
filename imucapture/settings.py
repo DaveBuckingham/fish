@@ -5,6 +5,7 @@ import PyQt5.QtWidgets
 import PyQt5.QtGui
 
 from imucapture.global_data import Global_data
+from imucapture.txrx import Txrx
 
 class Settings(PyQt5.QtWidgets.QWidget):
 
@@ -16,11 +17,11 @@ class Settings(PyQt5.QtWidgets.QWidget):
         ########################################
         #              CONSTANTS               #
         ########################################
-        self.use_trigger = False
-        #self.invert_trigger = False
-        self.rising_edge = True
+        self.use_trigger = Txrx.NO_TRIGGER_EDGE
 
         self.data_buffer_len = int((Global_data.DATA_BUFFER_MAX - Global_data.DATA_BUFFER_MIN + 1) / 2)
+
+        self.trigger_delay = int((Global_data.TRIGGER_DELAY_MAX - Global_data.TRIGGER_DELAY_MIN + 1) / 2)
 
 
         ########################################
@@ -33,29 +34,29 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
         self.setMaximumWidth(300)
 
+        self.trigger_delay_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.data_buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
 
            
 
 
-        ########################################
-        #  CHECKBOX TO ENABLE/DISABLE TRIGGER  #
-        ########################################
-        trigger_checkbox = PyQt5.QtWidgets.QCheckBox('use trigger', self)
-        trigger_checkbox.setToolTip('Stop recording on trigger signal')
-        trigger_checkbox.stateChanged.connect(self.toggle_trigger)
-
-        #self.invert_checkbox = PyQt5.QtWidgets.QCheckBox('invert trigger', self)
-        #self.invert_checkbox.setToolTip('Trigger activates on pin low')
-        #self.invert_checkbox.stateChanged.connect(self.toggle_invert)
+        ############################################################
+        #  RADIO BUTTONS TO SET TRIGGER TO OFF, RISING, OR FALLING #
+        ############################################################
 
         trigger_edge_box = PyQt5.QtWidgets.QGroupBox()
         self.trigger_edge_layout = PyQt5.QtWidgets.QVBoxLayout()
+
+        radio = PyQt5.QtWidgets.QRadioButton("no trigger")
+        radio.setToolTip('Trigger is ignored')
+        radio.clicked.connect(self.set_trigger_off)
+        self.trigger_edge_layout.addWidget(radio)
+        radio.click()
 
         radio = PyQt5.QtWidgets.QRadioButton("rising edge")
         radio.setToolTip('Trigger is activated by a rising edge')
         radio.clicked.connect(self.set_trigger_rising_edge)
         self.trigger_edge_layout.addWidget(radio)
-        radio.click()
 
         radio = PyQt5.QtWidgets.QRadioButton("falling edge")
         radio.setToolTip('Trigger is activated by a falling edge')
@@ -64,11 +65,37 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
         trigger_edge_box.setLayout(self.trigger_edge_layout)
 
+        trigger_layout = PyQt5.QtWidgets.QHBoxLayout()
+        trigger_layout.addWidget(trigger_edge_box)
 
-        self.enable_layout(self.trigger_edge_layout, self.use_trigger)
+        ########################################
+        #        TRIGGER BUFFER SETTINGS       #
+        ########################################
 
+        # LABEL
+        trigger_delay_label = PyQt5.QtWidgets.QLabel("trigger delay")
+        #trigger_layout.addWidget(trigger_delay_label, 1, 1)
 
+        # SLIDER
+        #self.trigger_delay_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.trigger_delay_slider.setMinimum(Global_data.TRIGGER_DELAY_MIN)
+        self.trigger_delay_slider.setMaximum(Global_data.TRIGGER_DELAY_MAX)
+        self.trigger_delay_slider.setValue(self.trigger_delay)
+        self.trigger_delay_slider.valueChanged[int].connect(self.read_trigger_delay_slider_slot)
+        self.trigger_delay_slider.setToolTip('Set how many samples to collect after trigger')
+        #trigger_layout.addWidget(self.trigger_delay_slider, 2, 1)
 
+        # SECONDS
+        self.trigger_delay_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.trigger_delay * Global_data.MS_PER_SAMPLE) + " ms")
+        #trigger_layout.addWidget(self.trigger_delay_label_sec, 3, 1)
+
+        # TEXTBOX
+        self.trigger_delay_textbox = PyQt5.QtWidgets.QLineEdit(str(self.trigger_delay), self)
+        self.trigger_delay_textbox.setFixedWidth(60)
+        validator = PyQt5.QtGui.QIntValidator(Global_data.TRIGGER_DELAY_MIN, Global_data.TRIGGER_DELAY_MAX)
+        self.trigger_delay_textbox.setValidator(validator)
+        self.trigger_delay_textbox.editingFinished.connect(self.read_trigger_delay_text_slot)
+        #trigger_layout.addWidget(self.trigger_delay_textbox, 2, 2)
 
 
 
@@ -78,39 +105,34 @@ class Settings(PyQt5.QtWidgets.QWidget):
         ########################################
 
         # LAYOUT
-        buffer_layout = PyQt5.QtWidgets.QGridLayout()
+        data_buffer_layout = PyQt5.QtWidgets.QGridLayout()
 
         # LABEL
-        buffer_label = PyQt5.QtWidgets.QLabel("data buffer size")
-        buffer_layout.addWidget(buffer_label, 1, 1)
+        data_buffer_label = PyQt5.QtWidgets.QLabel("data buffer size")
+        data_buffer_layout.addWidget(data_buffer_label, 1, 1)
 
         # SLIDER
-        self.buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.buffer_slider.setMinimum(Global_data.DATA_BUFFER_MIN)
-        self.buffer_slider.setMaximum(Global_data.DATA_BUFFER_MAX)
-        self.buffer_slider.setValue(self.data_buffer_len)
-        self.buffer_slider.valueChanged[int].connect(self.read_buffer_slider_slot)
-        self.buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
-        buffer_layout.addWidget(self.buffer_slider, 2, 1)
+        #self.data_buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.data_buffer_slider.setMinimum(Global_data.DATA_BUFFER_MIN)
+        self.data_buffer_slider.setMaximum(Global_data.DATA_BUFFER_MAX)
+        self.data_buffer_slider.setValue(self.data_buffer_len)
+        self.data_buffer_slider.valueChanged[int].connect(self.read_data_buffer_slider_slot)
+        self.data_buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
+        data_buffer_layout.addWidget(self.data_buffer_slider, 2, 1)
 
         # SECONDS
-        self.buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Global_data.MS_PER_SAMPLE) + " ms")
-        buffer_layout.addWidget(self.buffer_label_sec, 3, 1)
+        self.data_buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Global_data.MS_PER_SAMPLE) + " ms")
+        data_buffer_layout.addWidget(self.data_buffer_label_sec, 3, 1)
 
         # TEXTBOX
-        self.buffer_textbox = PyQt5.QtWidgets.QLineEdit(str(self.data_buffer_len), self)
-        #self.buffer_textbox.setMaximumWidth(50)
-        self.buffer_textbox.setFixedWidth(60)
+        self.data_buffer_textbox = PyQt5.QtWidgets.QLineEdit(str(self.data_buffer_len), self)
+        self.data_buffer_textbox.setFixedWidth(60)
         validator = PyQt5.QtGui.QIntValidator(Global_data.DATA_BUFFER_MIN, Global_data.DATA_BUFFER_MAX)
-        self.buffer_textbox.setValidator(validator)
-        self.buffer_textbox.editingFinished.connect(self.read_buffer_text_slot)
-        buffer_layout.addWidget(self.buffer_textbox, 2, 2)
+        self.data_buffer_textbox.setValidator(validator)
+        self.data_buffer_textbox.editingFinished.connect(self.read_data_buffer_text_slot)
+        data_buffer_layout.addWidget(self.data_buffer_textbox, 2, 2)
 
 
-        trigger_layout = PyQt5.QtWidgets.QHBoxLayout()
-        trigger_layout.addWidget(trigger_checkbox)
-        #trigger_layout.addWidget(self.invert_checkbox)
-        trigger_layout.addWidget(trigger_edge_box)
 
 
         ########################################
@@ -118,13 +140,13 @@ class Settings(PyQt5.QtWidgets.QWidget):
         ########################################
         top_layout = PyQt5.QtWidgets.QVBoxLayout()
         top_layout.addLayout(trigger_layout)
-        top_layout.addLayout(buffer_layout)
+        top_layout.addLayout(data_buffer_layout)
         self.setLayout(top_layout)
 
 
-    ########################################
-    #   HELPER FUNCTION: ENABLE A LAYOUT   #
-    ########################################
+    ###################################################
+    #   HELPER FUNCTION: ENABLE OR DISABLE A LAYOUT   #
+    ###################################################
     def enable_layout(self, layout, state):
         items = (layout.itemAt(i) for i in range(layout.count())) 
         for w in items:
@@ -136,27 +158,48 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
 
     ########################################
-    #        HANDLE TRIGGER CHECKBOX       #
+    #        HANDLE TRIGGER RADIOS         #
     ########################################
-    def toggle_trigger(self, state):
-        self.use_trigger = not self.use_trigger
-        self.enable_layout(self.trigger_edge_layout, self.use_trigger)
+
+    def set_trigger_off(self):
+        self.use_trigger = Txrx.NO_TRIGGER_EDGE
+        self.trigger_delay_slider.setEnabled(False)
 
     def set_trigger_rising_edge(self):
-        self.rising_edge = True
+        self.use_trigger = Txrx.RISING_TRIGGER_EDGE
+        self.trigger_delay_slider.setEnabled(True)
 
     def set_trigger_falling_edge(self):
-        self.rising_edge = False
+        self.use_trigger = Txrx.FALLING_TRIGGER_EDGE
+        self.trigger_delay_slider.setEnabled(True)
 
 
-    #def toggle_invert(self, state):
-    #    self.invert_trigger = not self.invert_trigger
+    ########################################
+    #       HANDLE TRIGGER SLIDER CHANGES  #
+    ########################################
+    def read_trigger_delay_slider_slot(self, val):
+        self.trigger_delay = val
+        self.trigger_delay_textbox.setText(str(self.trigger_delay))
+        # SHOULD READ FREQ FROM GLOBAL!
+        self.trigger_delay_label_sec.setText('= approx. ' + str(self.trigger_delay * 5) + ' ms')
+
+
+    ########################################
+    #       HANDLE TRIGGER TEXTBOX ENTRY   #
+    ########################################
+    def read_trigger_delay_text_slot(self):
+        val = int(self.trigger_delay_textbox.text())
+        self.trigger_delay = val
+        self.trigger_delay_slider.setValue(self.trigger_delay)
+        self.trigger_delay_label_sec.setText('= approx. ' + str(self.trigger_delay * 5) + ' ms')
+
+
 
           
     ########################################
-    #        HANDLE SLIDER CHANGES         #
+    #        HANDLE BUFFER SLIDER CHANGES  #
     ########################################
-    def read_buffer_slider_slot(self, val):
+    def read_data_buffer_slider_slot(self, val):
         self.data_buffer_len = val
         self.buffer_textbox.setText(str(self.data_buffer_len))
         # SHOULD READ FREQ FROM GLOBAL!
@@ -165,9 +208,9 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
 
     ########################################
-    #        HANDLE TEXTBOX ENTRY          #
+    #        HANDLE BUFFER TEXTBOX ENTRY   #
     ########################################
-    def read_buffer_text_slot(self):
+    def read_data_buffer_text_slot(self):
         val = int(self.buffer_textbox.text())
         self.data_buffer_len = val
         self.buffer_slider.setValue(self.data_buffer_len)

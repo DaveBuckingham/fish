@@ -43,6 +43,10 @@ class Txrx():
     GYRO_RANGE                      = 250     # +-. DEGREES PER SECOND. SET BY ARDUINO CODE
     MAG_RANGE                       = 4800    # +-. MICRO TESLAS. CAN'T BE SET. MAYBE 4900?
 
+    NO_TRIGGER_EDGE                 = 0x01
+    RISING_TRIGGER_EDGE             = 0x02
+    FALLING_TRIGGER_EDGE            = 0x03
+
     # USED FOR DEBUGGING
     codes = {str(COM_PACKET_NUMIMUS): 'COM_PACKET_NUMIMUS', 
              str(COM_PACKET_SAMPLE):  'COM_PACKET_SAMPLE', 

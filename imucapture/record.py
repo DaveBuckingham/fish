@@ -8,7 +8,7 @@ import logging
 import serial.tools.list_ports
 
 from imucapture.data import Data
-from imucapture.rx import Txrx
+from imucapture.txrx import Txrx
 
 from imucapture.global_data import Global_data
 
@@ -41,7 +41,8 @@ class Record(PyQt5.QtCore.QObject):
 
         self.settings = settings
 
-        self.trigger_state = False
+        self.trigger_edge = Txrx.NO_TRIGGER_EDGE
+        self.trigger_timeout_counter = -1
 
     def raw_accel_to_meters_per_second_squared(self, raw):
         assert((raw >= -Txrx.INT_MAX) and (raw < Txrx.INT_MAX))
@@ -83,6 +84,18 @@ class Record(PyQt5.QtCore.QObject):
 
         while (self.recording):
 
+            # HALT IF TRIGGER TIMEOUT ELAPSED
+            if (self.triger_timeout_counter == 0):
+                logging.info("trigger timeout elapsed")
+                txrx.tx_byte(Txrx.COM_SIGNAL_STOP)
+                txrx.close_connection()
+                self.finished_signal.emit()
+                return()
+
+            # DECREMENT TRIGGER TIMEOUT COUNTER
+            if (self.trigger_timeout_counter >= 0):
+                self.trigger_timeout_counter -= 1
+
             (received, message_type) = txrx.rx_packet()
 
             if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
@@ -111,7 +124,7 @@ class Record(PyQt5.QtCore.QObject):
                     (ax, ay, az) = map(self.raw_accel_to_meters_per_second_squared, (ax, ay, az))
                     (gx, gy, gz) = map(self.raw_gyro_to_radians_per_second, (gx, gy, gz))
 
-                    # I'M NOT SURE WHICH IF THESE SHOULD BE FIRST
+                    # I'M NOT SURE WHICH OF THESE SHOULD BE FIRST
                     # ASA FIRST, THEN SCALE BY 0.15 SEEMS TO PRODUCE APPROPRIATE VALUES
                     # I.E. BETWEEN 25 AND 65 MICROTESLAS AT EARTHS SURFACE ACCORDING TO WIKIPEDIA
                     (mx, my, mz) = [(mx, my, mz)[j] * self.mag_asas[i][j] for j in range(3)]
@@ -124,10 +137,10 @@ class Record(PyQt5.QtCore.QObject):
                 trigger_start = 4 + (self.data.num_imus * 18)
 
                 # ONE BYTE FOR TRIGGER
-                (self.trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
+                (self.trigger_edge,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
 
-                if (not self.settings.rising_edge):
-                    self.trigger_state = not self.trigger_state
+                #if (not self.settings.rising_edge):
+                #    self.trigger_state = not self.trigger_state
 
                 #if (Global_data.USE_ENCODER):
                 #    # TWO BYTES FOR ENCODER
@@ -138,12 +151,10 @@ class Record(PyQt5.QtCore.QObject):
                 self.data.add_sample(sample)
 
 
-                if (self.settings.use_trigger and self.trigger_state):
+                if ((self.settings.use_trigger != Txrx.NO_TRIGGER_EDGE) and (self.settings.use_trigger == self.trigger_edge)):
                     logging.info("received trigger")
-                    txrx.tx_byte(Txrx.COM_SIGNAL_STOP)
-                    txrx.close_connection()
-                    self.finished_signal.emit()
-                    return()
+                    self.trigger_timeout_counter = self.settings.trigger_delay
+
 
             #else:
                 #logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))

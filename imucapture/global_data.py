@@ -18,6 +18,9 @@ class Global_data():
     DATA_BUFFER_MIN = 1                  # >0
     DATA_BUFFER_MAX = 20000
 
+    TRIGGER_DELAY_MIN = 1                  # >0
+    TRIGGER_DELAY_MAX = 20000
+
 
     # OPTIONAL FEATURES
 

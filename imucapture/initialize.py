@@ -7,7 +7,7 @@ import struct
 import logging
 import serial.tools.list_ports
 
-from imucapture.rx import Txrx
+from imucapture.txrx import Txrx
 
 from imucapture.global_data import Global_data
 
