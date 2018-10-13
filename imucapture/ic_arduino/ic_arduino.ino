@@ -54,8 +54,6 @@
 //            CONSTANTS                //
 /////////////////////////////////////////
 
-#define DEL                                       1 
-
 //#define USE_ENCODER
 
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
@@ -237,6 +235,7 @@ int read_encoder() {
 
 
 
+// NOTE: THIS DOESN'T WORK.
 // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
 // IMPLEMENTATION FROM "MPU-6500 ACCELEROMETER AND GYROSCOPE SELF-TEST IMPLEMENTATION.
 // ACCORDING TO INVENSENSE TECH SUPPORT THIS PROCEDURE APPLIES TO MPU-9250.
@@ -581,9 +580,9 @@ void tx_asa(){
         write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);
         write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_ASAX);
         write_register(imu_select[i], REG_I2C_SLV0_CTRL, 3 | ENABLE_SLAVE_FLAG);
-        delay(DEL);
+        delay(1);
         read_multiple_registers(imu_select[i], REG_EXT_SENS_DATA_00, response, 3);
-        delay(DEL);
+        delay(1);
         tx_packet(response, 3, COM_PACKET_ASA);
     }
 }

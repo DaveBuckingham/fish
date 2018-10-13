@@ -22,7 +22,7 @@ class Global_data():
     # OPTIONAL FEATURES
 
     USE_ENCODER = False
-    SMART_FILE_LOADING = True
+    SMART_FILE_LOADING = False
 
 
     # VARIABLES

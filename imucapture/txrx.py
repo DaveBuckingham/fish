@@ -11,7 +11,7 @@ from imucapture.data import Data
 
 from imucapture.global_data import Global_data
 
-class Rx():
+class Txrx():
 
 
     COM_FLAG_START                  = 0x7E
@@ -111,7 +111,7 @@ class Rx():
         val = None
 
         # WAIT FOR START OF FRAME
-        while (val != Rx.COM_FLAG_START):
+        while (val != Txrx.COM_FLAG_START):
             val = self.rx_byte()
             if (val == None):
                 logging.warning("rx failed, no data read from serial")
@@ -121,12 +121,12 @@ class Rx():
         val = self.rx_byte()
 
         # READ, UNSTUFF, AND STORE PAYLOAD
-        while (val != Rx.COM_FLAG_END):
-            if (val == Rx.COM_FLAG_ESCAPE):
+        while (val != Txrx.COM_FLAG_END):
+            if (val == Txrx.COM_FLAG_ESCAPE):
                 val = self.rx_byte()
                 if (val == None):
                     return (None, None)
-                val = val ^ Rx.COM_FLAG_XOR
+                val = val ^ Txrx.COM_FLAG_XOR
             message.append(val)
             val = self.rx_byte()
             if (val == None):
@@ -173,10 +173,10 @@ class Rx():
 
 
         # HANDSHAKE
-        self.tx_byte(Rx.COM_SIGNAL_STOP)
+        self.tx_byte(Txrx.COM_SIGNAL_STOP)
         time.sleep(2)
         self.connection.flushInput()
-        self.tx_byte(Rx.COM_SIGNAL_HELLO)
+        self.tx_byte(Txrx.COM_SIGNAL_HELLO)
 
         handshake_success = None
         handshake_attempts = 0
@@ -184,7 +184,7 @@ class Rx():
         while (handshake_success is None):
             logging.info("attempting handshake")
             (message, message_type) = self.rx_packet()
-            if ((message_type is not None) and (message_type == Rx.COM_PACKET_HELLO)):
+            if ((message_type is not None) and (message_type == Txrx.COM_PACKET_HELLO)):
                 handshake_success = True
             else:
                 handshake_attempts += 1
@@ -192,10 +192,10 @@ class Rx():
                 if (handshake_attempts > 4):
                     handshake_success = False
                 else:
-                    self.tx_byte(Rx.COM_SIGNAL_STOP)
+                    self.tx_byte(Txrx.COM_SIGNAL_STOP)
                     time.sleep(2)
                     self.connection.flushInput()
-                    self.tx_byte(Rx.COM_SIGNAL_HELLO)
+                    self.tx_byte(Txrx.COM_SIGNAL_HELLO)
 
         if (handshake_success):
             logging.info("handshake succesfull")

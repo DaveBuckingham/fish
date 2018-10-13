@@ -8,7 +8,7 @@ import logging
 import serial.tools.list_ports
 
 from imucapture.data import Data
-from imucapture.rx import Rx
+from imucapture.rx import Txrx
 
 from imucapture.global_data import Global_data
 
@@ -44,21 +44,21 @@ class Record(PyQt5.QtCore.QObject):
         self.trigger_state = False
 
     def raw_accel_to_meters_per_second_squared(self, raw):
-        assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
-        gs = Rx.ACCEL_RANGE * (raw / Rx.INT_MAX)
+        assert((raw >= -Txrx.INT_MAX) and (raw < Txrx.INT_MAX))
+        gs = Txrx.ACCEL_RANGE * (raw / Txrx.INT_MAX)
         mps = gs * 9.80665
         return mps
 
     def raw_gyro_to_radians_per_second(self, raw):
-        assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
-        dps = Rx.GYRO_RANGE * (raw / Rx.INT_MAX)
+        assert((raw >= -Txrx.INT_MAX) and (raw < Txrx.INT_MAX))
+        dps = Txrx.GYRO_RANGE * (raw / Txrx.INT_MAX)
         rps = dps * (math.pi / 180.0)
         return rps
 
     def raw_mag_to_microteslas(self, raw):
         return raw * 0.15
-        # assert((raw >= -Rx.INT_MAX) and (raw < Rx.INT_MAX))
-        # mt = Rx.MAG_RANGE * (raw / Rx.INT_MAX)
+        # assert((raw >= -Txrx.INT_MAX) and (raw < Txrx.INT_MAX))
+        # mt = Txrx.MAG_RANGE * (raw / Txrx.INT_MAX)
         # return mt
 
 
@@ -66,7 +66,7 @@ class Record(PyQt5.QtCore.QObject):
 
     def record(self):
 
-        txrx = Rx()
+        txrx = Txrx()
 
         if (not txrx.open_connection()):
             logging.warning("failed to create connection, aborting recording")
@@ -75,7 +75,7 @@ class Record(PyQt5.QtCore.QObject):
 
         txrx.initialize_arduino()
 
-        txrx.tx_byte(Rx.COM_SIGNAL_RUN)
+        txrx.tx_byte(Txrx.COM_SIGNAL_RUN)
         logging.info("sent record command to arduino")
 
         # RESET TIMER
@@ -85,7 +85,7 @@ class Record(PyQt5.QtCore.QObject):
 
             (received, message_type) = txrx.rx_packet()
 
-            if ((message_type == Rx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
+            if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
 
                 received = bytearray(received)
@@ -140,7 +140,7 @@ class Record(PyQt5.QtCore.QObject):
 
                 if (self.settings.use_trigger and self.trigger_state):
                     logging.info("received trigger")
-                    self.tx_byte(Rx.COM_SIGNAL_STOP)
+                    txrx.tx_byte(Txrx.COM_SIGNAL_STOP)
                     txrx.close_connection()
                     self.finished_signal.emit()
                     return()

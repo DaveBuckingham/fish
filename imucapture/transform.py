@@ -303,7 +303,7 @@ class Transform():
         Ry_pitch = numpy.array([[numpy.cos(theta),    0,              -numpy.sin(theta)],
                              [0,                1,              0],
                              [numpy.sin(theta),    0,              numpy.cos(theta)]])
-        Rx_roll =  numpy.array([[1,                0,              0],
+        Txrx_roll =  numpy.array([[1,                0,              0],
                              [0,                numpy.cos(phi),    numpy.sin(phi)],
                              [0,                -numpy.sin(phi),   numpy.cos(phi)]])
 
@@ -314,14 +314,14 @@ class Transform():
         Ry_pitch_rate = numpy.array([[-numpy.sin(theta),  0,              -numpy.cos(theta)],
                                   [0,               0,              0],
                                   [numpy.cos(theta),   0,              -numpy.sin(theta)]])
-        Rx_roll_rate =  numpy.array([[0,               0,              0],
+        Txrx_roll_rate =  numpy.array([[0,               0,              0],
                                   [0,               -numpy.sin(phi),   numpy.cos(phi)],
                                   [0,               -numpy.cos(phi),   -numpy.sin(phi)]])
 
-        QT       = Rx_roll.dot(Ry_pitch).dot(Rz_yaw)
-        QT_roll  = Rx_roll_rate.dot(Ry_pitch).dot(Rz_yaw)
-        QT_pitch = Rx_roll.dot(Ry_pitch_rate).dot(Rz_yaw)
-        QT_yaw   = Rx_roll.dot(Ry_pitch).dot(Rz_yaw_rate)
+        QT       = Txrx_roll.dot(Ry_pitch).dot(Rz_yaw)
+        QT_roll  = Txrx_roll_rate.dot(Ry_pitch).dot(Rz_yaw)
+        QT_pitch = Txrx_roll.dot(Ry_pitch_rate).dot(Rz_yaw)
+        QT_yaw   = Txrx_roll.dot(Ry_pitch).dot(Rz_yaw_rate)
 
         Jh = numpy.vstack((QT_roll.dot(gN), QT_pitch.dot(gN), QT_yaw.dot(gN), numpy.zeros((3, 3)),
                            numpy.eye(3), numpy.zeros((3, 3)))).T
@@ -349,11 +349,11 @@ def eul2rotm(x):
     Ry_pitch = numpy.array([[numpy.cos(theta), 0,               -numpy.sin(theta)],
                             [0,                1,               0                ],
                             [numpy.sin(theta), 0,               numpy.cos(theta) ]])
-    Rx_roll =  numpy.array([[1,                0,               0                ],
+    Txrx_roll =  numpy.array([[1,              0,               0                ],
                             [0,                numpy.cos(phi),  numpy.sin(phi)   ],
                             [0,                -numpy.sin(phi), numpy.cos(phi)   ]])
 
-    return Rx_roll.dot(Ry_pitch.dot(Rz_yaw))
+    return Txrx_roll.dot(Ry_pitch.dot(Rz_yaw))
 
 
 def rotm2eul(rotm, singularity=0.001):
