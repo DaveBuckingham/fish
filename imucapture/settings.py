@@ -9,18 +9,16 @@ from imucapture.txrx import Txrx
 
 class Settings(PyQt5.QtWidgets.QWidget):
 
-    buffer_length_signal = PyQt5.QtCore.pyqtSignal(int)
+    data_buffer_length_signal = PyQt5.QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None):
 
 
         ########################################
-        #              CONSTANTS               #
+        #              VARIABLES               #
         ########################################
         self.use_trigger = Txrx.NO_TRIGGER_EDGE
-
         self.data_buffer_len = int((Global_data.DATA_BUFFER_MAX - Global_data.DATA_BUFFER_MIN + 1) / 2)
-
         self.trigger_delay = int((Global_data.TRIGGER_DELAY_MAX - Global_data.TRIGGER_DELAY_MIN + 1) / 2)
 
 
@@ -36,37 +34,37 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
         self.trigger_delay_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.data_buffer_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.trigger_delay_textbox = PyQt5.QtWidgets.QLineEdit(str(self.trigger_delay), self)
 
            
+        ########################################
+        #        TRIGGER RADIO BUTTONS         #
+        ########################################
 
-
-        ############################################################
-        #  RADIO BUTTONS TO SET TRIGGER TO OFF, RISING, OR FALLING #
-        ############################################################
+        trigger_layout = PyQt5.QtWidgets.QGridLayout()
 
         trigger_edge_box = PyQt5.QtWidgets.QGroupBox()
-        self.trigger_edge_layout = PyQt5.QtWidgets.QVBoxLayout()
+        self.trigger_radio_layout = PyQt5.QtWidgets.QVBoxLayout()
 
         radio = PyQt5.QtWidgets.QRadioButton("no trigger")
         radio.setToolTip('Trigger is ignored')
         radio.clicked.connect(self.set_trigger_off)
-        self.trigger_edge_layout.addWidget(radio)
+        self.trigger_radio_layout.addWidget(radio)
         radio.click()
 
         radio = PyQt5.QtWidgets.QRadioButton("rising edge")
         radio.setToolTip('Trigger is activated by a rising edge')
         radio.clicked.connect(self.set_trigger_rising_edge)
-        self.trigger_edge_layout.addWidget(radio)
+        self.trigger_radio_layout.addWidget(radio)
 
         radio = PyQt5.QtWidgets.QRadioButton("falling edge")
         radio.setToolTip('Trigger is activated by a falling edge')
         radio.clicked.connect(self.set_trigger_falling_edge)
-        self.trigger_edge_layout.addWidget(radio)
+        self.trigger_radio_layout.addWidget(radio)
 
-        trigger_edge_box.setLayout(self.trigger_edge_layout)
+        trigger_edge_box.setLayout(self.trigger_radio_layout)
+        trigger_layout.addWidget(trigger_edge_box, 1, 1, 1, 2)
 
-        trigger_layout = PyQt5.QtWidgets.QHBoxLayout()
-        trigger_layout.addWidget(trigger_edge_box)
 
         ########################################
         #        TRIGGER BUFFER SETTINGS       #
@@ -74,28 +72,34 @@ class Settings(PyQt5.QtWidgets.QWidget):
 
         # LABEL
         trigger_delay_label = PyQt5.QtWidgets.QLabel("trigger delay")
-        #trigger_layout.addWidget(trigger_delay_label, 1, 1)
+        trigger_layout.addWidget(trigger_delay_label, 2, 1, PyQt5.QtCore.Qt.AlignLeft)
 
         # SLIDER
-        #self.trigger_delay_slider = PyQt5.QtWidgets.QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.trigger_delay_slider.setMinimum(Global_data.TRIGGER_DELAY_MIN)
         self.trigger_delay_slider.setMaximum(Global_data.TRIGGER_DELAY_MAX)
         self.trigger_delay_slider.setValue(self.trigger_delay)
         self.trigger_delay_slider.valueChanged[int].connect(self.read_trigger_delay_slider_slot)
         self.trigger_delay_slider.setToolTip('Set how many samples to collect after trigger')
-        #trigger_layout.addWidget(self.trigger_delay_slider, 2, 1)
+        trigger_layout.addWidget(self.trigger_delay_slider, 2, 2, PyQt5.QtCore.Qt.AlignRight)
 
-        # SECONDS
-        self.trigger_delay_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.trigger_delay * Global_data.MS_PER_SAMPLE) + " ms")
-        #trigger_layout.addWidget(self.trigger_delay_label_sec, 3, 1)
+        trigger_textbox_layout = PyQt5.QtWidgets.QHBoxLayout()
 
         # TEXTBOX
-        self.trigger_delay_textbox = PyQt5.QtWidgets.QLineEdit(str(self.trigger_delay), self)
         self.trigger_delay_textbox.setFixedWidth(60)
         validator = PyQt5.QtGui.QIntValidator(Global_data.TRIGGER_DELAY_MIN, Global_data.TRIGGER_DELAY_MAX)
         self.trigger_delay_textbox.setValidator(validator)
         self.trigger_delay_textbox.editingFinished.connect(self.read_trigger_delay_text_slot)
-        #trigger_layout.addWidget(self.trigger_delay_textbox, 2, 2)
+        trigger_textbox_layout.addWidget(self.trigger_delay_textbox)
+
+        # SECONDS
+        self.trigger_delay_label_sec = PyQt5.QtWidgets.QLabel("samples = " + str(Global_data.TRIGGER_DELAY_MAX * Global_data.MS_PER_SAMPLE) + " ms")
+        self.trigger_delay_label_sec.setMinimumSize(self.trigger_delay_label_sec.sizeHint())
+        self.trigger_delay_label_sec.setText('samples = ' + str(self.trigger_delay * Global_data.MS_PER_SAMPLE) + ' ms')
+        trigger_textbox_layout.addWidget(self.trigger_delay_label_sec)
+
+        trigger_layout.addLayout(trigger_textbox_layout, 3, 1, 1, 2)
+
+        trigger_layout.setColumnStretch(1, 1)
 
 
 
@@ -118,11 +122,9 @@ class Settings(PyQt5.QtWidgets.QWidget):
         self.data_buffer_slider.setValue(self.data_buffer_len)
         self.data_buffer_slider.valueChanged[int].connect(self.read_data_buffer_slider_slot)
         self.data_buffer_slider.setToolTip('Set how many measurements the data buffer can hold')
-        data_buffer_layout.addWidget(self.data_buffer_slider, 2, 1)
+        data_buffer_layout.addWidget(self.data_buffer_slider, 1, 2)
 
-        # SECONDS
-        self.data_buffer_label_sec = PyQt5.QtWidgets.QLabel("= approx. " + str(self.data_buffer_len * Global_data.MS_PER_SAMPLE) + " ms")
-        data_buffer_layout.addWidget(self.data_buffer_label_sec, 3, 1)
+        data_buffer_textbox_layout = PyQt5.QtWidgets.QHBoxLayout()
 
         # TEXTBOX
         self.data_buffer_textbox = PyQt5.QtWidgets.QLineEdit(str(self.data_buffer_len), self)
@@ -130,9 +132,15 @@ class Settings(PyQt5.QtWidgets.QWidget):
         validator = PyQt5.QtGui.QIntValidator(Global_data.DATA_BUFFER_MIN, Global_data.DATA_BUFFER_MAX)
         self.data_buffer_textbox.setValidator(validator)
         self.data_buffer_textbox.editingFinished.connect(self.read_data_buffer_text_slot)
-        data_buffer_layout.addWidget(self.data_buffer_textbox, 2, 2)
+        data_buffer_textbox_layout.addWidget(self.data_buffer_textbox)
 
+        # SECONDS
+        self.data_buffer_label_sec = PyQt5.QtWidgets.QLabel("samples = " + str(Global_data.DATA_BUFFER_MAX * Global_data.MS_PER_SAMPLE) + " ms")
+        self.data_buffer_label_sec.setMinimumSize(self.data_buffer_label_sec.sizeHint())
+        self.data_buffer_label_sec.setText('samples = ' + str(self.data_buffer_len * Global_data.MS_PER_SAMPLE) + ' ms')
+        data_buffer_textbox_layout.addWidget(self.data_buffer_label_sec)
 
+        data_buffer_layout.addLayout(data_buffer_textbox_layout, 2, 1, 1, 2)
 
 
         ########################################
@@ -156,7 +164,6 @@ class Settings(PyQt5.QtWidgets.QWidget):
                 w.widget().setEnabled(state)
 
 
-
     ########################################
     #        HANDLE TRIGGER RADIOS         #
     ########################################
@@ -164,14 +171,17 @@ class Settings(PyQt5.QtWidgets.QWidget):
     def set_trigger_off(self):
         self.use_trigger = Txrx.NO_TRIGGER_EDGE
         self.trigger_delay_slider.setEnabled(False)
+        self.trigger_delay_textbox.setEnabled(False)
 
     def set_trigger_rising_edge(self):
         self.use_trigger = Txrx.RISING_TRIGGER_EDGE
         self.trigger_delay_slider.setEnabled(True)
+        self.trigger_delay_textbox.setEnabled(True)
 
     def set_trigger_falling_edge(self):
         self.use_trigger = Txrx.FALLING_TRIGGER_EDGE
         self.trigger_delay_slider.setEnabled(True)
+        self.trigger_delay_textbox.setEnabled(True)
 
 
     ########################################
@@ -181,7 +191,7 @@ class Settings(PyQt5.QtWidgets.QWidget):
         self.trigger_delay = val
         self.trigger_delay_textbox.setText(str(self.trigger_delay))
         # SHOULD READ FREQ FROM GLOBAL!
-        self.trigger_delay_label_sec.setText('= approx. ' + str(self.trigger_delay * 5) + ' ms')
+        self.trigger_delay_label_sec.setText('samples = ' + str(self.trigger_delay * 5) + ' ms')
 
 
     ########################################
@@ -191,9 +201,7 @@ class Settings(PyQt5.QtWidgets.QWidget):
         val = int(self.trigger_delay_textbox.text())
         self.trigger_delay = val
         self.trigger_delay_slider.setValue(self.trigger_delay)
-        self.trigger_delay_label_sec.setText('= approx. ' + str(self.trigger_delay * 5) + ' ms')
-
-
+        self.trigger_delay_label_sec.setText('samples = ' + str(self.trigger_delay * 5) + ' ms')
 
           
     ########################################
@@ -201,20 +209,20 @@ class Settings(PyQt5.QtWidgets.QWidget):
     ########################################
     def read_data_buffer_slider_slot(self, val):
         self.data_buffer_len = val
-        self.buffer_textbox.setText(str(self.data_buffer_len))
+        self.data_buffer_textbox.setText(str(self.data_buffer_len))
         # SHOULD READ FREQ FROM GLOBAL!
-        self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
-        self.buffer_length_signal.emit(self.data_buffer_len)
+        self.data_buffer_label_sec.setText('samples = ' + str(self.data_buffer_len * 5) + ' ms')
+        self.data_buffer_length_signal.emit(self.data_buffer_len)
 
 
     ########################################
     #        HANDLE BUFFER TEXTBOX ENTRY   #
     ########################################
     def read_data_buffer_text_slot(self):
-        val = int(self.buffer_textbox.text())
+        val = int(self.data_buffer_textbox.text())
         self.data_buffer_len = val
         self.buffer_slider.setValue(self.data_buffer_len)
-        self.buffer_label_sec.setText('= approx. ' + str(self.data_buffer_len * 5) + ' ms')
+        self.buffer_label_sec.setText('samples = ' + str(self.data_buffer_len * 5) + ' ms')
         self.buffer_length_signal.emit(self.data_buffer_len)
 
 

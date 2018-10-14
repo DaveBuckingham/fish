@@ -272,7 +272,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
         self.buttons['record'].setToolTip('Begin recording samples')
         self.buttons['load'].setEnabled(True)
 
-        self.settings.buffer_length_signal.disconnect(self.data.set_max_samples)
+        self.settings.data_buffer_length_signal.disconnect(self.data.set_max_samples)
 
         if (self.raw_plot_window is not None):           # RECORDING WAS SUCCESSFULL
             self.data.trim_data()
@@ -343,7 +343,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
         logging.info("initialization succesfull, recording data")
 
         self.data = Data.for_recording(self.num_imus, self.settings.data_buffer_len)
-        self.settings.buffer_length_signal.connect(self.data.set_max_samples)
+        self.settings.data_buffer_length_signal.connect(self.data.set_max_samples)
 
         self.receiver_thread = PyQt5.QtCore.QThread()
         self.receiver = Record(self.settings, self.data, self.mag_asas)

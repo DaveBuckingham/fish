@@ -85,7 +85,7 @@ class Record(PyQt5.QtCore.QObject):
         while (self.recording):
 
             # HALT IF TRIGGER TIMEOUT ELAPSED
-            if (self.triger_timeout_counter == 0):
+            if (self.trigger_timeout_counter == 0):
                 logging.info("trigger timeout elapsed")
                 txrx.tx_byte(Txrx.COM_SIGNAL_STOP)
                 txrx.close_connection()
