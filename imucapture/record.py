@@ -41,7 +41,7 @@ class Record(PyQt5.QtCore.QObject):
 
         self.settings = settings
 
-        self.trigger_edge = Txrx.NO_TRIGGER_EDGE
+        self.trigger_state = None 
         self.trigger_timeout_counter = -1
 
     def raw_accel_to_meters_per_second_squared(self, raw):
@@ -84,18 +84,6 @@ class Record(PyQt5.QtCore.QObject):
 
         while (self.recording):
 
-            # HALT IF TRIGGER TIMEOUT ELAPSED
-            if (self.trigger_timeout_counter == 0):
-                logging.info("trigger timeout elapsed")
-                txrx.tx_byte(Txrx.COM_SIGNAL_STOP)
-                txrx.close_connection()
-                self.finished_signal.emit()
-                return()
-
-            # DECREMENT TRIGGER TIMEOUT COUNTER
-            if (self.trigger_timeout_counter >= 0):
-                self.trigger_timeout_counter -= 1
-
             (received, message_type) = txrx.rx_packet()
 
             if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
@@ -133,15 +121,6 @@ class Record(PyQt5.QtCore.QObject):
                     sample.append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
 
-
-                trigger_start = 4 + (self.data.num_imus * 18)
-
-                # ONE BYTE FOR TRIGGER
-                (self.trigger_edge,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
-
-                #if (not self.settings.rising_edge):
-                #    self.trigger_state = not self.trigger_state
-
                 #if (Global_data.USE_ENCODER):
                 #    # TWO BYTES FOR ENCODER
                 #    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
@@ -150,11 +129,35 @@ class Record(PyQt5.QtCore.QObject):
 
                 self.data.add_sample(sample)
 
+                trigger_start = 4 + (self.data.num_imus * 18)
 
-                if ((self.settings.use_trigger != Txrx.NO_TRIGGER_EDGE) and (self.settings.use_trigger == self.trigger_edge)):
-                    logging.info("received trigger")
-                    self.trigger_timeout_counter = self.settings.trigger_delay
+                # ONE BYTE FOR TRIGGER
+                (new_trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
 
+                if (self.trigger_state == None):
+                    self.trigger_state = new_trigger_state;
+
+                if (new_trigger_state > self.trigger_state): 
+                    logging.info("detected rising trigger edge")
+                    if (self.settings.use_trigger == Txrx.RISING_TRIGGER_EDGE):
+                        logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
+                        self.trigger_timeout_counter = self.settings.trigger_delay
+
+                if (new_trigger_state < self.trigger_state): 
+                    logging.info("detected falling trigger edge")
+                    if (self.settings.use_trigger == Txrx.FALLING_TRIGGER_EDGE):
+                        logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
+                        self.trigger_timeout_counter = self.settings.trigger_delay
+
+                self.trigger_state = new_trigger_state
+
+            # HALT IF TRIGGER TIMEOUT ELAPSED
+            if (self.trigger_timeout_counter == 0):
+                self.recording = False
+
+            # DECREMENT TRIGGER TIMEOUT COUNTER
+            if (self.trigger_timeout_counter >= 0):
+                self.trigger_timeout_counter -= 1
 
             #else:
                 #logging.error("unknown sample received. type: " + str(message_type) + ", len: " + str(len(received)))

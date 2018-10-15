@@ -131,11 +131,6 @@ const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CH
 
 #define IMU_WHOAMI_VAL                            0x71
 
-// TRIGGER EDGE DETECTION VALUES TO SEND TO PC
-#define NO_TRIGGER_EDGE                           0x01
-#define RISING_TRIGGER_EDGE                       0x02
-#define FALLING_TRIGGER_EDGE                      0x03
- 
 
 
 // EMS PINS
@@ -150,9 +145,6 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
-byte trigger_state;                            // is the trigger pin high (true) or low (false)
-byte new_trigger_state;
-byte trigger_edge;                             // trigger rising or falling
 
 
 
@@ -568,9 +560,6 @@ void initialize(){
 
     }
 
-    trigger_state = new_trigger_state = (digitalRead(TRIGGER_PIN) == HIGH)
-    trigger_edge = NO_TRIGGER_EDGE;
-
 #ifdef USE_ENCODER
     pinMode(PIN_EMS_CLK, OUTPUT);
     pinMode(PIN_EMS_CS, OUTPUT);
@@ -635,7 +624,7 @@ void read_sample(){
         j += 6;
 
         // READ MAG
-        // WE READ 7 BYTES SO READING STATUS2 CAUSES DATA RESET
+        // WE READ 7 BYTES SO READING STATUS2 TRIGGERS DATA RESET
         // N.B., MAG REGISTERS ARE LAID OUT IN LITTLE-ENDIAN ORDER, UNLIKE ACCEL AND GYRO
         write_register(imu_select[i], REG_I2C_SLV0_ADDR, I2C_ADDRESS_MAG | READ_FLAG);     // specify mag i2c address
         write_register(imu_select[i], REG_I2C_SLV0_REG, MAG_HXL);                           // specify desired mag register
@@ -645,25 +634,8 @@ void read_sample(){
 
     }
 
-
-    // CHECK FOR TRIGGER EDGE
-    new_trigger_state = (digitalRead(TRIGGER_PIN) == HIGH);
-    if (new_trigger_state == trigger_state) {
-        trigger_edge = NO_TRIGGER_EDGE;
-    }
-    else if (new_trigger_state) {
-        trigger_edge = RISING_TRIGGER_EDGE;
-        trigger_state = new_trigger_state;
-    }
-    else {
-        trigger_edge = FALLING_TRIGGER_EDGE;
-        trigger_state = new_trigger_state;
-    }
-
     // will overwrite the extra byte from mag STATUS2
-    //response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
-    response[j++] = trigger_edge;
-
+    response[j++] = (digitalRead(TRIGGER_PIN) == HIGH) ? 0x01 : 0x00;
 
 #ifdef USE_ENCODER
     int encoder_angle = read_encoder();

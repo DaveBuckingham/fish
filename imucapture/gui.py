@@ -267,6 +267,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
 
     # CALLED WHEN REVEIVER THREAD FINISHES
     def receiver_done(self):
+        self.timer.stop()
         self.recording = False
         self.buttons['record'].setText('Record')
         self.buttons['record'].setToolTip('Begin recording samples')
@@ -383,7 +384,7 @@ class Gui(PyQt5.QtWidgets.QWidget):
     # THIS FUNCTION SHOULD BE OK WITH BEING CALLED REPEATEDLY
     def stop_recording(self):
         self.receiver.recording = False
-        self.timer.stop()
+        #self.timer.stop()
 
 
     # CALLED WHEN MAIN WINDOW CLOSES
