@@ -125,17 +125,23 @@ class Gui(PyQt5.QtWidgets.QWidget):
         # STATUS INFO
 
         stats_layout = PyQt5.QtWidgets.QVBoxLayout()
-        self.stats_trigger = PyQt5.QtWidgets.QLabel("Trigger signal state:")
         self.stats_time = PyQt5.QtWidgets.QLabel("Time (ms):")
         self.stats_true_frequency = PyQt5.QtWidgets.QLabel("Sample frequency:")
         self.stats_num_samples_recorded = PyQt5.QtWidgets.QLabel("Total samples recorded:")
         self.stats_num_samples_buffer = PyQt5.QtWidgets.QLabel("Samples in buffer:")
 
-        stats_layout.addWidget(self.stats_trigger)
         stats_layout.addWidget(self.stats_time)
         stats_layout.addWidget(self.stats_true_frequency)
         stats_layout.addWidget(self.stats_num_samples_recorded)
         stats_layout.addWidget(self.stats_num_samples_buffer)
+
+
+        # MAKE SETTINGS RED
+
+        #p = self.settings.palette()
+        #p.setColor(self.settings.backgroundRole(), PyQt5.QtCore.Qt.red)
+        #self.settings.setAutoFillBackground(True)
+        #self.settings.setPalette(p)
 
 
         # ADD WIDGETS TO LAYOUT
@@ -293,9 +299,6 @@ class Gui(PyQt5.QtWidgets.QWidget):
         # DISPLAY NUMBER OF SAMPLES
         self.stats_num_samples_buffer.setText('Samples in buffer: %d' % self.data.num_samples)
         self.stats_num_samples_recorded.setText('Total samples recorded: %d' % self.data.total_samples)
-
-        # DISPLAY THE TRIGGER STATE
-        self.stats_trigger.setText("Trigger signal state: " + ('ON' if self.receiver.trigger_state else 'OFF'))
 
         self.raw_plot_window.update()
 

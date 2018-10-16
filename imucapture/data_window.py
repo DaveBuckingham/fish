@@ -117,8 +117,6 @@ class Data_window(PyQt5.QtWidgets.QWidget):
             for p in self.plots:
                 p.plot_slot()
             self.data.mutex.unlock()
-        else:
-            logging.warning("Missed plot update: data being written");
 
 
     # SYNC NUMBER OF IMUS WITH RECEIVER AND CREATE THE CORRECT NUMBER OF PLOTS

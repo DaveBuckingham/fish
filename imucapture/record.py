@@ -41,7 +41,6 @@ class Record(PyQt5.QtCore.QObject):
 
         self.settings = settings
 
-        self.trigger_state = None 
         self.trigger_timeout_counter = -1
 
     def raw_accel_to_meters_per_second_squared(self, raw):
@@ -84,6 +83,8 @@ class Record(PyQt5.QtCore.QObject):
 
         while (self.recording):
 
+            old_trigger_state = None 
+
             (received, message_type) = txrx.rx_packet()
 
             if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
@@ -121,11 +122,11 @@ class Record(PyQt5.QtCore.QObject):
                     sample.append([[ax, ay, az], [gx, gy, gz], [mx, my, mz]])
 
 
-                #if (Global_data.USE_ENCODER):
-                #    # TWO BYTES FOR ENCODER
-                #    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
-                #    enc *= 0.3515625  # 360/1024
-                #    sample.append(enc)
+                if (Global_data.USE_ENCODER):
+                    # TWO BYTES FOR ENCODER
+                    (enc,) = struct.unpack('>h', received[trigger_start+1:trigger_start+3])
+                    enc *= 0.3515625  # 360/1024
+                    sample.append(enc)
 
                 self.data.add_sample(sample)
 
@@ -134,22 +135,22 @@ class Record(PyQt5.QtCore.QObject):
                 # ONE BYTE FOR TRIGGER
                 (new_trigger_state,) = struct.unpack('>?', received[trigger_start:trigger_start+1])
 
-                if (self.trigger_state == None):
-                    self.trigger_state = new_trigger_state;
+                if (old_trigger_state == None):
+                    old_trigger_state = new_trigger_state;
 
-                if (new_trigger_state > self.trigger_state): 
+                if (new_trigger_state > old_trigger_state): 
                     logging.info("detected rising trigger edge")
                     if (self.settings.use_trigger == Txrx.RISING_TRIGGER_EDGE):
                         logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
                         self.trigger_timeout_counter = self.settings.trigger_delay
 
-                if (new_trigger_state < self.trigger_state): 
+                if (new_trigger_state < old_trigger_state): 
                     logging.info("detected falling trigger edge")
                     if (self.settings.use_trigger == Txrx.FALLING_TRIGGER_EDGE):
                         logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
                         self.trigger_timeout_counter = self.settings.trigger_delay
 
-                self.trigger_state = new_trigger_state
+                old_trigger_state = new_trigger_state
 
             # HALT IF TRIGGER TIMEOUT ELAPSED
             if (self.trigger_timeout_counter == 0):
