@@ -8,7 +8,7 @@ class Global_data():
     # CONSTANTS
 
     APPLICATION_NAME = 'IMU-Capture'
-    VERSION = '0.3.1'
+    VERSION = '0.3.2'
     APPLICATION_FULL_NAME = APPLICATION_NAME + ' ' + VERSION
 
     SAMPLE_FREQ_HZ = 200                             # EXPECTED SAMPLES PER SECOND
