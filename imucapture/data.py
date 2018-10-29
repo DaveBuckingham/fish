@@ -27,7 +27,7 @@ class Data(PyQt5.QtCore.QObject):
     GYRO_INDEX  = 1
     MAG_INDEX   = 2
 
-    def __init__(self, dataset_type, data, num_samples):
+    def __init__(self, dataset_type, data, num_samples, timestamps=None):
         super(Data, self).__init__()
 
         self.mutex = PyQt5.QtCore.QMutex()
@@ -39,6 +39,7 @@ class Data(PyQt5.QtCore.QObject):
         self.num_imus = self.imu_data.shape[0]
         self.num_samples = num_samples
         self.total_samples = self.num_samples
+        self.timestamps = timestamps
 
 
     @classmethod
@@ -92,7 +93,7 @@ class Data(PyQt5.QtCore.QObject):
 
 
     @classmethod
-    def from_file_smart(cls, filename):
+    def from_file_smart(cls, filename, resample=False, resample_rate=200.0):
 
         start = time.time()
 
@@ -109,24 +110,31 @@ class Data(PyQt5.QtCore.QObject):
             else:
                 root = datafile
 
+            is_numbered_data = False
             if ('imu0' in root):
                 no_imu_group = False
             else:
-                no_imu_group = True
-
+                if ('accel1' in root):
+                    is_numbered_data = True
+                    no_imu_group = False
+                else:
+                    no_imu_group = True
 
             data = None
             imu_index = 0
-            while (no_imu_group or ('imu' + str(imu_index) in root)):
+            while (no_imu_group or ('imu' + str(imu_index) in root) or \
+                           (is_numbered_data and ('accel' + str(imu_index+1) in root))):
 
-                if (no_imu_group):
+                if (no_imu_group or is_numbered_data):
                     imu = root
                 else:
                     imu = root['imu' + str(imu_index)]
 
                 no_imu_group = False
 
-                if ('accel' in imu):
+                if is_numbered_data and ('accel' + str(imu_index+1) in imu):
+                    accel_data = imu['accel' + str(imu_index+1)]
+                elif ('accel' in imu):
                     accel_data = imu['accel']
                 elif ('Accel' in imu):
                     accel_data = imu['Accel']
@@ -138,7 +146,9 @@ class Data(PyQt5.QtCore.QObject):
                     logging.error("couldn't load file: accel data not found")
                     return None
 
-                if ('gyro' in imu):
+                if is_numbered_data and ('gyro' + str(imu_index+1) in imu):
+                    gyro_data = imu['gyro' + str(imu_index+1)]
+                elif ('gyro' in imu):
                     gyro_data = imu['gyro']
                 elif ('Gyro' in imu):
                     gyro_data = imu['Gyro']
@@ -150,7 +160,9 @@ class Data(PyQt5.QtCore.QObject):
                     logging.error("couldn't load file: gyro data not found")
                     return None
 
-                if ('mag' in imu):
+                if is_numbered_data and ('mag' + str(imu_index+1) in imu):
+                    mag_data = imu['mag' + str(imu_index+1)]
+                elif ('mag' in imu):
                     mag_data = imu['mag']
                 elif ('Mag' in imu):
                     mag_data = imu['Mag']
@@ -172,61 +184,66 @@ class Data(PyQt5.QtCore.QObject):
                 if (mag_data.shape[1] == 3):
                     mag_data = mag_data.transpose([1,0])
 
-                if ('t' in root):
-                    timestamps = root['t'][()]
-
-
-                    # REMOVE LAST ENTRY IF TIMESTAMP == 0
-                    if (timestamps[-1] == 0):
-                        timestamps = numpy.delete(timestamps, -1, 0)
-                        accel_data = numpy.delete(accel_data, -1, 1)
-                        gyro_data = numpy.delete(gyro_data, -1, 1)
-                        mag_data = numpy.delete(mag_data, -1, 1)
-
-
-                    # REMOVE ALL ENTRIES WITH TIMESTAMP == 0
-                    # sample_index = timestamps.size - 1
-                    # while sample_index >= 0.0:
-                    #     if (timestamps[sample_index] == 0.0):
-                    #         timestamps = numpy.delete(timestamps, sample_index, 0)
-                    #         accel_data = numpy.delete(accel_data, sample_index, 1)
-                    #         gyro_data = numpy.delete(gyro_data, sample_index, 1)
-                    #         mag_data = numpy.delete(mag_data, sample_index, 1)
-                    #     sample_index -= 1
-
-
-                    if (any(x>=y for x, y in zip(timestamps, timestamps[1:]))):
-                        logging.error("couldn't load file: non-monotonic timestamps")
-                        return None
-
-                    # START TIMESTAMPS AT 0 AND CONVERT FROM NANOSECONDS TO MILLISECONDS
-                    start_time = timestamps[0]
-                    timestamps[:] = [(x - start_time) / 1000000 for x in timestamps]
-
-
-                    # TIMESTAMPS FOR PERFECT 200 HZ RECORDINGS
-                    desired_timestamps = numpy.arange(0, timestamps[-1], 5);
-
-
-                    interpolated_accel_data = numpy.empty([3, desired_timestamps.size])
-                    interpolated_gyro_data = numpy.empty([3, desired_timestamps.size])
-                    interpolated_mag_data = numpy.empty([3, desired_timestamps.size])
-                    for dimension_index in ([0,1,2]):
-                        interpolated_accel_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], accel_data[dimension_index,:])
-                        interpolated_gyro_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], gyro_data[dimension_index,:])
-                        interpolated_mag_data[dimension_index,:] = numpy.interp(desired_timestamps, timestamps[:], mag_data[dimension_index,:])
-
-                    #accel_data = interpolated_accel_data
-                    #gyro_data = interpolated_gyro_data
-                    #mag_data = interpolated_mag_data
-
-
-                if (data == None):
+                if (data is None):
                     data = numpy.array([numpy.stack((accel_data, gyro_data, mag_data))])
                 else:
-                    data = numpy.append(data, numpy.stack((accel_data, gyro_data, mag_data)), 0)
+                    data1 = numpy.stack((accel_data, gyro_data, mag_data))
+                    data = numpy.append(data, data1[numpy.newaxis, ...], 0)
 
                 imu_index += 1
+
+            timestamps = None
+            timename = None
+            if ('t' in root):
+                timestamps = root['t'][()]
+                timename = 't'
+            elif ('time' in root):
+                timestamps = root['time'][()]
+                timename = 'time'
+
+            if (timestamps is not None) and resample:
+                # REMOVE LAST ENTRY IF TIMESTAMP == 0
+                if (timestamps[-1] == 0):
+                    timestamps = numpy.delete(timestamps, -1, 0)
+                    data = numpy.delete(data, -1, 3)
+
+                # REMOVE ALL ENTRIES WITH TIMESTAMP == 0
+                # sample_index = timestamps.size - 1
+                # while sample_index >= 0.0:
+                #     if (timestamps[sample_index] == 0.0):
+                #         timestamps = numpy.delete(timestamps, sample_index, 0)
+                #         accel_data = numpy.delete(accel_data, sample_index, 1)
+                #         gyro_data = numpy.delete(gyro_data, sample_index, 1)
+                #         mag_data = numpy.delete(mag_data, sample_index, 1)
+                #     sample_index -= 1
+
+                if (any(x>=y for x, y in zip(timestamps, timestamps[1:]))):
+                    logging.error("couldn't load file: non-monotonic timestamps")
+                    return None
+
+                # START TIMESTAMPS AT 0 AND CONVERT FROM NANOSECONDS TO MILLISECONDS
+                tscale = 1
+                if 'Units' in root[timename].attrs:
+                    tunit = ''.join([chr(c) for c in root[timename].attrs['Units']])
+                    if tunit[:4] == 'nsec':
+                        tscale = 1e6
+                    elif tunit[:4] == 'msec':
+                        tscale = 1
+
+                start_time = timestamps[0]
+                timestamps[:] = [(x - start_time) / tscale for x in timestamps]
+
+
+                # TIMESTAMPS FOR PERFECT 200 HZ RECORDINGS
+                dt = 1000.0 / resample_rate
+                desired_timestamps = numpy.arange(0, timestamps[-1], dt)
+
+                interpolated_data = numpy.empty(data.shape[0:-1] + (desired_timestamps.size,))
+                for imu1 in range(data.shape[0]):
+                    for ax1 in range(3):
+                        for ax2 in range(3):
+                            interpolated_data[imu1, ax1, ax2, :] = numpy.interp(desired_timestamps, timestamps, data[imu1, ax1, ax2, :])
+                timestamps = desired_timestamps
 
             if ('description' in root.attrs):
                 dataset_type = root.attrs['description']
@@ -237,7 +254,7 @@ class Data(PyQt5.QtCore.QObject):
                 logging.error("couldn't load file: invalid data shape " + str(data.shape))
                 return None
 
-            return cls(dataset_type, data, data.shape[3])
+            return cls(dataset_type, data, data.shape[3], timestamps)
 
         logging.error("couldn't load file")
         return None
@@ -252,8 +269,8 @@ class Data(PyQt5.QtCore.QObject):
         return cls('raw', numpy.zeros([num_imus, 3, 3, max_samples]), 0)
 
     @classmethod
-    def from_data(cls, data_type, data):
-        return cls(data_type, data, data.shape[3])
+    def from_data(cls, data_type, data, timestamps):
+        return cls(data_type, data, data.shape[3], timestamps)
 
 
     def save_file(self, filename):
@@ -291,6 +308,15 @@ class Data(PyQt5.QtCore.QObject):
 
     def trim_data(self):
         self.set_max_samples(self.num_samples)
+
+    def get_one_imu(self, imunum):
+        return Data.from_data(self.dataset_type, self.imu_data[imunum:imunum+1, ...], self.timestamps)
+
+    def get_acceleration(self, imunum=0):
+        return self.imu_data[imunum, Data.ACCEL_INDEX, ...]
+
+    def get_gyroscope(self, imunum=0):
+        return self.imu_data[imunum, Data.GYRO_INDEX, ...]
 
     def set_max_samples(self, max_samples):
         self.mutex.lock()
