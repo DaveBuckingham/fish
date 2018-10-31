@@ -39,6 +39,15 @@ def main():
 
     t = data.timestamps/timescale
 
+    acc1 = data.get_acceleration(0)
+    acc1 = acc1[:, t < 0.5]
+    mag = np.linalg.norm(acc1, axis=0)
+
+    acc1 = acc1 / mag
+
+    initial_gravity = np.mean(acc1, axis=1) * 9.81
+    calib.initial_gravity = initial_gravity
+
     plt.ion()
 
     fig, ax = plt.subplots()
@@ -65,7 +74,7 @@ def main():
         ax1.plot(t, acc1, label='dsf')
 
     g = []
-    for chiprpy in np.rollaxis(orient, 1):
+    for chiprpy in np.rollaxis(orient_mad, 1):
         Rchip = eul2rotm(chiprpy)
         g1 = Rchip.dot(calib.initial_gravity)
         g.append(g1)
@@ -77,7 +86,7 @@ def main():
     # filter with a running average
     orient_y = np.convolve(orient_y, np.ones((80,))/80, mode='same')
 
-    orient_true = np.zeros_like(orient)
+    orient_true = np.zeros_like(orient_mad)
     orient_true[1, :] = orient_y
     orient_true[1, :] = orient_true[1, :] - orient_true[1, 0]
 
