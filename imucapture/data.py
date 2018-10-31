@@ -244,6 +244,7 @@ class Data(PyQt5.QtCore.QObject):
                         for ax2 in range(3):
                             interpolated_data[imu1, ax1, ax2, :] = numpy.interp(desired_timestamps, timestamps, data[imu1, ax1, ax2, :])
                 timestamps = desired_timestamps
+                data = interpolated_data
 
             if ('description' in root.attrs):
                 dataset_type = root.attrs['description']

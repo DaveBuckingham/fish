@@ -30,23 +30,42 @@ def main():
     calibdata1 = calibdata.get_one_imu(0)
 
     calib = Calib()
-    calib.parse_data(calibdata)
+    calib.parse_data(calibdata1)
+
+    world_basis = calib.imu_bases[0]
 
     datafilename = '/Users/etytel01/Documents/Acceleration/rawdata/data_2017_07_28/rotate_only.hdf5'
     data = Data.from_file_smart(datafilename, resample=True)
 
     t = data.timestamps/timescale
 
-    transform = Transform()
+    plt.ion()
 
-    accdyn, orient = transform.get_orientation_dsf(data, calib, imu=0, filter_num_samples=10,
-                                                   accdynmag=200.0)
+    fig, ax = plt.subplots()
+
+    acc1 = data.get_acceleration(0)
+    mag = np.linalg.norm(acc1, axis=0)
+
+    ax.plot(t, data.get_acceleration(0).T)
+    ax.plot(t, mag)
+
+    transform = Transform()
 
     accdyn_mad, orient_mad = transform.get_orientation_madgwick(data, calib, imu=0, filter_num_samples=10,
                                                                 beta=np.deg2rad(2.86))
+    accdyn_dsf, orient_dsf = transform.get_orientation_dsf(data, calib, imu=0, filter_num_samples=10,
+                                                   accdynmag=200.0)
+
+
+    fig, ax = plt.subplots(3, 1)
+
+    for ax1, acc1 in zip(ax, accdyn_mad):
+        ax1.plot(t, acc1, label='mad')
+    for ax1, acc1 in zip(ax, accdyn_dsf):
+        ax1.plot(t, acc1, label='dsf')
 
     g = []
-    for chiprpy in orient:
+    for chiprpy in np.rollaxis(orient, 1):
         Rchip = eul2rotm(chiprpy)
         g1 = Rchip.dot(calib.initial_gravity)
         g.append(g1)
@@ -55,28 +74,29 @@ def main():
     with h5py.File(datafilename) as h5file:
         orient_y = np.deg2rad(np.array(h5file['/data/Encoder']))
 
-    orient_true = np.zeros((len(orient_y), 3))
-    orient_true[:, 1] = orient_y
-    orient_true[:, 1] = orient_true[:, 1] - orient_true[0, 1]
-
     # filter with a running average
-    orient_true[:, 1] = np.convolve(orient_true[:, 1], np.ones((80,))/80, mode='same')
+    orient_y = np.convolve(orient_y, np.ones((80,))/80, mode='same')
+
+    orient_true = np.zeros_like(orient)
+    orient_true[1, :] = orient_y
+    orient_true[1, :] = orient_true[1, :] - orient_true[1, 0]
 
     omega = data.get_gyroscope(0)
     dt = np.mean(np.diff(t))
 
-    omega_dot = np.gradient(omega, dt, axis=0)
+    omega_dot = np.gradient(omega, dt, axis=1)
 
-    omega_world_true = -np.gradient(orient_true, dt, axis=0)
-    omega_dot_world_true = np.gradient(omega_world_true, dt, axis=0)
+    omega_world_true = -np.gradient(orient_true, dt, axis=1)
+    omega_dot_world_true = np.gradient(omega_world_true, dt, axis=1)
 
-    omega_chip_true = world_basis.T.dot(omega_world_true.T).T
-
+    omega_chip_true = world_basis.T.dot(omega_world_true)
 
     armlen = 0.5    # meters
     xpb_world = np.array([0, 0, armlen])
     xpb_chip = world_basis.T.dot(xpb_world)
 
+
+    # CONTINUE here - debug math
     acc_angular = world_basis.dot(np.cross(omega_dot, xpb_chip).T).T
     acc_centrip = world_basis.dot(np.cross(omega, np.cross(omega, xpb_chip)).T).T
 
@@ -87,7 +107,6 @@ def main():
     acc_dyn_true = acc_angular_true + acc_centrip_true
     acc_dyn_true[:, 0] += acc_base[:, 0]
 
-    plt.ion()
 
     fig, ax = plt.subplots(3)
     for ab1, ax1 in zip(np.rollaxis(acc_base, 1), ax):
