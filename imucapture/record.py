@@ -81,9 +81,10 @@ class Record(PyQt5.QtCore.QObject):
         # RESET TIMER
         start_time = time.time() * 1000
 
+        old_trigger_state = None 
+
         while (self.recording):
 
-            old_trigger_state = None 
 
             (received, message_type) = txrx.rx_packet()
 
