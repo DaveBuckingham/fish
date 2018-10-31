@@ -50,7 +50,6 @@ class Calib():
             still_start = self.intervals[0][0]
             still_end = self.intervals[0][1]
 
-            self.initial_gravity = numpy.mean(calib_data.imu_data[0, Data.ACCEL_INDEX, :, still_start:still_end], axis=1)
             self.still_accel = calib_data.imu_data[0, Data.ACCEL_INDEX, :, still_start:still_end].transpose()
             self.still_gyro = calib_data.imu_data[0, Data.GYRO_INDEX, :, still_start:still_end].transpose()
 

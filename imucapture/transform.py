@@ -31,7 +31,8 @@ class Transform():
 
 
 
-    def get_orientation_dsf(self, data, calib, imu, filter_num_samples, accdynmag=200.0):
+    def get_orientation_dsf(self, data, calib, imu, filter_num_samples, accdynmag=200.0,
+                            initial_gravity = None, initial_window = 0.5):
         # Dynamic snap free Kalman filter for sensor fusion
         # x is the state: [theta, bias, adyn, jerk]^T
         # where theta are the Euler angles
@@ -55,6 +56,10 @@ class Transform():
         # COMPUTE TIME ARRAY IN SECONDS, ASSUME GLOBAL VALUE IS CORRECT
         time = numpy.array(numpy.arange(0, data.num_samples*Global_data.SECONDS_PER_SAMPLE, Global_data.SECONDS_PER_SAMPLE))
 
+
+        # Get the initial orientation of the chip in this data set
+        if initial_gravity is None:
+            initial_gravity = numpy.mean(acc[time < initial_window, :], axis=0)
 
         bias_gyro = numpy.mean(calib.still_gyro, axis=0)
 
@@ -97,7 +102,7 @@ class Transform():
                 [numpy.zeros((6,6)),                                           Qdyn]])
 
             PkM = Fk.dot(Pkm1).dot(Fk.T) + Qk
-            hk, Jh = self._observation_dynamics(xkM, calib.initial_gravity)
+            hk, Jh = self._observation_dynamics(xkM, initial_gravity)
 
             Hk = Jh
 
@@ -110,7 +115,7 @@ class Transform():
 
             eulerEKF.append(xk[:3])
             aD.append(QT.T.dot(xk[6:9]))
-            err.append(accel - ((QT.dot(calib.initial_gravity) + xk[6:9])))
+            err.append(accel - ((QT.dot(initial_gravity) + xk[6:9])))
 
             PkEKF.append(Pk)
             xkEKF.append(xk)
@@ -162,7 +167,9 @@ class Transform():
         # COMPUTE TIME ARRAY IN SECONDS, ASSUME GLOBAL VALUE IS CORRECT
         time = numpy.array(numpy.arange(0, data.num_samples*Global_data.SECONDS_PER_SAMPLE, Global_data.SECONDS_PER_SAMPLE))
 
+        # rotation from chip to world is just the conjugate of the world to chip rotation
         qchip2world = Quaternion(matrix=calib.imu_bases[imu])
+        # qworld2chip = Quaternion(matrix=calib.imu_bases[imu])
 
         qorient = [0] * time.size
 
@@ -171,7 +178,6 @@ class Transform():
         dt = 1.0 / sampfreq
 
         qorient[0] = qchip2world.conjugate
-
 
         for i, gyro1 in enumerate(gyro[1:, :], start=1):
             qprev = qorient[i-1]
@@ -217,14 +223,11 @@ class Transform():
 
         # ATTEMPT TO CONVERT FROM CHIP COORDINATES TO WORLD
         # qorient IS THE QUATERNION THAT SPECIFIES THE CURRENT ORIENTATION OF THE CHIP, RELATIVE TO ITS INITIAL ORIENTATION
-        # qchip2world IS THE QUATERNION THAT ROTATES FROM THE INITIAL CHIP ORIENTATION TO THE WORLD FRAME
-
+        # qworld2chip IS THE QUATERNION THAT ROTATES FROM THE WORLD FRAME TO THE INITIAL CHIP ORIENTATION
 
         qorient_world = [qchip2world.conjugate * q1.conjugate for q1 in qorient]
 
-
         orient_world_rotm = [q1.rotation_matrix for q1 in qorient_world]
-
 
         orient_world = numpy.array([rotm2eul(R1) for R1 in orient_world_rotm]).transpose()
 
