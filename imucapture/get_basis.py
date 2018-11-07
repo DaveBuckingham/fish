@@ -24,7 +24,7 @@ class Get_basis(object):
         self.HOLD_MIN = 600
         self.GYRO_THRESHOLD = 0.6
         self.ACCEL_DELTA_THRESHOLD = 1.5
-        self.ORTHOGONAL_THRESHOLD = 0.5
+        self.ORTHOGONAL_THRESHOLD = 0.7
 
 
     # ARE TWO 3D VECTORS ORTHOGONAL?
