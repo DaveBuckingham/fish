@@ -15,17 +15,16 @@ class Get_basis(object):
         self.MAX_INTERVALS = 5
 
 
-        # THESE VALUES WORK WITH MEASUREMENTS TAKEN AT DESK WITH CHIP ON A BOARD
-        #self.HOLD_MIN = 800               # minimum window size. 800 samples ~ 4 seconds
-        #self.GYRO_THRESHOLD = 0.1         # max absolute value in window. degrees per second.
-        #self.ACCEL_DELTA_THRESHOLD = 0.5  # max difference in window. meters per second squared.
-        #self.ORTHOGONAL_THRESHOLD = 0.1   # max distance from right angle (in radians) between two vectors. 0.1 rad ~ 5.7 degs.
+        #self.HOLD_MIN = 600               # minimum window size. 600 samples ~ 3 seconds
+        #self.GYRO_THRESHOLD = 0.6         # max absolute value in window. degrees per second.
+        #self.ACCEL_DELTA_THRESHOLD = 1.5  # max difference in window. meters per second squared.
+        #self.ORTHOGONAL_THRESHOLD = 0.3   # max distance from right angle (in radians) between two vectors. 0.1 rad ~ 5.7 degs.
 
-        # RELAX ALL THE THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
-        self.HOLD_MIN = 600               # minimum window size. 600 samples ~ 3 seconds
+        # RELAX THRESHOLDS TO BE MORE FORGIVING WHEN CHIP IS ON A FISH
+        self.HOLD_MIN = 600
         self.GYRO_THRESHOLD = 0.6
         self.ACCEL_DELTA_THRESHOLD = 1.5
-        self.ORTHOGONAL_THRESHOLD = 0.3
+        self.ORTHOGONAL_THRESHOLD = 0.5
 
 
     # ARE TWO 3D VECTORS ORTHOGONAL?
