@@ -36,6 +36,10 @@ class Data(PyQt5.QtCore.QObject):
 
         self.imu_data = data
 
+        self.utc_system_time_at_trigger = ""
+
+        self.trigger_delay = 0
+
         self.num_imus = self.imu_data.shape[0]
         self.num_samples = num_samples
         self.total_samples = self.num_samples
@@ -278,11 +282,15 @@ class Data(PyQt5.QtCore.QObject):
         with h5py.File(filename, 'w') as datafile:
             data_group = datafile.create_group('data')
             data_group.attrs['description'] = self.dataset_type
+            data_group.attrs['trigger_time'] = self.utc_system_time_at_trigger
+            data_group.attrs['sample_rate_hz'] = Global_data.SAMPLE_FREQ_HZ
+            data_group.attrs['trigger_delay_samples'] = self.trigger_delay
             for i in range(0, self.imu_data.shape[0]):
                 imu_group = data_group.create_group('imu' + str(i))
                 imu_group.create_dataset('accel', data=self.imu_data[i, Data.ACCEL_INDEX, :, :].transpose())
                 imu_group.create_dataset('gyro',  data=self.imu_data[i, Data.GYRO_INDEX, :, :].transpose())
                 imu_group.create_dataset('mag',   data=self.imu_data[i, Data.MAG_INDEX, :, :].transpose())
+                data_group.create_dataset('time', data=list(range(0,self.num_samples*Global_data.MS_PER_SAMPLE,Global_data.MS_PER_SAMPLE)))
 
 
 
