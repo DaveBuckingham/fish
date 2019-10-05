@@ -143,16 +143,16 @@ class Record(PyQt5.QtCore.QObject):
                 if (new_trigger_state > old_trigger_state): 
                     logging.info("detected rising trigger edge")
                     if (self.settings.use_trigger == Txrx.RISING_TRIGGER_EDGE):
-                        data.utc_system_time_at_trigger = datetime.datetime.utcnow().isoformat()
-                        data.trigger_delay = self.settings.trigger_delay
+                        self.data.utc_system_time_at_trigger = datetime.datetime.utcnow().isoformat()
+                        self.data.trigger_delay = self.settings.trigger_delay
                         logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
                         self.trigger_timeout_counter = self.settings.trigger_delay
 
                 if (new_trigger_state < old_trigger_state): 
                     logging.info("detected falling trigger edge")
                     if (self.settings.use_trigger == Txrx.FALLING_TRIGGER_EDGE):
-                        data.utc_system_time_at_trigger = datetime.datetime.utcnow().isoformat()
-                        data.trigger_delay = self.settings.trigger_delay
+                        self.data.utc_system_time_at_trigger = datetime.datetime.utcnow().isoformat()
+                        self.data.trigger_delay = self.settings.trigger_delay
                         logging.info("setting recording timeout to " + str(self.settings.trigger_delay) + " samples")
                         self.trigger_timeout_counter = self.settings.trigger_delay
 
