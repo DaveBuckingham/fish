@@ -238,17 +238,6 @@ class Data(PyQt5.QtCore.QObject):
                 timestamps[:] = [(x - start_time) / tscale for x in timestamps]
 
 
-                # TIMESTAMPS FOR PERFECT 200 HZ RECORDINGS
-                dt = 1000.0 / resample_rate
-                desired_timestamps = numpy.arange(0, timestamps[-1], dt)
-
-                interpolated_data = numpy.empty(data.shape[0:-1] + (desired_timestamps.size,))
-                for imu1 in range(data.shape[0]):
-                    for ax1 in range(3):
-                        for ax2 in range(3):
-                            interpolated_data[imu1, ax1, ax2, :] = numpy.interp(desired_timestamps, timestamps, data[imu1, ax1, ax2, :])
-                timestamps = desired_timestamps
-                data = interpolated_data
 
             if ('description' in root.attrs):
                 dataset_type = root.attrs['description']
@@ -351,7 +340,7 @@ class Data(PyQt5.QtCore.QObject):
 
 
     def add_sample(self, sample):
-        assert(len(sample) == self.num_imus)
+        assert(len(sample) == 1 + self.num_imus)
 
         self.mutex.lock()
 

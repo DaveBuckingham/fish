@@ -27,6 +27,7 @@ class Initialize(PyQt5.QtCore.QObject):
     success_signal = PyQt5.QtCore.pyqtSignal()
     numimus_signal = PyQt5.QtCore.pyqtSignal(int)
     asa_signal = PyQt5.QtCore.pyqtSignal(list)
+    rate_signal = PyQt5.QtCore.pyqtSignal(int)
 
 
     def __init__(self):
@@ -53,19 +54,23 @@ class Initialize(PyQt5.QtCore.QObject):
 
         num_imus = 0
 
+        logging.info("requesting number of imus from arduino...")
         (message, message_type) = txrx.rx_packet()
         if (message_type == Txrx.COM_PACKET_NUMIMUS):
             num_imus = message[0];
         else:
+            logging.warning("failed to determine number of imus, aborting")
             txrx.close_connection()
             self.finished_signal.emit()
             return()
 
         if (num_imus < 1):
+            logging.warning("found zero imus, aborting")
             txrx.close_connection()
             self.finished_signal.emit()
             return()
 
+        logging.info("found " + str(num_imus) + " imu(s)");
         self.numimus_signal.emit(num_imus)
 
         time.sleep(2)
@@ -93,8 +98,36 @@ class Initialize(PyQt5.QtCore.QObject):
                 logging.warning("ASA read failed, using 1 adjustment")
                 mag_asas.append([1,1,1])
 
-
         self.asa_signal.emit(mag_asas)
+
+
+
+        ##################################
+        #          SAMPLE RATE           #
+        ##################################
+
+        logging.info("requesting sample rate from arduino...")
+        time.sleep(1)
+        txrx.tx_byte(Txrx.COM_SIGNAL_RATE)
+        time.sleep(1)
+
+        (received, message_type) = txrx.rx_packet()
+        if ((message_type == Txrx.COM_PACKET_RATE) and (len(received) == 2)):
+            sample_rate = (received[0] << 8) | received[1]
+            logging.info("sample rate received: " + str(sample_rate));
+
+
+        else:
+            logging.warning("sample rate read failed, aborting");
+            txrx.close_connection()
+            self.finished_signal.emit()
+            return()
+
+        self.rate_signal.emit(sample_rate)
+
+
+
+
 
 
         txrx.close_connection()

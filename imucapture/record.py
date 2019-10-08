@@ -36,9 +36,10 @@ class Record(PyQt5.QtCore.QObject):
 
         self.mag_asas = mag_asas
 
-        self.sample_length = 4 + (18 * self.data.num_imus) + 1
-        #if (Global_data.USE_ENCODER):
-        #    self.sample_length += 2
+        self.sample_length = 2 + 4 + (18 * self.data.num_imus) + 1;  # id, timestamp, data, trigger
+
+        if (Global_data.USE_ENCODER):
+            self.sample_length += 2
 
         self.settings = settings
 
@@ -86,19 +87,19 @@ class Record(PyQt5.QtCore.QObject):
 
 
             (received, message_type) = txrx.rx_packet()
-            //logging.info(datetime.datetime.now())
+            #logging.info(datetime.datetime.now())
 
             if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
 
                 received = bytearray(received)
 
-                (id,) = struct.unpack('>L', received[:4])
+                (id,timestamp) = struct.unpack('>IL', received[:6])
 
                 sample = []
+                sample.append(timestamp)
 
                 for i in (range(0, self.data.num_imus)):
-
 
                     accel_start = 4 + (i * 18)
                     mag_start   = 16 + (i * 18)

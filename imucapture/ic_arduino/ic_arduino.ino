@@ -57,7 +57,7 @@
 //#define USE_ENCODER
 
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
-#define SAMPLE_FREQ_HZ                            250            // attempted samples per second
+#define SAMPLE_FREQ_HZ                            350            // attempted samples per second
 #define SAMPLE_DELAY_US                           (1000000 / SAMPLE_FREQ_HZ)  // microseconds between samples
 
 #define TRIGGER_PIN                               4
@@ -116,20 +116,18 @@ const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CH
 // TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
 #define COM_PACKET_SAMPLE                         0x50
 #define COM_PACKET_ASA                            0x51
-#define COM_PACKET_TRIGGER                        0x53
-#define COM_PACKET_STRING                         0x54
-#define COM_PACKET_TEST                           0x55
-#define COM_PACKET_HELLO                          0x56
-#define COM_PACKET_NUMIMUS                        0x57
-#define COM_PACKET_ERROR                          0x58
+#define COM_PACKET_TEST                           0x53
+#define COM_PACKET_HELLO                          0x54
+#define COM_PACKET_NUMIMUS                        0x55
+#define COM_PACKET_ERROR                          0x56
 
 // SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-#define COM_SIGNAL_INIT                           0x69  // 'i'
-#define COM_SIGNAL_ASA                            0x61  // 'a'
-#define COM_SIGNAL_RUN                            0x72  // 'r'
-#define COM_SIGNAL_STOP                           0x73  // 's'
-#define COM_SIGNAL_TEST                           0x74  // 't'
-#define COM_SIGNAL_HELLO                          0x68  // 'h'
+#define COM_SIGNAL_INIT                           0x60
+#define COM_SIGNAL_ASA                            0x61
+#define COM_SIGNAL_RUN                            0x63
+#define COM_SIGNAL_STOP                           0x64
+#define COM_SIGNAL_TEST                           0x65
+#define COM_SIGNAL_HELLO                          0x66
 
 #define IMU_WHOAMI_VAL                            0x71
 
@@ -143,11 +141,11 @@ const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CH
 
 
 byte serial_buffer[SERIAL_BUFF_LENGTH];        // for framing and byte stuffing for tx
-unsigned long next_sample_id;                  // counter for sample ids
+unsigned int next_sample_id;                   // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
-bool sampling;
+unsigned long record_start_time_us;
 
 
 
@@ -395,8 +393,8 @@ byte self_test(byte chip) {
     write_register(chip, REG_ACCEL_CONFIG_1, 0x00);
 
     ///// STEP 3.1.2 /////
-    delay(25);                                    
-    // delay(20);                                    
+    delay(25);
+    // delay(20);
 
 
     ///// STEP 3.1.3 /////
@@ -527,7 +525,7 @@ void initialize(){
     begin_imu_com();
     tx_packet(&num_imus, 1, COM_PACKET_NUMIMUS);
 
-    response_len = 4 + (18 * num_imus) + 1;
+    response_len = 2 + 4 + (18 * num_imus) + 1;  // id, timestamp, data, trigger
     #ifdef USE_ENCODER
         response_len += 2;
     #endif
@@ -591,6 +589,7 @@ void tx_asa(){
 }
 
 
+
 void read_sample(){
     uint8_t response[response_len];
     uint8_t i;
@@ -604,13 +603,16 @@ void read_sample(){
     j = 0;
 
     // SAMPLE ID
-    // COULD SPEED THING UP BY REMOVING SAMPLE IDS, OR USE 2 BYTES INSTEAD OF 4
-    response[j++] = next_sample_id >> 24;
-    response[j++] = next_sample_id >> 16;
     response[j++] = next_sample_id >> 8;
     response[j++] = next_sample_id;
     next_sample_id++;
 
+    // TIMESTAMP
+    unsigned long timestamp = millis() - record_start_time;
+    response[j++] = timestamp >> 24;
+    response[j++] = timestamp >> 16;
+    response[j++] = timestamp >> 8;
+    response[j++] = timestamp;
 
     for (i=0; i < num_imus; i++) {
 
@@ -673,6 +675,7 @@ void start_recording() {
     TCCR1B |= (1 << CS12);                               // 256 prescaler 
     TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
     interrupts();                                        // enable all interrupts
+    record_start_time = millis();
 }
 
 void stop_recording() {

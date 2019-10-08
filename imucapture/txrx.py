@@ -20,21 +20,20 @@ class Txrx():
     COM_FLAG_XOR                    = 0x20
 
     # TO SPECIFY TYPE OF A (POSSIBLY EMPTY) PACKET SENT FROM ARDUINO TO PC
-    COM_PACKET_SAMPLE               = 0x50        # 80
-    COM_PACKET_ASA                  = 0x51        # 81
-    COM_PACKET_STRING               = 0x54        # 84
-    COM_PACKET_TEST                 = 0x55        # 85
-    COM_PACKET_HELLO                = 0x56        # 86
-    COM_PACKET_NUMIMUS              = 0x57        # 87
-    COM_PACKET_ERROR                = 0x58        # 87
+    COM_PACKET_SAMPLE               = 0x50
+    COM_PACKET_ASA                  = 0x51
+    COM_PACKET_TEST                 = 0x53
+    COM_PACKET_HELLO                = 0x54
+    COM_PACKET_NUMIMUS              = 0x55
+    COM_PACKET_ERROR                = 0x56
 
     # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
-    COM_SIGNAL_INIT                 = 0x69
+    COM_SIGNAL_INIT                 = 0x60
     COM_SIGNAL_ASA                  = 0x61
-    COM_SIGNAL_RUN                  = 0x72
-    COM_SIGNAL_STOP                 = 0x73
-    COM_SIGNAL_TEST                 = 0x74
-    COM_SIGNAL_HELLO                = 0x68
+    COM_SIGNAL_RUN                  = 0x63
+    COM_SIGNAL_STOP                 = 0x64
+    COM_SIGNAL_TEST                 = 0x65
+    COM_SIGNAL_HELLO                = 0x66
 
     MAGNETOMETER_SCALE_FACTOR       = 0.15
 
