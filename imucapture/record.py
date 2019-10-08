@@ -79,8 +79,6 @@ class Record(PyQt5.QtCore.QObject):
         txrx.tx_byte(Txrx.COM_SIGNAL_RUN)
         logging.info("sent record command to arduino")
 
-        # RESET TIMER
-        start_time = time.time() * 1000
 
         old_trigger_state = None 
 
@@ -88,6 +86,7 @@ class Record(PyQt5.QtCore.QObject):
 
 
             (received, message_type) = txrx.rx_packet()
+            //logging.info(datetime.datetime.now())
 
             if ((message_type == Txrx.COM_PACKET_SAMPLE) and (len(received) == self.sample_length)):
 
@@ -157,6 +156,12 @@ class Record(PyQt5.QtCore.QObject):
                         self.trigger_timeout_counter = self.settings.trigger_delay
 
                 old_trigger_state = new_trigger_state
+
+
+            # IF RECEIVED ERROR MESSAGE FROM ARDUINO, PRINT MESSAGE AND HALT
+            elif (message_type == Txrx.COM_PACKET_ERROR):
+                logging.error("received error from arduino: " + bytes(received).decode("utf-8"))
+                self.recording = False
 
             # HALT IF TRIGGER TIMEOUT ELAPSED
             if (self.trigger_timeout_counter == 0):

@@ -26,6 +26,7 @@ class Txrx():
     COM_PACKET_TEST                 = 0x55        # 85
     COM_PACKET_HELLO                = 0x56        # 86
     COM_PACKET_NUMIMUS              = 0x57        # 87
+    COM_PACKET_ERROR                = 0x58        # 87
 
     # SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
     COM_SIGNAL_INIT                 = 0x69
@@ -52,6 +53,7 @@ class Txrx():
              str(COM_PACKET_SAMPLE):  'COM_PACKET_SAMPLE', 
              str(COM_PACKET_HELLO):   'COM_PACKET_HELLO', 
              str(COM_PACKET_ASA):     'COM_PACKET_ASA', 
+             str(COM_PACKET_ERROR):   'COM_PACKET_ERROR', 
              str(COM_SIGNAL_INIT):    'COM_SIGNAL_INIT', 
              str(COM_SIGNAL_ASA):     'COM_SIGNAL_ASA', 
              str(COM_SIGNAL_RUN):     'COM_SIGNAL_RUN', 

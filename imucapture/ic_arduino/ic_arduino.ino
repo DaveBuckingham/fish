@@ -57,7 +57,8 @@
 //#define USE_ENCODER
 
 #define SPI_CLOCK                                 1000000        // 1MHz clock specified for imus
-#define SAMPLE_FREQ_HZ                            200            // attempted samples per second
+#define SAMPLE_FREQ_HZ                            250            // attempted samples per second
+#define SAMPLE_DELAY_US                           (1000000 / SAMPLE_FREQ_HZ)  // microseconds between samples
 
 #define TRIGGER_PIN                               4
 #define MAX_CHIP_SELECTS                          3              // maximum number of imus
@@ -120,6 +121,7 @@ const uint8_t IMU_SELECT_OPTIONS[]                = {8, 9, 10};  // len = MAX_CH
 #define COM_PACKET_TEST                           0x55
 #define COM_PACKET_HELLO                          0x56
 #define COM_PACKET_NUMIMUS                        0x57
+#define COM_PACKET_ERROR                          0x58
 
 // SINGLE BYTE COMMANDS TO SEND FROM PC TO ARDUINO
 #define COM_SIGNAL_INIT                           0x69  // 'i'
@@ -145,6 +147,7 @@ unsigned long next_sample_id;                  // counter for sample ids
 byte num_imus;
 byte imu_select[MAX_CHIP_SELECTS];
 byte response_len;
+bool sampling;
 
 
 
@@ -152,9 +155,9 @@ void tx_packet(byte *in_buffer, unsigned int num_bytes, byte message_type) {
     byte val;
     byte i;
     byte j = 0;
-    if ((message_type == COM_FLAG_START) || (message_type == COM_FLAG_END) || (message_type == COM_FLAG_ESCAPE)) {
-        return;
-    }
+    // if ((message_type == COM_FLAG_START) || (message_type == COM_FLAG_END) || (message_type == COM_FLAG_ESCAPE)) {
+    //     return;
+    // }
     serial_buffer[j++] = COM_FLAG_START;
     serial_buffer[j++] = message_type;
     for (i = 0; i < num_bytes; i++) {
@@ -643,7 +646,6 @@ void read_sample(){
     response[j++] = encoder_angle;
 #endif
 
-
     tx_packet(response, response_len, COM_PACKET_SAMPLE);
 }
 
@@ -663,11 +665,11 @@ void start_recording() {
 
     // SET TIMER FOR read_sample()
     noInterrupts();                                      // disable all interrupts
-    TCCR1A = 0;
-    TCCR1B = 0;
+    TCCR1A = 0;                                          // reset timer control register a
     TCNT1  = 0;
     OCR1A  = int((16000000 / 256) / SAMPLE_FREQ_HZ);     // compare match register = clock speed / prescaler / sample freq
-    TCCR1B |= (1 << WGM12);                              // CTC mode
+    TCCR1B = 0;
+    TCCR1B |= (1 << WGM12);                              // CTC mode (clear timer at interrupt)
     TCCR1B |= (1 << CS12);                               // 256 prescaler 
     TIMSK1 |= (1 << OCIE1A);                             // enable timer compare interrupt
     interrupts();                                        // enable all interrupts
@@ -695,7 +697,13 @@ void setup() {
 
 
 ISR(TIMER1_COMPA_vect) {
+    unsigned long start = micros();
     read_sample();
+    if ((micros() - start) > (SAMPLE_DELAY_US + 1000)) {    // an extra 1ms to be safe
+        uint8_t err_message[21];
+        String("sample rate too high").getBytes(err_message, 21);
+        tx_packet(err_message, 21, COM_PACKET_ERROR);
+    }
 }
 
 
